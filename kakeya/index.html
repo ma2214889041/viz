@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>一根针最少能扫过多大地方 — 三维挂谷猜想</title>
-<meta name="description" content="把一根针在空间里转过所有方向，扫过的区域最小可以有多小？答案是可以任意接近零——但它的维数必须是满满的 3。可交互三维演示。">
+<meta name="description" content="把一根针在空间里转过所有方向，扫过的区域最小可以有多小？先留下预测，再用可交互三维模型检验体积与维数。">
 <link rel="canonical" href="https://viz.gopromp.com/kakeya/">
 <link rel="icon" href="/favicon.png" type="image/png">
 <link rel="manifest" href="/site.webmanifest">
 <meta property="og:title" content="一根针最少能扫过多大地方 — 三维挂谷猜想">
-<meta property="og:description" content="体积可以任意接近零，维数却必须是 3。可交互三维演示。">
+<meta property="og:description" content="先留下预测，再用可交互三维模型检验体积与维数。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://viz.gopromp.com/kakeya/">
 <style>
@@ -274,7 +274,7 @@ canvas.chart{display:block;border-radius:8px}
   <div class="eyebrow">2026 年 7 月 29 日 · 数学</div>
   <h1>一根针最少能扫过多大地方？</h1>
   <p class="sub">
-    1917 年，挂谷宗一问：一根长度为 1 的针要转过每一个方向，扫过的区域最小是多少？两年后 Besicovitch 给出了反直觉的答案——可以要多小有多小，而这个几乎不占地方的集合，维数却必须是完整的 3。
+    1917 年，挂谷宗一问：一根长度为 1 的针要转过每一个方向，扫过的区域最小是多少？两年后 Besicovitch 给出了一个反直觉的体积答案。可是一个几乎不占地方的集合，在维数上究竟还剩多少？
   </p>
   <div id="cards">
     <div class="card kk" data-go="kakeya" style="width:520px">
@@ -1169,7 +1169,11 @@ function bindCtrl(name){
     const sc=$('#s_cell');sc.value=cellSize;
     sc.oninput=()=>{cellSize=+sc.value;syncCtrl();};
     const tog=(id,k)=>{$(id).onclick=()=>{to(KAK,k,KAK[k]>0.5?0:1,450);syncCtrl();};};
-    tog('#b_shadow','shadow');tog('#b_globe','dirGlobe');tog('#b_box','boxes');
+    tog('#b_shadow','shadow');tog('#b_globe','dirGlobe');
+    $('#b_box').onclick=()=>{
+      to(KAK,'boxes',KAK.boxes>0.5?0:1,450);syncCtrl();
+      window.vizReadKakeyaEvidence();
+    };
     $('#b_cones').onclick=()=>{to(KAK,'cones',KAK.cones>0.5?0:1,KAK.cones>0.5?800:2600);syncCtrl();};
     $('#b_sweep').onclick=()=>{KAK.sweeping=!KAK.sweeping;syncCtrl();};
     $('#b_spin').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
@@ -1264,6 +1268,13 @@ function getScaleData(){
   }
   return scaleData=pts;
 }
+window.vizReadKakeyaEvidence=()=>{
+  const pts=getScaleData(),i=pts.length-1;
+  const dimension=3-Math.log2(pts[i-1][1]/pts[i][1]);
+  document.dispatchEvent(new CustomEvent('viz:evidence',{detail:{
+    scene:'kakeya',kind:'kakeya-dimension',dimension
+  }}));
+};
 function drawScale(){
   const W=248,H=132,x=fitChart(c1,W,H);
   const pts=getScaleData();

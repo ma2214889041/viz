@@ -16,7 +16,7 @@ const fixedFiles = [
   "article-shell.js",
   "favicon.png"
 ];
-const extraDirs = ["kakeya-boltzmann"];
+const extraDirs = ["kakeya-boltzmann", "methods"];
 
 const escapeXml = (value) =>
   String(value)
@@ -65,6 +65,7 @@ await writeFile(join(out, "works.json"), `${JSON.stringify(works, null, 2)}\n`);
 const sitemapUrls = [
   { loc: `${baseUrl}/`, lastmod: works[0]?.date },
   ...works.map(({ url, date }) => ({ loc: url, lastmod: date })),
+  { loc: `${baseUrl}/methods/`, lastmod: works[0]?.date },
   { loc: `${baseUrl}/kakeya-boltzmann/`, lastmod: works[0]?.date }
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>

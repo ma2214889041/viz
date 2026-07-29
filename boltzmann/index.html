@@ -658,7 +658,7 @@ const GAS={
   px:null,py:null,pz:null,vx:null,vy:null,vz:null,
   t:0, collisions:0, colRate:0, mode:'micro', view:1,
   hist:new Float32Array(46), NB:46, vmaxHist:0,
-  H:[], Hcur:0, reversed:0, preset:'same',
+  H:[], Hcur:0, reversed:0, revPeak:0, preset:'same',
   macroN:7, dens:null, temp:null, mom:null, single:false
 };
 const gasInst=new Inst(2600);
@@ -696,7 +696,7 @@ function gasInit(preset){
     const u=R()*2-1, th=R()*Math.PI*2, s=Math.sqrt(1-u*u);
     GAS.vx[i]=sp*s*Math.cos(th);GAS.vy[i]=sp*u;GAS.vz[i]=sp*s*Math.sin(th);
   }
-  GAS.t=0;GAS.collisions=0;GAS.H=[];GAS.reversed=0;GAS.revIdx=-1;
+  GAS.t=0;GAS.collisions=0;GAS.H=[];GAS.reversed=0;GAS.revPeak=0;GAS.revIdx=-1;
   GAS.macro=null;
 }
 let cellIdx=null,cellStart=null,cellItems=null,cellFill=null,lastGN=-1;
@@ -865,7 +865,7 @@ const SC={
        b:`<p>1876 年，洛施密特（Loschmidt）当面反驳玻尔兹曼：</p>
           <p>既然每次碰撞都可逆，那把<b>所有球的速度同时取反</b>，系统就该沿原路倒回去，H 会一路<em>回升</em>——这不就违反 H 定理了吗？</p>
           <p>他说得对。右侧按 <b>⏮ 早期反演</b>：系统会重置、只跑一小会儿、然后瞬间反向。盯住 H 曲线——</p>
-          <p>它<b>真的爬回去了</b>，几乎回到出发点，然后才重新往下掉。（实测：H 从 −1.82 冲回 −0.04，回升幅度 1.78）</p>
+          <p>它<b>真的会先爬回去</b>，然后因离散仿真的数值误差与重新混合再次下降。上方实验回执记录的是本次运行中反演后的 <b>H 峰值</b>，不使用写死的示范数字。</p>
           <p>可是如果先让它跑到平衡，再按 <b>⇄ 时间反演</b>，H 会<em>纹丝不动</em>。</p>
           <p>区别不在定律，而在<b>初始状态有多特殊</b>。反演后的那个状态特殊到几乎不可能被“碰”出来；一旦系统忘记了出身，反演就什么也换不回来。</p>
           <span class="fml">可逆的定律 + 特殊的初态 = 不可逆的世界</span>`,
@@ -1014,16 +1014,22 @@ function bindCtrl(name){
     ss.oninput=()=>{GAS.speed=+ss.value;syncCtrl();};
     $('#b_run').onclick=()=>{GAS.running=!GAS.running;syncCtrl();};
     $('#b_rev').onclick=()=>{for(let i=0;i<GAS.N;i++){GAS.vx[i]*=-1;GAS.vy[i]*=-1;GAS.vz[i]*=-1;}
-      GAS.reversed=performance.now();GAS.revH=GAS.Hcur;GAS.revIdx=GAS.H.length;
-      GAS.running=true;syncCtrl();};
+      GAS.reversed=performance.now();GAS.revH=GAS.Hcur;GAS.revPeak=GAS.Hcur;GAS.revIdx=GAS.H.length;
+      GAS.running=true;syncCtrl();
+      beat(2600,()=>document.dispatchEvent(new CustomEvent('viz:evidence',{detail:{
+        scene:'gas',kind:'gas-reversal',delta:GAS.revPeak-GAS.revH
+      }})));};
     $('#b_early').onclick=()=>{
       // 慢放到 0.4×，跑约 0.5 个模拟秒后整体反向 —— 实测这是 H 回升最明显的时机
       clearShow();gasInit('same');GAS.running=true;GAS.speed=0.4;GAS.H=[];GAS.reversed=0;
       syncCtrl();
       beat(1300,()=>{
         for(let i=0;i<GAS.N;i++){GAS.vx[i]*=-1;GAS.vy[i]*=-1;GAS.vz[i]*=-1;}
-        GAS.reversed=performance.now();GAS.revH=GAS.Hcur;GAS.revIdx=GAS.H.length;
+        GAS.reversed=performance.now();GAS.revH=GAS.Hcur;GAS.revPeak=GAS.Hcur;GAS.revIdx=GAS.H.length;
       });
+      beat(5500,()=>document.dispatchEvent(new CustomEvent('viz:evidence',{detail:{
+        scene:'gas',kind:'gas-reversal',delta:GAS.revPeak-GAS.revH
+      }})));
       beat(9000,()=>{GAS.speed=1;syncCtrl();});
     };
     $('#b_same').onclick=()=>{gasInit('same');GAS.running=true;syncCtrl();};
@@ -1169,6 +1175,7 @@ function frame(now){
       const sub=2, dts=dt*GAS.speed/sub;
       for(let s=0;s<sub;s++)gasStep(Math.min(0.02,dts));
       gasStats();
+      if(GAS.reversed)GAS.revPeak=Math.max(GAS.revPeak,GAS.Hcur);
       GAS.H.push(GAS.Hcur);
       if(GAS.H.length>420){GAS.H.shift();if(GAS.revIdx>=0)GAS.revIdx--;}
     }
