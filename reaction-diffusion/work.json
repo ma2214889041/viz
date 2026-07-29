@@ -1,0 +1,12 @@
+{
+  "slug": "reaction-diffusion",
+  "title": "会生长的方程",
+  "question": "两种化学物，为什么会自己长出花纹？",
+  "description": "从完全均匀的化学场开始，亲手加入扰动、改变供给与清除率，并暂停到任意像素检查 Gray–Scott 方程的每一项。",
+  "date": "2026-07-29",
+  "category": ["非线性系统", "数学"],
+  "duration": "10 分钟",
+  "labs": 3,
+  "featured": true,
+  "accent": "#ef6a3a"
+}
