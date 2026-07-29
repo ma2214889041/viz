@@ -1,10 +1,47 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "viz-site",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-07-29",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "404-page"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MATCHMAKER",
+        "class_name": "Matchmaker"
+      },
+      {
+        "name": "LANGUAGE_ROOM",
+        "class_name": "LanguageRoom"
+      },
+      {
+        "name": "CONVENTION_AGGREGATE",
+        "class_name": "ConventionAggregate"
+      }
+    ]
+  },
+  "exports": {
+    "Matchmaker": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "LanguageRoom": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "ConventionAggregate": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
   },
   "routes": [
     {

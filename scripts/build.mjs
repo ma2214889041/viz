@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "dist");
 const baseUrl = "https://viz.gopromp.com";
-const workDirs = ["gw150914", "reaction-diffusion", "braess", "consciousness", "kakeya", "boltzmann"];
+const workDirs = ["language-game", "gw150914", "reaction-diffusion", "braess", "consciousness", "kakeya", "boltzmann"];
 const fixedFiles = [
   "index.html",
   "404.html",

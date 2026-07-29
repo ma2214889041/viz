@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "preview": "python3 -m http.server 8000 --directory dist",
-    "deploy": "npm run build && wrangler deploy"
+    "dev": "npm run build && wrangler dev",
+    "preview": "npm run dev",
+    "typecheck": "tsc --noEmit",
+    "test:multiplayer": "node tests/multiplayer-smoke.mjs",
+    "deploy": "npm run build && npm run typecheck && wrangler deploy"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20260729.1",
+    "typescript": "5.9.3",
     "wrangler": "4.115.0"
   }
 }

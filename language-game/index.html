@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>一个词，怎样在两个人之间获得意义？— VIZ</title>
+<meta name="description" content="和另一位真实访问者共同发明三个词：轮流发送和解释，观察词义如何从反复使用中形成。">
+<link rel="canonical" href="https://viz.gopromp.com/language-game/">
+<link rel="icon" href="../favicon.png" type="image/png">
+<meta property="og:title" content="一个词，怎样在两个人之间获得意义？">
+<meta property="og:description" content="一场没有词典、没有自由文本、由两位真实访问者共同完成的语言游戏。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://viz.gopromp.com/language-game/">
+<style>
+:root{
+  --ink:#0b0b0a;
+  --muted:#686863;
+  --line:#dcdcd6;
+  --soft:#f4f4f0;
+  --paper:#fafaf7;
+  --blue:#5267ff;
+  --blue-soft:#e9ecff;
+  --green:#16745a;
+  --green-soft:#e7f3ee;
+  --red:#e85b43;
+  --yellow:#e5b83e;
+  --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Songti SC","Noto Serif SC","STSong",Georgia,serif;
+  --page:min(1240px,calc(100vw - 48px));
+  --text:min(760px,calc(100vw - 48px));
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#fff;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button,input{font:inherit}
+button{color:inherit}
+a{color:inherit}
+::selection{background:#dfe3ff}
+:where(a,button,input):focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+[hidden]{display:none!important}
+.skip{position:fixed;top:-100px;left:18px;z-index:100;background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px}
+.skip:focus{top:14px}
+.header{position:sticky;top:0;z-index:40;height:68px;background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
+.nav{width:var(--page);height:100%;margin:auto;display:flex;align-items:center;gap:22px}
+.logo{font-size:21px;font-weight:650;letter-spacing:-.055em;text-decoration:none}
+.crumb{color:#777;font-size:13px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}
+.progress-track{width:112px;height:2px;background:#ddd}.progress-fill{display:block;width:0;height:100%;background:var(--ink)}
+
+.hero{width:var(--page);margin:auto;padding:clamp(96px,12vw,166px) 0 92px}
+.eyebrow{display:flex;justify-content:space-between;gap:24px;margin-bottom:36px;font-size:12px;font-weight:600}
+.eyebrow span:last-child{color:var(--muted);font-weight:500}
+h1{max-width:1120px;font-size:clamp(54px,7.5vw,104px);font-weight:500;line-height:.94;letter-spacing:-.068em;text-wrap:balance}
+.dek{max-width:800px;margin-top:38px;color:#383834;font:400 clamp(19px,1.75vw,24px)/1.65 var(--serif)}
+.premise{display:grid;grid-template-columns:1fr 2fr;gap:40px;margin-top:76px;padding-top:22px;border-top:1px solid var(--ink)}
+.premise b{font-size:12px}.premise p{max-width:730px;color:var(--muted);font-size:14px;line-height:1.7}
+
+.experiment{background:var(--soft);padding:110px 0}
+.section-head{width:var(--page);margin:auto;display:grid;grid-template-columns:.72fr 1.55fr;gap:clamp(42px,8vw,120px)}
+.section-label{font-size:12px;font-weight:600}
+.section-copy h2{max-width:900px;font-size:clamp(38px,4.8vw,68px);font-weight:500;line-height:1.02;letter-spacing:-.055em;text-wrap:balance}
+.section-copy>p{max-width:760px;margin-top:24px;color:var(--muted);font-size:16px;line-height:1.8}
+
+.entry{width:var(--page);margin:62px auto 0;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);gap:22px}
+.entry-card,.rules-card{padding:clamp(24px,3vw,38px);border:1px solid var(--line);border-radius:18px;background:#fff}
+.entry-card h3{max-width:620px;font-size:clamp(28px,3.2vw,44px);font-weight:520;line-height:1.1;letter-spacing:-.045em}
+.entry-card>p{max-width:620px;margin-top:15px;color:var(--muted);font-size:14px;line-height:1.7}
+.entry-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+.primary,.secondary,.copy-button,.ready-button{
+  border:1px solid var(--ink);border-radius:999px;padding:13px 19px;background:var(--ink);color:#fff;font-weight:600;font-size:13px;cursor:pointer;
+}
+.secondary,.copy-button{background:#fff;color:var(--ink)}
+.primary:hover{background:#30302e}.secondary:hover,.copy-button:hover{background:var(--soft)}
+.join-row{display:flex;gap:8px;margin-top:28px;padding-top:24px;border-top:1px solid var(--line)}
+.join-row input{
+  min-width:0;flex:1;border:1px solid var(--line);border-radius:999px;padding:12px 16px;background:var(--paper);
+  text-transform:uppercase;letter-spacing:.12em;font-weight:600;
+}
+.join-row button{flex:0 0 auto}
+.entry-note{min-height:22px;margin-top:12px!important;color:#8a8a84!important;font-size:12px!important}
+.rules-card{display:grid;align-content:start;gap:20px}
+.rule{display:grid;grid-template-columns:28px 1fr;gap:13px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.rule:last-child{padding-bottom:0;border:0}
+.rule span{display:grid;width:25px;height:25px;place-items:center;border:1px solid var(--line);border-radius:50%;font-size:10px}
+.rule b{display:block;font-size:13px}.rule p{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
+
+.share-panel{width:var(--page);margin:22px auto 0;padding:23px 26px;border:1px solid var(--ink);border-radius:16px;background:#fff}
+.share-top{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.share-top>div{min-width:0}
+.share-kicker{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.room-code{display:block;margin-top:6px;font-size:clamp(24px,3vw,38px);font-weight:600;letter-spacing:.12em}
+.share-actions{display:flex;gap:8px}
+.presence{display:flex;align-items:center;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.presence-dot{width:8px;height:8px;border-radius:50%;background:#aaa}
+.presence-dot.waiting{background:var(--yellow);animation:pulse 1.5s infinite}
+.presence-dot.live{background:var(--green)}
+
+.game{width:var(--page);margin:22px auto 0;border:1px solid var(--ink);border-radius:20px;overflow:hidden;background:#fff}
+.game-top{display:grid;grid-template-columns:1fr auto auto;gap:26px;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line)}
+.round-state{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:600}
+.round-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.counter{color:var(--muted);font-size:12px}.counter strong{color:var(--ink);font-size:14px}
+.game-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,.65fr);min-height:620px}
+.playfield{display:flex;flex-direction:column;min-width:0;padding:clamp(25px,4vw,52px);border-right:1px solid var(--line)}
+.role-label{font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}
+.instruction{max-width:720px;margin-top:17px;font-size:clamp(31px,4vw,58px);font-weight:520;line-height:1.04;letter-spacing:-.052em;text-wrap:balance}
+.instruction-note{max-width:620px;min-height:52px;margin-top:18px;color:var(--muted);font-size:14px;line-height:1.7}
+.choice-stage{display:grid;align-content:center;flex:1;margin-top:30px}
+.target-focus{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:30px;padding:28px;border:1px solid var(--line);border-radius:16px;background:var(--paper)}
+.target-focus .shape-wrap{height:120px}
+.target-name small{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.target-name strong{display:block;margin-top:9px;font-size:31px;font-weight:520;letter-spacing:-.04em}
+.token-grid,.object-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.token,.object-choice{min-width:0;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}
+.token{padding:22px 10px;font-size:clamp(20px,2.4vw,31px);font-weight:600;letter-spacing:-.02em}
+.token small{display:block;margin-top:6px;color:var(--muted);font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.token:hover,.object-choice:hover{border-color:var(--ink);transform:translateY(-2px)}
+.token:disabled,.object-choice:disabled{opacity:.5;cursor:default;transform:none}
+.received{display:flex;align-items:baseline;gap:14px;padding-bottom:18px;border-bottom:1px solid var(--ink)}
+.received span{color:var(--muted);font-size:11px}.received strong{font-size:clamp(38px,5vw,72px);line-height:1;letter-spacing:-.055em}
+.object-choice{padding:22px 12px}.object-choice .shape-wrap{height:88px}.object-choice span{display:block;margin-top:9px;font-size:12px;font-weight:600}
+.waiting-figure{display:grid;place-items:center;min-height:250px;border:1px dashed #c9c9c2;border-radius:16px;background:var(--paper);color:var(--muted);text-align:center}
+.waiting-figure span{display:block;width:9px;height:9px;margin:0 auto 14px;border-radius:50%;background:var(--yellow);animation:pulse 1.5s infinite}
+.round-result{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.result-card{padding:24px;border:1px solid var(--line);border-radius:15px;background:var(--paper)}
+.result-card small{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.result-token{display:block;margin-top:12px;font-size:32px;font-weight:600}
+.result-object{display:flex;align-items:center;gap:14px;margin-top:12px}.result-object .shape-wrap{width:60px;height:60px}.result-object b{font-size:18px}
+.verdict{grid-column:1/-1;padding:22px;border-radius:15px;background:var(--green-soft);color:#0f5c46;font-size:15px;line-height:1.65}
+.verdict.wrong{background:#fff0eb;color:#8a321f}
+.ready-row{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:18px}
+.ready-row p{color:var(--muted);font-size:12px}.ready-button:disabled{opacity:.45;cursor:default}
+.final-card{padding:clamp(25px,4vw,46px);border:1px solid var(--ink);border-radius:16px}
+.final-score{font-size:clamp(55px,8vw,100px);font-weight:500;line-height:.9;letter-spacing:-.07em}.final-score small{font-size:.25em;letter-spacing:0}
+.final-card h3{max-width:600px;margin-top:28px;font-size:30px;font-weight:520;letter-spacing:-.04em}
+.final-card p{max-width:620px;margin-top:14px;color:var(--muted);font-size:14px;line-height:1.75}
+.final-card .primary{margin-top:25px}
+
+.meaning-panel{padding:26px;background:var(--paper)}
+.meaning-panel h3{font-size:14px;font-weight:650}
+.meaning-panel>p{margin-top:9px;color:var(--muted);font-size:11px;line-height:1.6}
+.matrix{display:grid;grid-template-columns:62px repeat(3,1fr);gap:5px;margin-top:25px}
+.matrix-head{display:grid;place-items:center;min-height:42px;color:var(--muted);font-size:9px}
+.matrix-head .shape-wrap{width:28px;height:28px}
+.matrix-word{display:flex;align-items:center;font-size:11px;font-weight:650}
+.matrix-cell{position:relative;display:grid;min-height:64px;place-items:center;overflow:hidden;border:1px solid var(--line);border-radius:9px;background:#fff}
+.matrix-cell::before{content:"";position:absolute;bottom:0;left:0;width:100%;height:var(--fill,0%);background:var(--blue-soft);transition:height .3s}
+.matrix-cell.best{border-color:#9ca7ff}
+.matrix-cell strong{position:relative;z-index:1;font-size:15px}.matrix-cell small{position:relative;z-index:1;color:var(--muted);font-size:8px}
+.matrix-legend{margin-top:12px;color:#8c8c86;font-size:10px;line-height:1.55}
+.trail{margin-top:30px;padding-top:22px;border-top:1px solid var(--line)}
+.trail h4{font-size:11px}
+.trail-list{display:grid;gap:9px;margin-top:13px}
+.trail-item{display:grid;grid-template-columns:52px 16px 1fr auto;align-items:center;gap:8px;color:var(--muted);font-size:10px}
+.trail-item b{color:var(--ink);font-size:11px}.trail-item .shape-wrap{width:18px;height:18px}
+.trail-item em{font-style:normal}.trail-item em.ok{color:var(--green)}.trail-item em.no{color:var(--red)}
+
+.shape-wrap{display:grid;place-items:center}
+.shape{display:block;width:min(68%,78px);aspect-ratio:1;background:var(--shape-color,var(--red))}
+.shape.circle{border-radius:50%;--shape-color:var(--red)}
+.shape.triangle{clip-path:polygon(50% 4%,98% 94%,2% 94%);--shape-color:var(--blue)}
+.shape.square{border-radius:4px;--shape-color:var(--yellow)}
+@keyframes pulse{50%{opacity:.38;transform:scale(.8)}}
+
+.explanation{width:var(--text);margin:auto;padding:110px 0}
+.explanation h2{font-size:clamp(36px,4.5vw,62px);font-weight:500;line-height:1.04;letter-spacing:-.055em;text-wrap:balance}
+.explanation>p{margin-top:28px;color:#40403c;font:400 18px/1.84 var(--serif)}
+.equation{margin:44px 0;padding:27px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);font-size:clamp(20px,2.5vw,30px);line-height:1.55;letter-spacing:-.03em}
+.equation small{display:block;margin-top:10px;color:var(--muted);font:400 12px/1.65 var(--sans);letter-spacing:0}
+.argument{display:grid;grid-template-columns:100px 1fr;gap:28px;margin-top:44px;padding-top:20px;border-top:1px solid var(--line)}
+.argument b{font-size:11px}.argument p{color:var(--muted);font-size:14px;line-height:1.75}
+
+.anatomy{background:#10110f;color:#f7f7f3;padding:110px 0}
+.anatomy-inner{width:var(--page);margin:auto}
+.anatomy .section-head{width:100%}.anatomy .section-copy>p{color:#afb1aa}
+.protocol{display:grid;grid-template-columns:repeat(4,1fr);margin-top:68px;border-top:1px solid #4b4d48;border-bottom:1px solid #4b4d48}
+.protocol-step{min-height:245px;padding:24px;border-right:1px solid #343632}
+.protocol-step:last-child{border:0}
+.protocol-step span{color:#8f928a;font-size:10px}.protocol-step strong{display:block;margin-top:46px;font-size:23px;font-weight:520;letter-spacing:-.035em}
+.protocol-step p{margin-top:14px;color:#aeb1aa;font-size:12px;line-height:1.7}
+.scope{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:58px}
+.scope-card{padding:28px;border:1px solid #3b3d38;border-radius:15px}
+.scope-card span{font-size:10px;color:#8f928a}.scope-card h3{margin-top:13px;font-size:25px;font-weight:520;letter-spacing:-.04em}
+.scope-card p{margin-top:14px;color:#aeb1aa;font-size:13px;line-height:1.75}
+
+.aggregate{padding:110px 0;background:var(--soft)}
+.aggregate-inner{width:var(--page);margin:auto}
+.aggregate-grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(400px,1.15fr);gap:clamp(45px,8vw,110px);margin-top:68px}
+.aggregate-copy h3{font-size:32px;font-weight:520;letter-spacing:-.045em}.aggregate-copy p{margin-top:18px;color:var(--muted);font-size:14px;line-height:1.8}
+.aggregate-total{display:block;margin-top:34px;font-size:72px;font-weight:500;letter-spacing:-.065em}.aggregate-total small{font-size:.2em;letter-spacing:0;color:var(--muted)}
+.aggregate-note{display:block;margin-top:9px;color:#8b8b85;font-size:10px;line-height:1.6}
+.bars{display:grid;gap:14px}
+.bar-row{display:grid;grid-template-columns:130px 1fr 34px;gap:13px;align-items:center}
+.bar-label{font-size:11px}.bar-track{height:10px;border-radius:99px;background:#dddeda;overflow:hidden}.bar-fill{display:block;height:100%;width:0;background:var(--blue);border-radius:inherit;transition:width .45s}.bar-value{text-align:right;font-size:11px}
+
+.closing{padding:120px 0}
+.closing-inner{width:var(--page);display:grid;grid-template-columns:.72fr 1.55fr;gap:clamp(42px,8vw,120px);margin:auto}
+.closing h2{font-size:clamp(40px,5.5vw,76px);font-weight:500;line-height:1;letter-spacing:-.06em;text-wrap:balance}
+.closing p{max-width:760px;margin-top:28px;color:var(--muted);font-size:16px;line-height:1.85}
+.takeaways{margin-top:50px;border-top:1px solid var(--ink)}
+.takeaway{display:grid;grid-template-columns:52px 1fr;gap:20px;padding:22px 0;border-bottom:1px solid var(--line)}
+.takeaway span{color:#8d8d87;font-size:11px}.takeaway p{margin:0;color:#393934;font-size:14px}
+.sources{width:var(--text);margin:auto;padding:0 0 95px}
+.sources h2{font-size:28px;font-weight:520;letter-spacing:-.035em}
+.sources ol{margin:24px 0 0 20px}.sources li{padding:6px 0;color:var(--muted);font-size:12px;line-height:1.7}
+.sources a{text-underline-offset:3px}
+.privacy{margin-top:28px;padding:18px;border-left:2px solid var(--ink);background:var(--soft);color:var(--muted);font-size:11px;line-height:1.7}
+.footer{border-top:1px solid var(--line)}.footer-inner{width:var(--page);margin:auto;padding:46px 0 26px;display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:12px}
+
+@media(max-width:860px){
+  :root{--page:calc(100vw - 32px);--text:calc(100vw - 32px)}
+  .header{height:62px}.crumb{display:none}.progress-track{width:72px}
+  .hero{padding:82px 0 75px}.eyebrow{flex-direction:column;gap:8px}.hero h1{font-size:50px}.dek{font-size:18px}
+  .premise,.section-head,.entry,.game-grid,.anatomy .section-head,.aggregate-grid,.closing-inner{grid-template-columns:1fr;gap:27px}
+  .experiment,.anatomy,.aggregate{padding:82px 0}
+  .share-top{align-items:flex-start;flex-direction:column}.game-top{grid-template-columns:1fr 1fr}.round-state{grid-column:1/-1}
+  .playfield{border-right:0;border-bottom:1px solid var(--line);min-height:620px}.meaning-panel{padding:22px}
+  .protocol{grid-template-columns:1fr 1fr}.protocol-step{min-height:220px;border-bottom:1px solid #343632}
+  .protocol-step:nth-child(2){border-right:0}.scope{grid-template-columns:1fr}.closing{padding:85px 0}
+}
+@media(max-width:560px){
+  .entry-actions,.share-actions{display:grid;grid-template-columns:1fr;width:100%}
+  .join-row{display:grid}.game{width:100%;border-left:0;border-right:0;border-radius:0}
+  .game-top{padding:17px 16px}.playfield{padding:26px 16px;min-height:600px}
+  .instruction{font-size:34px}.target-focus{grid-template-columns:90px 1fr;padding:20px}.target-focus .shape-wrap{height:90px}
+  .token-grid,.object-grid{gap:6px}.token{padding:18px 5px;font-size:20px}.object-choice{padding:17px 5px}
+  .round-result{grid-template-columns:1fr}.verdict{grid-column:1}.ready-row{align-items:stretch;flex-direction:column}
+  .protocol{grid-template-columns:1fr}.protocol-step{min-height:auto;border-right:0;padding:25px 0}.protocol-step strong{margin-top:25px}
+  .bar-row{grid-template-columns:110px 1fr 28px;gap:8px}.argument{grid-template-columns:1fr;gap:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">跳到正文</a>
+<header class="header">
+  <nav class="nav" aria-label="页面导航">
+    <a class="logo" href="../">VIZ</a><span class="crumb">没有词典的词</span>
+    <div class="progress" aria-label="阅读进度"><span id="progressText">进入实验</span><span class="progress-track"><span class="progress-fill" id="progressFill"></span></span></div>
+  </nav>
+</header>
+
+<main id="content">
+  <section class="hero">
+    <div class="eyebrow"><span>语言哲学 × 社会实验</span><span>2026 年 7 月 29 日 · 约 12 分钟</span></div>
+    <h1>一个词，怎样在两个人之间获得意义？</h1>
+    <p class="dek">这里没有词典。你和另一位真实访问者只有三个陌生词、三个物体和十二次行动。一个词的意义，能不能只靠反复使用慢慢长出来？</p>
+    <div class="premise"><b>实验问题</b><p>如果发送者知道目标、解释者不知道，而两人只能交换一个没有预设含义的词，他们会不会形成一个共同且稳定的对应关系？</p></div>
+  </section>
+
+  <section class="experiment" aria-labelledby="experimentTitle">
+    <div class="section-head">
+      <div class="section-label">01 · 找到另一位玩家</div>
+      <div class="section-copy">
+        <h2 id="experimentTitle">先不要定义词。直接用它。</h2>
+        <p>每轮只有发送者看得见目标。发送者选词，解释者看词猜物体，然后互换角色。自由文本被关闭，因此词义只能留在行动记录里。</p>
+      </div>
+    </div>
+
+    <div class="entry" id="entry">
+      <div class="entry-card">
+        <h3>开始一场两人实验</h3>
+        <p>快速配对会连接当前也在等待的访问者。私人房间会生成一条邀请链接；也可以在另一个浏览器窗口打开它，亲手扮演双方。</p>
+        <div class="entry-actions">
+          <button class="primary" id="matchButton">快速配对</button>
+          <button class="secondary" id="createButton">创建私人房间</button>
+        </div>
+        <form class="join-row" id="joinForm">
+          <input id="roomInput" aria-label="八位房间码" maxlength="8" autocomplete="off" placeholder="输入 8 位房间码">
+          <button class="secondary" type="submit">进入房间</button>
+        </form>
+        <p class="entry-note" id="entryNote" aria-live="polite">不需要账号；本页不会发送自由文本。</p>
+      </div>
+      <aside class="rules-card" aria-label="实验规则">
+        <div class="rule"><span>1</span><div><b>发送者看目标</b><p>从 mepo、luma、tavi 中选择一个词。</p></div></div>
+        <div class="rule"><span>2</span><div><b>解释者只看词</b><p>从圆、三角、方块中猜发送者看见了什么。</p></div></div>
+        <div class="rule"><span>3</span><div><b>十二轮后比较</b><p>不要求事先商量；成功和失败都会进入词义矩阵。</p></div></div>
+      </aside>
+    </div>
+
+    <div class="share-panel" id="sharePanel" hidden>
+      <div class="share-top">
+        <div><span class="share-kicker">你的房间</span><strong class="room-code" id="roomCode">—</strong></div>
+        <div class="share-actions">
+          <button class="copy-button" id="copyButton">复制邀请链接</button>
+          <button class="copy-button" id="leaveButton">离开房间</button>
+        </div>
+      </div>
+      <div class="presence"><span class="presence-dot waiting" id="presenceDot"></span><span id="presenceText" aria-live="polite">正在连接实验服务器…</span></div>
+    </div>
+
+    <section class="game" id="game" aria-label="双人语言游戏" hidden>
+      <div class="game-top">
+        <div class="round-state"><span class="round-dot"></span><span id="phaseLabel">实验进行中</span></div>
+        <div class="counter">回合 <strong id="roundCount">0 / 12</strong></div>
+        <div class="counter">共同成功 <strong id="scoreCount">0</strong></div>
+      </div>
+      <div class="game-grid">
+        <div class="playfield">
+          <div class="role-label" id="roleLabel">等待角色</div>
+          <h3 class="instruction" id="instruction">等待另一位玩家。</h3>
+          <p class="instruction-note" id="instructionNote">邀请对方进入同一个房间，实验会自动开始。</p>
+          <div class="choice-stage" id="choiceStage"></div>
+        </div>
+        <aside class="meaning-panel">
+          <h3>房间里的词义矩阵</h3>
+          <p>每个格子记录“这个词曾被用于这个目标”的次数；颜色越高，联系越强。</p>
+          <div class="matrix" id="matrix" aria-label="词与目标的使用次数矩阵"></div>
+          <p class="matrix-legend">这不是隐藏的正确答案。它只是你们已经留下的公开使用痕迹。</p>
+          <div class="trail">
+            <h4>最近发生</h4>
+            <div class="trail-list" id="trailList"><span class="matrix-legend">完成第一轮后，这里会出现记录。</span></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </section>
+
+  <section class="explanation">
+    <h2>“词义”没有被写进程序；程序只记录使用。</h2>
+    <p>mepo、luma、tavi 在第一轮完全对称。服务器没有保存“mepo 就是圆”这样的答案。它只在每轮结束时把一次选择记入矩阵：哪个词被用来指向哪个目标，以及解释是否成功。</p>
+    <div class="equation">P（目标 = j｜收到词 i）≈ n<sub>ij</sub> ÷ Σ<sub>k</sub> n<sub>ik</sub>
+      <small>n<sub>ij</sub> 是词 i 被用于目标 j 的次数。解释者实际上是在用共同历史估计“听到这个词后，哪个行动最可能成功”。</small>
+    </div>
+    <p>当一个词的一整行逐渐集中到一个目标，两人就有了可重复的预期。下一次发送者选择这个词、解释者按同一方式行动，都不需要重新查定义。约定开始承担定义原本承担的工作。</p>
+    <div class="argument"><b>关键反事实</b><p>如果把两位玩家在第一轮形成的 mepo 与 luma 对调，只要之后双方一直遵守新的对应，成功率仍可完全相同。声音本身没有指定对象；稳定的共同使用史才打破对称。</p></div>
+  </section>
+
+  <section class="anatomy" aria-labelledby="anatomyTitle">
+    <div class="anatomy-inner">
+      <div class="section-head">
+        <div class="section-label">02 · 论证的结构</div>
+        <div class="section-copy">
+          <h2 id="anatomyTitle">这是一个可操作的信号博弈，不是哲学判决机。</h2>
+          <p>实验把一个巨大问题压缩成四个可观察事件。这样能精确测量约定如何形成，也意味着它没有资格代表语言的全部。</p>
+        </div>
+      </div>
+      <div class="protocol" aria-label="每回合的四个步骤">
+        <div class="protocol-step"><span>01 / 私有状态</span><strong>发送者看见目标</strong><p>信息不对称由服务器维持；解释者在猜测前永远收不到目标字段。</p></div>
+        <div class="protocol-step"><span>02 / 公共信号</span><strong>选择一个无义词</strong><p>三个信号成本相同，也没有预设顺序或图像暗示。</p></div>
+        <div class="protocol-step"><span>03 / 行动</span><strong>解释者选择物体</strong><p>不能讨论，只能根据过去的共同轨迹更新判断。</p></div>
+        <div class="protocol-step"><span>04 / 反馈</span><strong>两人一起看结果</strong><p>成功强化预期，失败迫使双方在下一轮修正。</p></div>
+      </div>
+      <div class="scope">
+        <div class="scope-card"><span>它能够显示</span><h3>约定可以从协同行动中出现</h3><p>不需要第三方先宣布词义；只要重复、反馈和共同利益存在，任意信号也能获得稳定的实践角色。</p></div>
+        <div class="scope-card"><span>它不能证明</span><h3>所有意义都等于统计关联</h3><p>自然语言还包含规范、语境、身体活动、制度与生活形式。这个页面只实现了其中一个极简切片：共同利益下的指称信号。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="aggregate" aria-labelledby="aggregateTitle">
+    <div class="aggregate-inner">
+      <div class="section-head">
+        <div class="section-label">03 · 不同房间，不同词典</div>
+        <div class="section-copy">
+          <h2 id="aggregateTitle">六种约定都一样有效。</h2>
+          <p>三个词与三个物体的一一对应共有 3! = 6 种。每个完成十二轮的房间只匿名投下一票；这里显示的不是民意调查，而是一个参与式展品。</p>
+        </div>
+      </div>
+      <div class="aggregate-grid">
+        <div class="aggregate-copy">
+          <h3>已经完成的房间</h3>
+          <span class="aggregate-total" id="aggregateTotal">— <small>组</small></span>
+          <p>若每个词都明显指向一个不同物体，房间进入对应的约定；仍有并列或冲突，就归入“尚未稳定”。</p>
+          <span class="aggregate-note">只汇总最终类型。随机房间码经散列后仅用于防止同一房间重复计数，不记录账号、自由文本或个人资料。</span>
+        </div>
+        <div class="bars" id="aggregateBars" aria-label="不同约定的房间数量"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="closing-inner">
+      <div class="section-label">结论</div>
+      <div>
+        <h2>不要先问词“装着什么”。先看人们拿它做了什么。</h2>
+        <p>《哲学研究》把语言重新放回活动和生活之中。本页没有把那套哲学化约成一个公式；它只给出一个可亲手检验的入口：当符号被反复使用、纠正并延续时，原本任意的声音开始约束下一次行动。</p>
+        <div class="takeaways">
+          <div class="takeaway"><span>01</span><p>信号起初没有内置指称；不同房间可以形成不同而同样成功的约定。</p></div>
+          <div class="takeaway"><span>02</span><p>共同历史把任意信号变成可预测的行动规则，成功率则检验规则是否真的共享。</p></div>
+          <div class="takeaway"><span>03</span><p>这支持“从使用中观察意义”的方法，但不证明自然语言的所有意义都能被一个信号博弈穷尽。</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sources">
+    <h2>来源与方法</h2>
+    <ol>
+      <li>Ludwig Wittgenstein, <a href="https://www.wittgensteinproject.org/w/index.php/Philosophical_Investigations" target="_blank" rel="noopener"><i>Philosophical Investigations</i></a>，尤其参见建筑者语言游戏（§2）、语言与活动（§23）及“意义—使用”限定表述（§43）。</li>
+      <li><a href="https://plato.stanford.edu/entries/convention/" target="_blank" rel="noopener">Stanford Encyclopedia of Philosophy: Convention</a>，关于 David Lewis 如何用协调与均衡分析语言约定。</li>
+      <li>David Lewis, <a href="https://www.hup.harvard.edu/books/9780674333664" target="_blank" rel="noopener"><i>Convention: A Philosophical Study</i></a>, Harvard University Press, 1969.</li>
+      <li>Brian Skyrms, <a href="https://global.oup.com/academic/product/signals-9780199582945" target="_blank" rel="noopener"><i>Signals: Evolution, Learning, and Information</i></a>, Oxford University Press, 2010.</li>
+    </ol>
+    <div class="privacy"><b>实现说明：</b>双人房间由 Cloudflare Durable Objects 协调，使用 WebSocket 保持回合同步。服务器校验角色、阶段和有限选项，并在广播前保存关键状态。页面不提供聊天、不设置账号、不写入 Cookie；浏览器只在当前标签会话中保存一个随机客户端标识。</div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner"><a href="../">← 返回全部文章</a><span>VIZ · VISUAL ESSAYS</span></div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = (selector) => document.querySelector(selector);
+  const TOKENS = ["mepo", "luma", "tavi"];
+  const OBJECTS = [
+    { key: "circle", name: "红色圆形", short: "圆" },
+    { key: "triangle", name: "蓝色三角", short: "三角" },
+    { key: "square", name: "黄色方块", short: "方块" }
+  ];
+  const ROOM_RE = /^[A-Z2-9]{8}$/;
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const ui = {
+    entry: $("#entry"),
+    entryNote: $("#entryNote"),
+    matchButton: $("#matchButton"),
+    createButton: $("#createButton"),
+    joinForm: $("#joinForm"),
+    roomInput: $("#roomInput"),
+    sharePanel: $("#sharePanel"),
+    roomCode: $("#roomCode"),
+    copyButton: $("#copyButton"),
+    leaveButton: $("#leaveButton"),
+    presenceDot: $("#presenceDot"),
+    presenceText: $("#presenceText"),
+    game: $("#game"),
+    phaseLabel: $("#phaseLabel"),
+    roundCount: $("#roundCount"),
+    scoreCount: $("#scoreCount"),
+    roleLabel: $("#roleLabel"),
+    instruction: $("#instruction"),
+    instructionNote: $("#instructionNote"),
+    choiceStage: $("#choiceStage"),
+    matrix: $("#matrix"),
+    trailList: $("#trailList"),
+    aggregateTotal: $("#aggregateTotal"),
+    aggregateBars: $("#aggregateBars")
+  };
+
+  let socket = null;
+  let matchSocket = null;
+  let room = null;
+  let state = null;
+  let previousResultKey = "";
+  const trail = [];
+  const clientId = getClientId();
+
+  function getClientId() {
+    let value = sessionStorage.getItem("viz-language-client");
+    if (!value) {
+      value = crypto.randomUUID();
+      sessionStorage.setItem("viz-language-client", value);
+    }
+    return value;
+  }
+
+  function makeRoom() {
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+  }
+
+  function wsUrl(path) {
+    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${location.host}${path}`;
+  }
+
+  function shapeMarkup(index) {
+    const object = OBJECTS[index];
+    return `<span class="shape-wrap" aria-hidden="true"><span class="shape ${object.key}"></span></span>`;
+  }
+
+  function setEntryNote(message) {
+    ui.entryNote.textContent = message;
+  }
+
+  function setPresence(kind, message) {
+    ui.presenceDot.className = `presence-dot ${kind}`;
+    ui.presenceText.textContent = message;
+  }
+
+  function updateRoomUrl(code) {
+    const url = new URL(location.href);
+    url.search = "";
+    if (code) url.searchParams.set("room", code);
+    history.replaceState(null, "", url);
+  }
+
+  function invitationUrl() {
+    const url = new URL(location.href);
+    url.search = "";
+    url.searchParams.set("room", room);
+    return url.toString();
+  }
+
+  function openRoom(code) {
+    const normalized = code.toUpperCase().replace(/[^A-Z2-9]/g, "");
+    if (!ROOM_RE.test(normalized)) {
+      setEntryNote("房间码应为 8 位大写字母或数字（不含 0、1、I、O）。");
+      return;
+    }
+    closeSockets();
+    room = normalized;
+    state = null;
+    previousResultKey = "";
+    trail.length = 0;
+    updateRoomUrl(room);
+    ui.roomCode.textContent = room;
+    ui.sharePanel.hidden = false;
+    ui.game.hidden = false;
+    ui.entry.hidden = true;
+    setPresence("waiting", "正在连接实验服务器…");
+    renderWaiting();
+
+    socket = new WebSocket(wsUrl(`/api/room/${room}?client=${encodeURIComponent(clientId)}`));
+    socket.addEventListener("open", () => setPresence("waiting", "已进入房间，等待另一位玩家…"));
+    socket.addEventListener("message", (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === "state") {
+        state = message;
+        render();
+      } else if (message.type === "error") {
+        handleError(message.code);
+      }
+    });
+    socket.addEventListener("close", (event) => {
+      if (event.code === 4003) {
+        setPresence("", "这个房间已有两位玩家。请创建另一个房间。");
+      } else if (room) {
+        setPresence("", "连接已断开。刷新页面可重新进入。");
+      }
+    });
+    socket.addEventListener("error", () => setPresence("", "暂时无法连接实验服务器。"));
+  }
+
+  function closeSockets() {
+    if (socket && socket.readyState < 2) socket.close(1000, "leave");
+    if (matchSocket && matchSocket.readyState < 2) matchSocket.close(1000, "cancel");
+    socket = null;
+    matchSocket = null;
+  }
+
+  function quickMatch() {
+    closeSockets();
+    ui.matchButton.disabled = true;
+    ui.createButton.disabled = true;
+    setEntryNote("正在寻找另一位也在等待的访问者…");
+    matchSocket = new WebSocket(wsUrl(`/api/match?client=${encodeURIComponent(clientId)}`));
+    matchSocket.addEventListener("message", (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === "queued") setEntryNote("你是当前第一位等待者。匹配到玩家后会自动开始。");
+      if (message.type === "matched") openRoom(message.room);
+    });
+    matchSocket.addEventListener("close", () => {
+      ui.matchButton.disabled = false;
+      ui.createButton.disabled = false;
+    });
+    matchSocket.addEventListener("error", () => {
+      setEntryNote("配对服务暂时不可用，请创建私人房间。");
+      ui.matchButton.disabled = false;
+      ui.createButton.disabled = false;
+    });
+  }
+
+  function send(message) {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+  }
+
+  function handleError(code) {
+    const messages = {
+      room_full: "这个房间已经有两位玩家。",
+      signal_not_allowed: "现在不能发送这个词。",
+      guess_not_allowed: "现在不能做这个解释。",
+      ready_not_allowed: "当前回合还没有结束。"
+    };
+    setPresence("", messages[code] || "操作没有被服务器接受。");
+  }
+
+  function renderWaiting() {
+    ui.phaseLabel.textContent = "等待搭档";
+    ui.roundCount.textContent = "0 / 12";
+    ui.scoreCount.textContent = "0";
+    ui.roleLabel.textContent = "房间已建立";
+    ui.instruction.textContent = "等待另一位玩家。";
+    ui.instructionNote.textContent = "复制邀请链接给对方；第二位玩家进入后，第一回合自动开始。";
+    ui.choiceStage.innerHTML = `<div class="waiting-figure"><div><span></span>房间正在等待第二个连接</div></div>`;
+    renderMatrix([[0,0,0],[0,0,0],[0,0,0]], [[0,0,0],[0,0,0],[0,0,0]]);
+  }
+
+  function render() {
+    if (!state) return;
+    const bothConnected = state.players === 2 && state.connected.every(Boolean);
+    setPresence(bothConnected ? "live" : "waiting", bothConnected ? "两位玩家均已连接 · 回合状态实时同步" : "搭档已离线或尚未进入；实验会保留当前回合。");
+    ui.roundCount.textContent = `${state.round} / ${state.maxRounds}`;
+    ui.scoreCount.textContent = String(state.score);
+    renderMatrix(state.uses, state.successes);
+    rememberResult();
+    renderTrail();
+
+    if (state.phase === "waiting") return renderWaiting();
+    if (state.phase === "signal") return renderSignal();
+    if (state.phase === "guess") return renderGuess();
+    if (state.phase === "result") return renderResult();
+    if (state.phase === "finished") return renderFinished();
+  }
+
+  function renderSignal() {
+    ui.phaseLabel.textContent = "选择信号";
+    if (state.role === "sender") {
+      const target = OBJECTS[state.target];
+      ui.roleLabel.textContent = "你是发送者";
+      ui.instruction.textContent = `让对方猜到：${target.name}`;
+      ui.instructionNote.textContent = "只能发送一个没有预设含义的词。想一想：你们过去怎样使用过它？";
+      ui.choiceStage.innerHTML = `
+        <div class="target-focus">${shapeMarkup(state.target)}<div class="target-name"><small>只有你看得见的目标</small><strong>${target.name}</strong></div></div>
+        <div class="token-grid" role="group" aria-label="选择发送的词">
+          ${TOKENS.map((token, index) => `<button class="token" data-signal="${index}">${token}<small>发送这个词</small></button>`).join("")}
+        </div>`;
+      ui.choiceStage.querySelectorAll("[data-signal]").forEach((button) => {
+        button.addEventListener("click", () => {
+          ui.choiceStage.querySelectorAll("button").forEach((item) => { item.disabled = true; });
+          send({ type: "signal", value: Number(button.dataset.signal) });
+        });
+      });
+    } else {
+      ui.roleLabel.textContent = "你是解释者";
+      ui.instruction.textContent = "对方正在选择一个词。";
+      ui.instructionNote.textContent = "目标对你保密。收到词以后，再根据共同历史选择物体。";
+      ui.choiceStage.innerHTML = `<div class="waiting-figure"><div><span></span>等待发送者的信号</div></div>`;
+    }
+  }
+
+  function renderGuess() {
+    ui.phaseLabel.textContent = "解释信号";
+    if (state.role === "receiver") {
+      ui.roleLabel.textContent = "你是解释者";
+      ui.instruction.textContent = "这个词在你们之间是什么意思？";
+      ui.instructionNote.textContent = "服务器仍然没有向你透露目标。选择你认为发送者看见的物体。";
+      ui.choiceStage.innerHTML = `
+        <div class="received"><span>你收到</span><strong>${TOKENS[state.signal]}</strong></div>
+        <div class="object-grid" role="group" aria-label="选择词所指的物体">
+          ${OBJECTS.map((object, index) => `<button class="object-choice" data-guess="${index}">${shapeMarkup(index)}<span>${object.short}</span></button>`).join("")}
+        </div>`;
+      ui.choiceStage.querySelectorAll("[data-guess]").forEach((button) => {
+        button.addEventListener("click", () => {
+          ui.choiceStage.querySelectorAll("button").forEach((item) => { item.disabled = true; });
+          send({ type: "guess", value: Number(button.dataset.guess) });
+        });
+      });
+    } else {
+      ui.roleLabel.textContent = "你是发送者";
+      ui.instruction.textContent = `你发送了“${TOKENS[state.signal]}”。`;
+      ui.instructionNote.textContent = `你的目标是${OBJECTS[state.target].name}。现在看对方会如何解释。`;
+      ui.choiceStage.innerHTML = `<div class="waiting-figure"><div><span></span>解释者正在选择物体</div></div>`;
+    }
+  }
+
+  function renderResult() {
+    const result = state.result;
+    ui.phaseLabel.textContent = result.correct ? "共同成功" : "解释偏离";
+    ui.roleLabel.textContent = `第 ${state.round} 回合结果`;
+    ui.instruction.textContent = result.correct ? "这个用法被双方接住了。" : "同一个词，引向了两个不同动作。";
+    ui.instructionNote.textContent = result.correct ? "成功不会把词义永久锁死，但会让下一次同样解释更有根据。" : "失败也是公开信息：下一轮双方都可以调整。";
+    ui.choiceStage.innerHTML = `
+      <div class="round-result">
+        <div class="result-card"><small>发送者的用词</small><strong class="result-token">${TOKENS[result.signal]}</strong></div>
+        <div class="result-card"><small>真正的目标</small><div class="result-object">${shapeMarkup(result.target)}<b>${OBJECTS[result.target].short}</b></div></div>
+        <div class="verdict ${result.correct ? "" : "wrong"}">${result.correct ? "解释者选择了同一个物体。一次共同使用进入了房间历史。" : `解释者选择了${OBJECTS[result.guess].short}。矩阵仍记录发送者怎样使用了这个词。`}</div>
+      </div>
+      <div class="ready-row"><p>${state.readyCount}/2 位玩家准备继续</p><button class="ready-button" id="readyButton" ${state.ready ? "disabled" : ""}>${state.ready ? "已准备，等待对方" : "进入下一回合"}</button></div>`;
+    $("#readyButton").addEventListener("click", () => send({ type: "ready" }));
+  }
+
+  function renderFinished() {
+    ui.phaseLabel.textContent = "实验完成";
+    ui.roleLabel.textContent = "十二回合结束";
+    ui.instruction.textContent = state.score >= 9 ? "你们已经形成了可用的共同约定。" : "你们留下了一个仍在变化的微型语言。";
+    ui.instructionNote.textContent = "结果已经匿名进入下方汇总。矩阵比一句“你们成功了”更重要：它显示约定究竟集中在哪里。";
+    ui.choiceStage.innerHTML = `
+      <div class="final-card">
+        <div class="final-score">${state.score}<small> / ${state.maxRounds}</small></div>
+        <h3>${conventionSentence(state.uses)}</h3>
+        <p>这里的“意思”指你们在这个有限任务中形成的稳定行动预期，不是对三个词的普遍定义。</p>
+        <button class="primary" id="resetButton">和同一位玩家再做十二轮</button>
+      </div>`;
+    $("#resetButton").addEventListener("click", () => send({ type: "reset" }));
+    loadAggregate();
+  }
+
+  function conventionSentence(uses) {
+    const mapping = uses.map((row) => {
+      const max = Math.max(...row);
+      const winners = row.map((value, index) => value === max && max > 0 ? index : -1).filter((index) => index >= 0);
+      return winners.length === 1 ? winners[0] : -1;
+    });
+    if (mapping.every((value) => value >= 0) && new Set(mapping).size === 3) {
+      return TOKENS.map((token, index) => `${token} → ${OBJECTS[mapping[index]].short}`).join("，");
+    }
+    return "至少一个词仍有并列或冲突的用法。";
+  }
+
+  function rememberResult() {
+    if (!state.result) return;
+    const key = `${state.round}:${state.result.signal}:${state.result.target}:${state.result.guess}`;
+    if (key === previousResultKey) return;
+    previousResultKey = key;
+    trail.unshift({ ...state.result, round: state.round });
+    if (trail.length > 5) trail.length = 5;
+  }
+
+  function renderTrail() {
+    if (!trail.length) {
+      ui.trailList.innerHTML = `<span class="matrix-legend">完成第一轮后，这里会出现记录。</span>`;
+      return;
+    }
+    ui.trailList.innerHTML = trail.map((item) => `
+      <div class="trail-item"><b>${TOKENS[item.signal]}</b><span>→</span>${shapeMarkup(item.target)}<em class="${item.correct ? "ok" : "no"}">${item.correct ? "成功" : "偏离"}</em></div>
+    `).join("");
+  }
+
+  function renderMatrix(uses, successes) {
+    const heads = OBJECTS.map((_, index) => `<div class="matrix-head">${shapeMarkup(index)}</div>`).join("");
+    const rows = TOKENS.map((token, rowIndex) => {
+      const total = uses[rowIndex].reduce((sum, value) => sum + value, 0);
+      const max = Math.max(...uses[rowIndex]);
+      const cells = uses[rowIndex].map((value, colIndex) => {
+        const rate = value ? Math.round(100 * successes[rowIndex][colIndex] / value) : 0;
+        const fill = total ? Math.round(100 * value / total) : 0;
+        const best = value > 0 && value === max;
+        return `<div class="matrix-cell ${best ? "best" : ""}" style="--fill:${fill}%"><div><strong>${value}</strong><br><small>${value ? `${rate}% 成功` : "—"}</small></div></div>`;
+      }).join("");
+      return `<div class="matrix-word">${token}</div>${cells}`;
+    }).join("");
+    ui.matrix.innerHTML = `<div></div>${heads}${rows}`;
+  }
+
+  const conventionLabels = [
+    ["012", "mepo ○ · luma △ · tavi □"],
+    ["021", "mepo ○ · luma □ · tavi △"],
+    ["102", "mepo △ · luma ○ · tavi □"],
+    ["120", "mepo △ · luma □ · tavi ○"],
+    ["201", "mepo □ · luma ○ · tavi △"],
+    ["210", "mepo □ · luma △ · tavi ○"],
+    ["unsettled", "尚未稳定"]
+  ];
+
+  async function loadAggregate() {
+    try {
+      const response = await fetch("/api/conventions", { cache: "no-store" });
+      const data = await response.json();
+      const max = Math.max(1, ...conventionLabels.map(([key]) => data.counts[key] || 0));
+      ui.aggregateTotal.innerHTML = `${data.total} <small>组</small>`;
+      ui.aggregateBars.innerHTML = conventionLabels.map(([key, label]) => {
+        const count = data.counts[key] || 0;
+        return `<div class="bar-row"><span class="bar-label">${label}</span><span class="bar-track"><span class="bar-fill" style="width:${100 * count / max}%"></span></span><span class="bar-value">${count}</span></div>`;
+      }).join("");
+    } catch {
+      ui.aggregateTotal.innerHTML = `— <small>组</small>`;
+      ui.aggregateBars.innerHTML = `<p class="matrix-legend">暂时无法读取汇总；双人实验仍可继续。</p>`;
+    }
+  }
+
+  ui.matchButton.addEventListener("click", quickMatch);
+  ui.createButton.addEventListener("click", () => openRoom(makeRoom()));
+  ui.joinForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    openRoom(ui.roomInput.value);
+  });
+  ui.roomInput.addEventListener("input", () => {
+    ui.roomInput.value = ui.roomInput.value.toUpperCase().replace(/[^A-Z2-9]/g, "").slice(0, 8);
+  });
+  ui.copyButton.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(invitationUrl());
+      ui.copyButton.textContent = "已复制";
+      setTimeout(() => { ui.copyButton.textContent = "复制邀请链接"; }, 1600);
+    } catch {
+      prompt("复制这条邀请链接：", invitationUrl());
+    }
+  });
+  ui.leaveButton.addEventListener("click", () => {
+    closeSockets();
+    room = null;
+    state = null;
+    updateRoomUrl(null);
+    ui.sharePanel.hidden = true;
+    ui.game.hidden = true;
+    ui.entry.hidden = false;
+    ui.matchButton.disabled = false;
+    ui.createButton.disabled = false;
+    setEntryNote("你已离开房间。可以重新配对或创建新房间。");
+  });
+
+  const progressFill = $("#progressFill");
+  const progressText = $("#progressText");
+  function updateProgress() {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const ratio = max > 0 ? scrollY / max : 0;
+    progressFill.style.width = `${Math.min(100, Math.max(0, ratio * 100))}%`;
+    progressText.textContent = ratio < .18 ? "进入实验" : ratio < .55 ? "观察使用" : ratio < .82 ? "区分边界" : "结论";
+  }
+  addEventListener("scroll", updateProgress, { passive: true });
+  addEventListener("beforeunload", closeSockets);
+  updateProgress();
+  loadAggregate();
+
+  const requestedRoom = new URL(location.href).searchParams.get("room");
+  if (requestedRoom) openRoom(requestedRoom);
+})();
+</script>
+</body>
+</html>
