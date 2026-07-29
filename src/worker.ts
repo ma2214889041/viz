@@ -537,6 +537,26 @@ export default {
       return json({ error: "not_found" }, 404);
     }
 
-    return env.ASSETS.fetch(request);
+    const isHtmlNavigation =
+      request.method === "GET" &&
+      (
+        url.pathname === "/" ||
+        url.pathname.endsWith("/") ||
+        request.headers.get("Accept")?.includes("text/html")
+      );
+    if (!isHtmlNavigation) return env.ASSETS.fetch(request);
+
+    const assetHeaders = new Headers(request.headers);
+    assetHeaders.set("Cache-Control", "no-cache");
+    const response = await env.ASSETS.fetch(new Request(request, { headers: assetHeaders }));
+    if (!response.headers.get("Content-Type")?.includes("text/html")) return response;
+
+    const responseHeaders = new Headers(response.headers);
+    responseHeaders.set("Cache-Control", "no-store");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders
+    });
   }
 } satisfies ExportedHandler<Env>;
