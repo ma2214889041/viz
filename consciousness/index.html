@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>一场实验能判决意识发生在哪里吗？— VIZ</title>
+<meta name="description" content="重走 2025 年 IIT 与全球神经工作空间理论的对抗式合作，亲自按预注册规则判断五件证物。">
+<link rel="canonical" href="https://viz.gopromp.com/consciousness/">
+<link rel="icon" href="../favicon.png" type="image/png">
+<meta property="og:title" content="一场实验能判决意识发生在哪里吗？">
+<meta property="og:description" content="两种理论、三种脑成像方法、五件证物。不要投票，先检查预测。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://viz.gopromp.com/consciousness/">
+<style>
+:root{
+  --ink:#0b0b0b;
+  --muted:#656560;
+  --line:#d9d9d3;
+  --soft:#f4f4f0;
+  --paper:#fafaf7;
+  --iit:#ff5b35;
+  --iit-soft:#fff0ea;
+  --gnw:#4e62ff;
+  --gnw-soft:#eef0ff;
+  --neutral:#17745b;
+  --neutral-soft:#e9f5f0;
+  --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Songti SC","Noto Serif SC","STSong",Georgia,serif;
+  --page:min(1240px,calc(100vw - 48px));
+  --text:min(760px,calc(100vw - 48px));
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:#fff;color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+button{font:inherit}
+a{color:inherit}
+::selection{background:#dfe4ff}
+:where(a,button):focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.skip{
+  position:fixed;top:-100px;left:18px;z-index:100;background:var(--ink);
+  color:#fff;padding:10px 14px;border-radius:8px;
+}
+.skip:focus{top:14px}
+.header{
+  position:sticky;top:0;z-index:40;height:68px;background:rgba(255,255,255,.94);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(18px);
+}
+.nav{width:var(--page);height:100%;margin:auto;display:flex;align-items:center;gap:22px}
+.logo{font-size:21px;font-weight:650;letter-spacing:-.055em;text-decoration:none}
+.crumb{color:#777;font-size:13px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}
+.progress-track{width:112px;height:2px;background:#ddd}
+.progress-fill{display:block;width:0;height:100%;background:var(--ink);transition:width .25s}
+
+.hero{width:var(--page);margin:auto;padding:clamp(96px,12vw,164px) 0 90px}
+.eyebrow{display:flex;justify-content:space-between;gap:24px;margin-bottom:36px;font-size:12px;font-weight:600}
+.eyebrow span:last-child{color:var(--muted);font-weight:500}
+h1{
+  max-width:1080px;font-size:clamp(54px,7.6vw,104px);font-weight:500;
+  line-height:.94;letter-spacing:-.068em;text-wrap:balance;
+}
+.dek{
+  max-width:760px;margin-top:38px;color:#383834;font:400 clamp(19px,1.75vw,24px)/1.65 var(--serif);
+}
+.hero-facts{
+  display:grid;grid-template-columns:repeat(4,1fr);margin-top:74px;
+  border-top:1px solid var(--ink);border-bottom:1px solid var(--line);
+}
+.hero-fact{padding:22px 18px 25px 0}
+.hero-fact+.hero-fact{padding-left:24px;border-left:1px solid var(--line)}
+.hero-fact b{display:block;font-size:28px;font-weight:520;letter-spacing:-.04em}
+.hero-fact span{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
+
+.prediction{background:#0d0e11;color:#f7f7f4;padding:100px 0}
+.prediction-inner{width:var(--page);margin:auto;display:grid;grid-template-columns:.78fr 1.55fr;gap:clamp(42px,8vw,120px)}
+.section-label{font-size:12px;font-weight:600;letter-spacing:.02em}
+.prediction h2,.brief h2,.court-intro h2,.result h2{
+  font-size:clamp(38px,4.8vw,68px);font-weight:500;line-height:1.02;letter-spacing:-.055em;text-wrap:balance;
+}
+.prediction-copy>p{max-width:680px;margin-top:24px;color:#b9bbc2;font-size:16px;line-height:1.75}
+.prediction-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:36px}
+.prediction-option{
+  min-height:136px;padding:18px;text-align:left;color:#f7f7f4;background:#17191e;
+  border:1px solid #343740;border-radius:12px;cursor:pointer;transition:.18s;
+}
+.prediction-option:hover{border-color:#8b8f9b;transform:translateY(-2px)}
+.prediction-option[aria-pressed="true"]{background:#f7f7f4;color:#0d0e11;border-color:#f7f7f4}
+.prediction-option b{display:block;font-size:15px}
+.prediction-option span{display:block;margin-top:28px;color:#969aa6;font-size:12px;line-height:1.5}
+.prediction-option[aria-pressed="true"] span{color:#555}
+.prediction-note{min-height:24px;margin-top:18px;color:#b9bbc2;font-size:13px}
+
+.brief{width:var(--page);margin:auto;padding:120px 0}
+.brief-head{display:grid;grid-template-columns:.78fr 1.55fr;gap:clamp(42px,8vw,120px);margin-bottom:70px}
+.brief-head p{max-width:710px;margin-top:24px;color:var(--muted);font-size:16px;line-height:1.8}
+.theories{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--ink)}
+.theory{padding:42px 0 52px}
+.theory+.theory{padding-left:48px;border-left:1px solid var(--line)}
+.theory-tag{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:650}
+.theory-tag::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--iit)}
+.theory.gnw .theory-tag::before{background:var(--gnw)}
+.theory h3{max-width:470px;margin-top:22px;font-size:clamp(28px,3vw,42px);font-weight:520;line-height:1.08;letter-spacing:-.045em}
+.theory>p{max-width:520px;margin-top:20px;color:var(--muted);font-size:14px;line-height:1.75}
+.brain{
+  position:relative;height:230px;margin-top:38px;border-radius:46% 54% 48% 52% / 44% 46% 54% 56%;
+  background:var(--paper);border:1px solid var(--line);overflow:hidden;
+}
+.brain::before,.brain::after{
+  content:"";position:absolute;border:1px solid #d4d4cd;border-radius:50%;opacity:.8;
+}
+.brain::before{inset:38px 22px 36px 64px}
+.brain::after{inset:67px 82px 56px 28px}
+.brain-label{position:absolute;z-index:2;font-size:11px;line-height:1.3}
+.brain-label b{display:block}
+.brain-label.posterior{right:30px;top:84px;text-align:right}
+.brain-label.frontal{left:28px;top:70px}
+.hotzone,.workspace{
+  position:absolute;z-index:1;border-radius:50%;filter:blur(.2px);opacity:.8;
+}
+.hotzone{right:18px;top:34px;width:58%;height:72%;background:var(--iit-soft);border:1px solid #ffc7b6}
+.workspace{left:18px;top:28px;width:44%;height:76%;background:var(--gnw-soft);border:1px solid #bdc5ff}
+.broadcast{position:absolute;left:36%;right:15%;top:49%;height:1px;background:var(--gnw)}
+.broadcast::after{content:"";position:absolute;right:-1px;top:-3px;border-left:6px solid var(--gnw);border-top:3px solid transparent;border-bottom:3px solid transparent}
+.theory-claims{margin-top:30px;border-top:1px solid var(--line)}
+.claim{display:grid;grid-template-columns:92px 1fr;gap:18px;padding:16px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.55}
+.claim b{font-weight:600}.claim span{color:var(--muted)}
+
+.rules{background:var(--soft);padding:110px 0}
+.rules-inner{width:var(--page);margin:auto}
+.rules-head{display:grid;grid-template-columns:.78fr 1.55fr;gap:clamp(42px,8vw,120px)}
+.rules h2{font-size:clamp(36px,4.5vw,62px);font-weight:500;line-height:1.04;letter-spacing:-.055em}
+.rules-grid{display:grid;grid-template-columns:repeat(4,1fr);margin-top:60px;border-top:1px solid var(--ink)}
+.rule{padding:25px 22px 0 0}
+.rule+.rule{padding-left:22px;border-left:1px solid var(--line)}
+.rule-num{color:#888;font-size:11px}
+.rule h3{margin-top:22px;font-size:17px;font-weight:560}
+.rule p{margin-top:10px;color:var(--muted);font-size:13px;line-height:1.65}
+.scope-warning{
+  max-width:900px;margin:70px auto 0;padding:28px 0;border-top:1px solid var(--ink);
+  border-bottom:1px solid var(--ink);font:400 20px/1.65 var(--serif);text-align:center;
+}
+
+.court-intro{width:var(--page);margin:auto;padding:120px 0 70px;display:grid;grid-template-columns:.78fr 1.55fr;gap:clamp(42px,8vw,120px)}
+.court-intro p{max-width:720px;margin-top:24px;color:var(--muted);font-size:15px;line-height:1.75}
+.court{width:var(--page);margin:auto;padding-bottom:130px}
+.court-top{
+  position:sticky;top:67px;z-index:20;display:flex;align-items:center;gap:20px;
+  padding:16px 0;background:rgba(255,255,255,.96);border-top:1px solid var(--ink);border-bottom:1px solid var(--line);
+  backdrop-filter:blur(16px);
+}
+.court-counter{font-size:12px;font-weight:600;white-space:nowrap}
+.case-dots{display:flex;gap:7px}
+.case-dot{width:8px;height:8px;border-radius:50%;background:#d5d5cf;transition:.2s}
+.case-dot.done{background:var(--neutral)}
+.case-status{margin-left:auto;color:var(--muted);font-size:12px}
+.exhibit{
+  display:grid;grid-template-columns:180px minmax(0,1fr);gap:48px;
+  padding:78px 0;border-bottom:1px solid var(--line);scroll-margin-top:130px;
+}
+.exhibit-meta{font-size:12px;line-height:1.6}
+.exhibit-meta b{display:block;margin-bottom:12px}
+.exhibit-meta span{display:block;color:var(--muted)}
+.exhibit-main{max-width:900px}
+.exhibit-main h3{font-size:clamp(29px,3.2vw,46px);font-weight:520;line-height:1.08;letter-spacing:-.045em;text-wrap:balance}
+.observation{
+  margin-top:25px;padding:24px 26px;background:var(--paper);border-left:3px solid var(--ink);
+  font:400 19px/1.65 var(--serif);
+}
+.question{margin-top:28px;font-size:13px;font-weight:600}
+.verdict-options{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+.verdict-button{
+  min-width:150px;padding:13px 16px;border:1px solid var(--line);border-radius:999px;
+  background:#fff;color:var(--ink);cursor:pointer;transition:.16s;
+}
+.verdict-button:hover{border-color:var(--ink)}
+.verdict-button:disabled{cursor:default;opacity:.45}
+.verdict-button.selected{opacity:1;color:#fff;background:var(--ink);border-color:var(--ink)}
+.reveal{
+  display:none;margin-top:30px;padding-top:25px;border-top:1px solid var(--line);
+  grid-template-columns:115px 1fr;gap:24px;
+}
+.exhibit.judged .reveal{display:grid}
+.reveal-label{font-size:12px;font-weight:650}
+.reveal-label.iit{color:#c13b1d}.reveal-label.gnw{color:#394bd0}.reveal-label.neutral{color:var(--neutral)}
+.reveal-copy p{color:#40403c;font-size:14px;line-height:1.75}
+.reveal-copy p+p{margin-top:11px}
+.reveal-copy .why{color:var(--muted)}
+.source-link{display:inline-block;margin-top:15px;color:var(--muted);font-size:11px;text-underline-offset:4px}
+
+.result{display:none;background:#0d0e11;color:#f7f7f4;padding:120px 0}
+.result.show{display:block}
+.result-inner{width:var(--page);margin:auto}
+.result-head{display:grid;grid-template-columns:.78fr 1.55fr;gap:clamp(42px,8vw,120px)}
+.result-head p{max-width:720px;margin-top:24px;color:#b9bbc2;font-size:16px;line-height:1.75}
+.matrix{margin-top:70px;border-top:1px solid #656872}
+.matrix-row{
+  display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:24px;
+  padding:24px 0;border-bottom:1px solid #32343b;align-items:start;
+}
+.matrix-row.head{color:#8f939e;font-size:11px}
+.matrix-row h3{font-size:16px;font-weight:560}
+.matrix-cell b{display:block;font-size:13px;font-weight:600}
+.matrix-cell p{margin-top:7px;color:#aeb1ba;font-size:12px;line-height:1.55}
+.status-support{color:#75d9b7}.status-challenge{color:#ff896d}.status-mixed{color:#aeb6ff}
+.receipt{
+  margin-top:70px;padding:32px 0;border-top:1px solid #656872;border-bottom:1px solid #656872;
+  display:grid;grid-template-columns:1fr 2fr;gap:40px;
+}
+.receipt-label{font-size:12px;font-weight:600}
+.receipt h3{font:400 clamp(25px,3vw,40px)/1.25 var(--serif)}
+.receipt p{margin-top:18px;color:#aeb1ba;font-size:14px;line-height:1.7}
+.receipt button{
+  margin-top:24px;padding:12px 17px;border:1px solid #656872;border-radius:999px;
+  color:#f7f7f4;background:transparent;cursor:pointer;
+}
+.receipt button:hover{border-color:#f7f7f4}
+
+.limits{width:var(--text);margin:auto;padding:120px 0}
+.limits h2{font-size:clamp(34px,4.2vw,56px);font-weight:500;line-height:1.05;letter-spacing:-.05em}
+.limits>p{margin-top:28px;color:#41413d;font:400 18px/1.8 var(--serif)}
+.limits-list{margin-top:45px;border-top:1px solid var(--ink)}
+.limit{display:grid;grid-template-columns:42px 1fr;gap:20px;padding:22px 0;border-bottom:1px solid var(--line)}
+.limit span{color:#888;font-size:11px}
+.limit p{font-size:14px;line-height:1.7}
+.sources{margin-top:70px}
+.sources h3{font-size:14px;font-weight:600}
+.sources ol{margin:18px 0 0 18px}
+.sources li{padding:5px 0;color:var(--muted);font-size:12px;line-height:1.6}
+.sources a{text-underline-offset:3px}
+.footer{border-top:1px solid var(--line)}
+.footer-inner{
+  width:var(--page);margin:auto;padding:46px 0 26px;display:flex;justify-content:space-between;
+  gap:24px;color:var(--muted);font-size:12px;
+}
+
+@media(max-width:800px){
+  :root{--page:calc(100vw - 32px);--text:calc(100vw - 32px)}
+  .header{height:62px}.crumb{display:none}.progress-track{width:74px}
+  .hero{padding:82px 0 70px}.eyebrow{flex-direction:column;gap:8px}.hero h1{font-size:50px}
+  .dek{font-size:18px}.hero-facts{grid-template-columns:1fr 1fr;margin-top:55px}
+  .hero-fact:nth-child(3){border-left:0;border-top:1px solid var(--line);padding-left:0}
+  .hero-fact:nth-child(4){border-top:1px solid var(--line)}
+  .prediction{padding:76px 0}.prediction-inner,.brief-head,.rules-head,.court-intro,.result-head{grid-template-columns:1fr;gap:28px}
+  .prediction-options{grid-template-columns:1fr}.prediction-option{min-height:0}.prediction-option span{margin-top:10px}
+  .brief{padding:85px 0}.brief-head{margin-bottom:45px}.theories{grid-template-columns:1fr}
+  .theory+.theory{padding-left:0;border-left:0;border-top:1px solid var(--line)}
+  .brain{height:210px}.rules{padding:80px 0}.rules-grid{grid-template-columns:1fr 1fr}
+  .rule:nth-child(3){padding-left:0;border-left:0;border-top:1px solid var(--line)}
+  .rule:nth-child(4){border-top:1px solid var(--line)}.rule{padding-bottom:24px}
+  .scope-warning{text-align:left;font-size:18px}
+  .court-intro{padding:85px 0 50px}.court-top{top:61px}.case-status{display:none}
+  .exhibit{grid-template-columns:1fr;gap:25px;padding:58px 0}
+  .exhibit-meta{display:flex;gap:14px;flex-wrap:wrap}.exhibit-meta b{width:100%;margin-bottom:0}
+  .observation{font-size:17px;padding:20px}.verdict-options{display:grid;grid-template-columns:1fr}
+  .verdict-button{width:100%}.reveal{grid-template-columns:1fr;gap:10px}
+  .result{padding:85px 0}.matrix-row{grid-template-columns:1fr;gap:20px}.matrix-row.head{display:none}
+  .matrix-cell{padding-left:62px;position:relative}
+  .matrix-cell::before{content:attr(data-theory);position:absolute;left:0;top:0;color:#8f939e;font-size:11px}
+  .receipt{grid-template-columns:1fr;gap:18px}.limits{padding:85px 0}
+  .footer-inner{flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">跳到正文</a>
+<header class="header">
+  <nav class="nav" aria-label="页面导航">
+    <a class="logo" href="../">VIZ</a>
+    <span class="crumb">意识的证据法庭</span>
+    <div class="progress" aria-label="阅读进度"><span id="progressText">序章</span><span class="progress-track"><span class="progress-fill" id="progressFill"></span></span></div>
+  </nav>
+</header>
+
+<main id="content">
+  <section class="hero">
+    <div class="eyebrow"><span>神经科学 × 科学哲学</span><span>2026 年 7 月 29 日 · 约 10 分钟</span></div>
+    <h1>一场实验，能判决意识发生在哪里吗？</h1>
+    <p class="dek">两套意识理论的支持者，把各自最关键的预测提前交给同一组实验。数据揭晓前，谁也不能移动门柱。现在，五件证物摆在你面前。</p>
+    <div class="hero-facts" aria-label="研究规模">
+      <div class="hero-fact"><b>256</b><span>名人类参与者</span></div>
+      <div class="hero-fact"><b>3</b><span>种互补测量：fMRI、MEG、iEEG</span></div>
+      <div class="hero-fact"><b>2</b><span>套对立的生物学实现</span></div>
+      <div class="hero-fact"><b>3</b><span>组预注册预测</span></div>
+    </div>
+  </section>
+
+  <section class="prediction" id="prediction">
+    <div class="prediction-inner">
+      <div class="section-label">先留下立场</div>
+      <div class="prediction-copy">
+        <h2>在看证据以前，你猜谁经受住了检验？</h2>
+        <p>这不是知识测验。先记录直觉，才看得见证据究竟改变了什么。</p>
+        <div class="prediction-options" role="group" aria-label="选择初始判断">
+          <button class="prediction-option" data-prediction="iit" aria-pressed="false"><b>IIT 更稳固</b><span>意识内容主要由后部皮层的整合结构维持</span></button>
+          <button class="prediction-option" data-prediction="gnw" aria-pressed="false"><b>GNWT 更稳固</b><span>意识来自前额叶参与的全局广播与点火</span></button>
+          <button class="prediction-option" data-prediction="both" aria-pressed="false"><b>两者都被挑战</b><span>数据可能同时击中两套理论的关键预测</span></button>
+        </div>
+        <p class="prediction-note" id="predictionNote" aria-live="polite">选择后不会立刻揭晓。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="brief" aria-labelledby="briefTitle">
+    <div class="brief-head">
+      <div class="section-label">两位证人</div>
+      <div>
+        <h2 id="briefTitle">争论的不是“意识是否存在”，而是它依靠什么神经机制。</h2>
+        <p>研究没有直接计算 IIT 的 Φ，也没有穷尽 GNWT 的所有版本。它检验的是两套理论支持者事先认可、且能被现有脑成像技术区分的生物学实现。</p>
+      </div>
+    </div>
+    <div class="theories">
+      <article class="theory">
+        <div class="theory-tag">IIT · 整合信息理论</div>
+        <h3>经验由系统对自身不可约的因果作用构成。</h3>
+        <p>在这次检验里，它把意识内容的主要物理基底放在后部“热区”：枕叶、颞叶和顶叶相关区域。</p>
+        <div class="brain" aria-label="IIT 预测的后部热区示意图">
+          <div class="hotzone"></div>
+          <div class="brain-label posterior"><b>后部热区</b>持续表征与短程连接</div>
+        </div>
+        <div class="theory-claims">
+          <div class="claim"><b>在哪里</b><span>意识内容应主要在后部皮层被解码。</span></div>
+          <div class="claim"><b>持续多久</b><span>刺激存在多久，后部表征就应活跃多久。</span></div>
+          <div class="claim"><b>怎样连接</b><span>早期视觉区与高阶类别区之间应持续同步。</span></div>
+        </div>
+      </article>
+      <article class="theory gnw">
+        <div class="theory-tag">GNWT · 全球神经工作空间理论</div>
+        <h3>信息越过阈值后，被点火并广播给全脑多个系统。</h3>
+        <p>在这次检验里，前额叶是关键节点：刺激出现和消失时应更新工作空间，内容应能在这里被读出。</p>
+        <div class="brain" aria-label="GNWT 预测的前额叶工作空间示意图">
+          <div class="workspace"></div><div class="broadcast"></div>
+          <div class="brain-label frontal"><b>前额叶</b>点火与长程广播</div>
+        </div>
+        <div class="theory-claims">
+          <div class="claim"><b>在哪里</b><span>前额叶应包含意识内容的重要维度。</span></div>
+          <div class="claim"><b>何时更新</b><span>刺激出现与消失时都应出现短暂点火。</span></div>
+          <div class="claim"><b>怎样连接</b><span>前额叶与高阶感觉区之间应发生长程同步。</span></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="rules" aria-labelledby="rulesTitle">
+    <div class="rules-inner">
+      <div class="rules-head">
+        <div class="section-label">审判程序</div>
+        <h2 id="rulesTitle">先固定规则，再打开数据。</h2>
+      </div>
+      <div class="rules-grid">
+        <div class="rule"><span class="rule-num">01</span><h3>共同预注册</h3><p>理论支持者与中立团队事先写下不同预测、通过条件和失败含义。</p></div>
+        <div class="rule"><span class="rule-num">02</span><h3>分离角色</h3><p>理论支持者不负责数据采集；采集与分析由多地点团队完成。</p></div>
+        <div class="rule"><span class="rule-num">03</span><h3>互补仪器</h3><p>fMRI 补空间，MEG 补时间，颅内 EEG 提供更直接的局部电活动。</p></div>
+        <div class="rule"><span class="rule-num">04</span><h3>冻结检验集</h3><p>三分之一数据优化分析，三分之二独立数据用于最终检验。</p></div>
+      </div>
+      <p class="scope-warning">法庭判的是“这项预注册预测有没有过关”，不是给整套意识理论判死刑。</p>
+    </div>
+  </section>
+
+  <section class="court-intro" aria-labelledby="courtTitle">
+    <div class="section-label">五件证物</div>
+    <div>
+      <h2 id="courtTitle">每次只判断一条预测。</h2>
+      <p>把证物归给它真正质询的理论，或者判定它没有足够区分力。选择后才会显示预注册判定与限制。</p>
+    </div>
+  </section>
+
+  <section class="court" aria-label="证据法庭" id="court">
+    <div class="court-top">
+      <span class="court-counter" id="courtCounter">0 / 5 已审</span>
+      <div class="case-dots" aria-hidden="true"><i class="case-dot"></i><i class="case-dot"></i><i class="case-dot"></i><i class="case-dot"></i><i class="case-dot"></i></div>
+      <span class="case-status" id="caseStatus">结案前不显示总判决</span>
+    </div>
+
+    <article class="exhibit" data-answer="gnw" data-index="0">
+      <div class="exhibit-meta"><b>证物 A</b><span>预测 2 · 时间</span><span>关键检验</span></div>
+      <div class="exhibit-main">
+        <h3>刺激消失时，前额叶没有普遍出现第二次“点火”。</h3>
+        <p class="observation">图像从屏幕上消失意味着意识内容从“看见一张脸”更新为“看见空白”。视觉区能测到清楚的消失反应，同一刺激在前额叶也产生了强烈的出现反应；但预期的前额叶消失点火普遍缺席。</p>
+        <p class="question">它最直接挑战谁？</p>
+        <div class="verdict-options" role="group" aria-label="证物 A 判定">
+          <button class="verdict-button" data-choice="iit">IIT</button>
+          <button class="verdict-button" data-choice="gnw">GNWT</button>
+          <button class="verdict-button" data-choice="neutral">无区分力</button>
+        </div>
+        <div class="reveal" aria-live="polite">
+          <div class="reveal-label gnw">挑战 GNWT</div>
+          <div class="reveal-copy">
+            <p>GNWT 在预注册中预测，刺激出现与消失都会更新全局工作空间。消失时没有点火，使它无法解释这次明确的意识内容更新。</p>
+            <p class="why">为什么负结果有分量：不是所有信号都没测到——同一套方法测到了视觉区的消失反应和前额叶的出现反应。</p>
+            <a class="source-link" href="https://www.nature.com/articles/s41586-025-08888-1" target="_blank" rel="noopener">Nature 正文：prediction 2 与讨论 ↗</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="exhibit" data-answer="iit" data-index="1">
+      <div class="exhibit-meta"><b>证物 B</b><span>预测 3 · 连接</span><span>IIT 核心检验</span></div>
+      <div class="exhibit-main">
+        <h3>后部皮层内部，没有出现预期的持续同步。</h3>
+        <p class="observation">研究寻找早期视觉区 V1/V2 与高阶类别选择区之间、随意识内容持续存在的同步。预注册相位一致性指标没有找到这种持续后部连接；贝叶斯分析也在多处支持“没有该效应”。</p>
+        <p class="question">它最直接挑战谁？</p>
+        <div class="verdict-options" role="group" aria-label="证物 B 判定">
+          <button class="verdict-button" data-choice="iit">IIT</button>
+          <button class="verdict-button" data-choice="gnw">GNWT</button>
+          <button class="verdict-button" data-choice="neutral">无区分力</button>
+        </div>
+        <div class="reveal" aria-live="polite">
+          <div class="reveal-label iit">挑战 IIT</div>
+          <div class="reveal-copy">
+            <p>这是研究者认为对 IIT 最直接的挑战：IIT 的生物学实现把网络的活动与连接结构视为意识内容的物理基底，而预期的持续后部同步没有出现。</p>
+            <p class="why">限制：实验检验的是人脑中被提出的生物学实现，并没有直接计算 IIT 的数学核心 Φ。</p>
+            <a class="source-link" href="https://www.nature.com/articles/s41586-025-08888-1" target="_blank" rel="noopener">Nature 正文：prediction 3 与讨论 ↗</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="exhibit" data-answer="iit-support" data-index="2">
+      <div class="exhibit-meta"><b>证物 C</b><span>预测 2 · 持续</span><span>通过但有保留</span></div>
+      <div class="exhibit-main">
+        <h3>枕叶与外侧颞叶的活动，确实跟随刺激持续时间。</h3>
+        <p class="observation">刺激分别呈现 0.5、1.0 与 1.5 秒。后部视觉相关区域出现了与持续时间相符的反应，达到了 IIT 对“意识内容持续维持”的预定义通过标准；但方向信息没有被持续表征。</p>
+        <p class="question">这件证物更接近哪种判定？</p>
+        <div class="verdict-options" role="group" aria-label="证物 C 判定">
+          <button class="verdict-button" data-choice="iit-support">支持 IIT 的一条预测</button>
+          <button class="verdict-button" data-choice="gnw">挑战 GNWT</button>
+          <button class="verdict-button" data-choice="neutral">完全无区分力</button>
+        </div>
+        <div class="reveal" aria-live="polite">
+          <div class="reveal-label neutral">IIT 通过一项</div>
+          <div class="reveal-copy">
+            <p>按预定义标准，IIT 的持续时间预测通过。它是正面证据，但不能抹去证物 B 对连接预测的直接挑战。</p>
+            <p class="why">保留意见：方向是参与者明确看见的属性，却没有得到持续表征；“通过”不等于所有内容维度都符合。</p>
+            <a class="source-link" href="https://www.nature.com/articles/s41586-025-08888-1" target="_blank" rel="noopener">Nature 正文：持续表征结果 ↗</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="exhibit" data-answer="gnw" data-index="3">
+      <div class="exhibit-meta"><b>证物 D</b><span>预测 1 · 内容</span><span>部分挑战</span></div>
+      <div class="exhibit-main">
+        <h3>前额叶能分辨类别，却没有完整表示所看见的内容。</h3>
+        <p class="observation">参与者看见的是具体身份、朝向与类别。前额叶里能解码类别；但没有解码到身份，朝向只在 MEG 中出现，且可能受信号泄漏影响。后部视觉与腹颞区域则包含多种内容信息。</p>
+        <p class="question">它最直接削弱哪条主张？</p>
+        <div class="verdict-options" role="group" aria-label="证物 D 判定">
+          <button class="verdict-button" data-choice="iit">IIT 后部表征</button>
+          <button class="verdict-button" data-choice="gnw">GNWT 前额叶必要角色</button>
+          <button class="verdict-button" data-choice="neutral">两边完全一样</button>
+        </div>
+        <div class="reveal" aria-live="polite">
+          <div class="reveal-label gnw">部分挑战 GNWT</div>
+          <div class="reveal-copy">
+            <p>GNWT 并非完全失败：前额叶确实包含类别信息。但身份和朝向没有稳定出现，使“意识内容的重要维度应在前额叶可读出”的版本受到挑战。</p>
+            <p class="why">这件证物说明为什么不能只贴“支持／反对”：同一区域对类别阳性、对身份阴性，不同内容维度给出不同结论。</p>
+            <a class="source-link" href="https://www.nature.com/articles/s41586-025-08888-1" target="_blank" rel="noopener">Nature 正文：prediction 1 与讨论 ↗</a>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="exhibit" data-answer="neutral" data-index="4">
+      <div class="exhibit-meta"><b>证物 E</b><span>预测 3 · 连接</span><span>共享失败</span></div>
+      <div class="exhibit-main">
+        <h3>确实测到内容选择性连接，但不是双方预注册的那种模式。</h3>
+        <p class="observation">面孔选择区与早期视觉区、前额叶之间出现连接；但效应很早、集中在较低频率，并且大多可由刺激诱发反应解释。用于检验两套理论的预注册相位同步指标最终没有支持任何一方。</p>
+        <p class="question">最诚实的判定是什么？</p>
+        <div class="verdict-options" role="group" aria-label="证物 E 判定">
+          <button class="verdict-button" data-choice="iit">支持 IIT</button>
+          <button class="verdict-button" data-choice="gnw">支持 GNWT</button>
+          <button class="verdict-button" data-choice="neutral">不支持任何一方</button>
+        </div>
+        <div class="reveal" aria-live="polite">
+          <div class="reveal-label neutral">双方皆未获支持</div>
+          <div class="reveal-copy">
+            <p>“发现了连接”不等于“理论预测正确”。频率、持续时间、区域和统计指标都属于预测的一部分；只保留“有连接”会在数据揭晓后移动门柱。</p>
+            <p class="why">探索性分析可以启发下一轮假设，但不能倒过来冒充这轮预注册预测已经通过。</p>
+            <a class="source-link" href="https://www.nature.com/articles/s41586-025-08888-1" target="_blank" rel="noopener">Nature 正文：connectivity analyses ↗</a>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="result" id="result" aria-labelledby="resultTitle">
+    <div class="result-inner">
+      <div class="result-head">
+        <div class="section-label">证据矩阵</div>
+        <div>
+          <h2 id="resultTitle">没有赢家，不等于没有学到东西。</h2>
+          <p>研究按预测逐项判定，而不是把异质证据压成一个任意总分。失败的位置告诉下一轮实验应该逼问哪里。</p>
+        </div>
+      </div>
+      <div class="matrix" role="table" aria-label="三组预测的判定">
+        <div class="matrix-row head" role="row"><span role="columnheader">预注册问题</span><span role="columnheader">IIT</span><span role="columnheader">GNWT</span></div>
+        <div class="matrix-row" role="row">
+          <h3 role="rowheader">1 · 意识内容在哪里？</h3>
+          <div class="matrix-cell" role="cell" data-theory="IIT"><b class="status-mixed">部分符合</b><p>后部区域包含多种内容信息；这条预测并非 IIT 独有。</p></div>
+          <div class="matrix-cell" role="cell" data-theory="GNWT"><b class="status-challenge">受到挑战</b><p>前额叶有类别信息，但身份缺席，朝向证据有限。</p></div>
+        </div>
+        <div class="matrix-row" role="row">
+          <h3 role="rowheader">2 · 内容如何维持？</h3>
+          <div class="matrix-cell" role="cell" data-theory="IIT"><b class="status-support">通过，带保留</b><p>后部活动跟随持续时间；方向没有持续表征。</p></div>
+          <div class="matrix-cell" role="cell" data-theory="GNWT"><b class="status-challenge">关键挑战</b><p>刺激消失时普遍缺少前额叶第二次点火。</p></div>
+        </div>
+        <div class="matrix-row" role="row">
+          <h3 role="rowheader">3 · 区域怎样连接？</h3>
+          <div class="matrix-cell" role="cell" data-theory="IIT"><b class="status-challenge">直接挑战</b><p>后部皮层内部没有预期的持续同步。</p></div>
+          <div class="matrix-cell" role="cell" data-theory="GNWT"><b class="status-mixed">未获预注册支持</b><p>长程连接结果依测量与分析而异，关键指标未通过。</p></div>
+        </div>
+      </div>
+      <div class="receipt">
+        <div class="receipt-label">你的审理回执</div>
+        <div>
+          <h3 id="receiptTitle">你先审证物，再看结论。</h3>
+          <p id="receiptCopy">这比“选一个你喜欢的理论”多了一层：你留下了哪些证据真正具有区分力的记录。</p>
+          <button id="resetCourt">清空判定，重新审理</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="limits" aria-labelledby="limitsTitle">
+    <h2 id="limitsTitle">这场法庭没有审理什么？</h2>
+    <p>如果把这项研究直接写成“意识不在前额叶”或“IIT 被证伪”，就把一次精心设计的检验重新变成了口号。</p>
+    <div class="limits-list">
+      <div class="limit"><span>01</span><p><b>没有直接裁决数学核心。</b> 人脑尺度上无法直接计算 IIT 的完整 Φ；实验测试的是支持者认可的后部皮层实现。</p></div>
+      <div class="limit"><span>02</span><p><b>没有证明某个区域单独“产生意识”。</b> 解码、持续活动与同步是不同性质，相关信号也不自动等于因果必要性。</p></div>
+      <div class="limit"><span>03</span><p><b>没有检验机器是否有意识。</b> 参与者是人类，任务是清楚可见的视觉刺激；把结果外推到大语言模型需要另一套可检验预测。</p></div>
+      <div class="limit"><span>04</span><p><b>没有把失败当终点。</b> 理论可以修改生物学实现，但修改后的版本必须产生新的、事先可区分的预测。</p></div>
+    </div>
+    <div class="sources">
+      <h3>主要依据</h3>
+      <ol>
+        <li><a href="https://www.nature.com/articles/s41586-025-08888-1" target="_blank" rel="noopener">Cogitate Consortium et al. (2025), Nature 642, 133–142</a> — 最终实验、三组结果与三方讨论。</li>
+        <li><a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0268577" target="_blank" rel="noopener">Melloni et al. (2023), PLOS ONE</a> — 实验协议、对立预测与预注册程序。</li>
+        <li><a href="https://osf.io/mbcfy/" target="_blank" rel="noopener">Cogitate preregistration, OSF</a> — 数据采集前冻结的分析与判定材料。</li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<footer class="footer"><div class="footer-inner"><a href="../">← 返回 VIZ 文章首页</a><span>VIZ · EVIDENCE COURT · 2026</span></div></footer>
+
+<script>
+const predictionButtons=[...document.querySelectorAll('.prediction-option')];
+const predictionNote=document.getElementById('predictionNote');
+let prediction='';
+predictionButtons.forEach(button=>button.addEventListener('click',()=>{
+  prediction=button.dataset.prediction;
+  predictionButtons.forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+  predictionNote.textContent='立场已封存。完成五件证物后再与你的判断对照。';
+}));
+
+const exhibits=[...document.querySelectorAll('.exhibit')];
+const dots=[...document.querySelectorAll('.case-dot')];
+const counter=document.getElementById('courtCounter');
+const status=document.getElementById('caseStatus');
+const result=document.getElementById('result');
+const receiptTitle=document.getElementById('receiptTitle');
+const receiptCopy=document.getElementById('receiptCopy');
+const answers=new Map();
+
+function updateCourt(){
+  const total=answers.size;
+  counter.textContent=`${total} / ${exhibits.length} 已审`;
+  dots.forEach((dot,index)=>dot.classList.toggle('done',answers.has(index)));
+  status.textContent=total===exhibits.length?'证据已齐，可以结案':'结案前不显示总判决';
+  if(total!==exhibits.length)return;
+  result.classList.add('show');
+  const aligned=exhibits.filter((item,index)=>answers.get(index)===item.dataset.answer).length;
+  const predictionLabel={
+    iit:'IIT 更稳固',
+    gnw:'GNWT 更稳固',
+    both:'两者都被挑战'
+  }[prediction];
+  receiptTitle.textContent=predictionLabel
+    ?`你最初判断“${predictionLabel}”；五件证物中有 ${aligned} 件与预注册判定一致。`
+    :`五件证物中，有 ${aligned} 件与你的归类和预注册判定一致。`;
+  receiptCopy.textContent=prediction==='both'
+    ?'你的总体预测与研究结论方向一致。但更重要的是：IIT 在持续时间上通过一项，GNWT 在类别信息上也并非全无结果；“双方受挑战”不是一句平局口号。'
+    :'最终结果同时挑战两套理论。真正有信息量的不是押错哪一边，而是你现在能指出：IIT 的直接裂缝在持续后部连接，GNWT 的关键裂缝在消失点火和内容维度。';
+}
+
+exhibits.forEach((exhibit,index)=>{
+  const buttons=[...exhibit.querySelectorAll('.verdict-button')];
+  buttons.forEach(button=>button.addEventListener('click',()=>{
+    if(answers.has(index))return;
+    answers.set(index,button.dataset.choice);
+    buttons.forEach(item=>{
+      item.disabled=true;
+      item.classList.toggle('selected',item===button);
+    });
+    exhibit.classList.add('judged');
+    updateCourt();
+  }));
+});
+
+document.getElementById('resetCourt').addEventListener('click',()=>{
+  answers.clear();
+  exhibits.forEach(exhibit=>{
+    exhibit.classList.remove('judged');
+    exhibit.querySelectorAll('.verdict-button').forEach(button=>{
+      button.disabled=false;
+      button.classList.remove('selected');
+    });
+  });
+  result.classList.remove('show');
+  updateCourt();
+  document.getElementById('court').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+});
+
+const progressFill=document.getElementById('progressFill');
+const progressText=document.getElementById('progressText');
+function updateProgress(){
+  const root=document.documentElement;
+  const max=root.scrollHeight-innerHeight;
+  const value=max>0?Math.min(1,Math.max(0,scrollY/max)):0;
+  progressFill.style.width=`${Math.round(value*100)}%`;
+  progressText.textContent=value<.18?'序章':value<.42?'理论':value<.76?'证物':value<.9?'判决':'限制';
+}
+addEventListener('scroll',updateProgress,{passive:true});
+updateProgress();
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "dist");
 const baseUrl = "https://viz.gopromp.com";
-const workDirs = ["kakeya", "boltzmann"];
+const workDirs = ["consciousness", "kakeya", "boltzmann"];
 const fixedFiles = [
   "index.html",
   "404.html",
@@ -82,7 +82,7 @@ const rss = `<?xml version="1.0" encoding="UTF-8"?>
   <channel>
     <title>VIZ 最新文章</title>
     <link>${baseUrl}/</link>
-    <description>用交互式文章解释数学与物理中的复杂问题。</description>
+    <description>用交互式文章解释数学、科学与思想中的复杂问题。</description>
     <language>zh-CN</language>
 ${works
   .map(

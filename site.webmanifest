@@ -1,7 +1,7 @@
 {
   "name": "VIZ — 可视化文章",
   "short_name": "VIZ",
-  "description": "用交互式文章解释数学与物理中的复杂问题。",
+  "description": "用交互式文章解释数学、科学与思想中的复杂问题。",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
