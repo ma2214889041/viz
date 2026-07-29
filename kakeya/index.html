@@ -11,9 +11,6 @@
 <meta property="og:description" content="体积可以任意接近零，维数却必须是 3。可交互三维演示。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://viz.gopromp.com/kakeya/">
-<meta property="og:image" content="https://viz.gopromp.com/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://viz.gopromp.com/og.png">
 <style>
 :root{
   /* 配色取自 3Blue1Brown 的标准色板 */
@@ -253,6 +250,7 @@ canvas.chart{display:block;border-radius:8px}
   .card{width:100%}
 }
 </style>
+<link rel="stylesheet" href="../article.css">
 </head>
 <body class="home">
 
@@ -261,33 +259,31 @@ canvas.chart{display:block;border-radius:8px}
 <div id="labels"></div>
 
 <div id="top">
-  <div id="brand"><a href="../" title="返回 VIZ">←</a><b>一根针</b><span>KAKEYA · 1917</span></div>
+  <div id="brand"><a href="../" title="返回 VIZ">VIZ</a><b>一根针</b><span>KAKEYA · 1917</span></div>
   <nav id="nav">
-    <button data-go="home">开篇</button>
-    <button data-go="kakeya" class="k">演示</button>
-    <button data-go="tl">背景</button>
+    <button data-go="home">文章</button>
+    <button data-go="kakeya" class="k">互动</button>
+    <button data-go="tl">资料</button>
   </nav>
 </div>
 
 <!-- 首页 -->
 <section id="home">
-  <div class="eyebrow">数学 · 可交互三维演示</div>
-  <h1>一根针<br><i>最少能扫过多大地方</i></h1>
+  <div class="eyebrow">2026 年 7 月 29 日 · 数学</div>
+  <h1>一根针最少能扫过多大地方？</h1>
   <p class="sub">
-    1917 年挂谷宗一问了一个小学生也听得懂的问题：一根长度为 1 的针，要转过每一个方向，扫过的区域最小是多少？<br>
-    两年后 Besicovitch 给出的答案让所有人不舒服——<b>可以要多小有多小</b>。而这个几乎不占地方的东西，维数却必须是满满的 3。
-    三维情形卡了半个多世纪，2025 年才被解决。
+    1917 年，挂谷宗一问：一根长度为 1 的针要转过每一个方向，扫过的区域最小是多少？两年后 Besicovitch 给出了反直觉的答案——可以要多小有多小，而这个几乎不占地方的集合，维数却必须是完整的 3。
   </p>
   <div id="cards">
     <div class="card kk" data-go="kakeya" style="width:520px">
-      <div class="who"><h3>开始演示</h3><span>10 章 · 约 6 分钟</span></div>
+      <div class="who"><h3>开始互动演示 ↗</h3><span>10 章 · 约 6 分钟</span></div>
       <div class="tag">三维挂谷猜想</div>
       <p class="prob">从一根针转一圈开始，一步步看它怎么被压到几乎没有体积，而每个方向仍在里面。所有数值实时计算。</p>
       <div class="go">进入 →</div>
     </div>
   </div>
   <p class="foot">
-    拖动旋转 · 滚轮缩放 · 左右方向键翻章
+    10 章 · 约 6 分钟 · 可以拖动、调节递归深度和观察方向覆盖
   </p>
 </section>
 

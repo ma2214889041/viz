@@ -12,8 +12,7 @@ const fixedFiles = [
   "_headers",
   "robots.txt",
   "site.webmanifest",
-  "og.png",
-  "og-v2.png",
+  "article.css",
   "favicon.png"
 ];
 const extraDirs = ["kakeya-boltzmann"];

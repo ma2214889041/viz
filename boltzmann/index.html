@@ -11,9 +11,6 @@
 <meta property="og:description" content="可交互三维演示：从可逆的粒子运动，到宏观世界的时间之箭。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://viz.gopromp.com/boltzmann/">
-<meta property="og:image" content="https://viz.gopromp.com/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://viz.gopromp.com/og.png">
 <style>
 :root{
   /* 配色取自 3Blue1Brown 的标准色板 */
@@ -253,6 +250,7 @@ canvas.chart{display:block;border-radius:8px}
   .card{width:100%}
 }
 </style>
+<link rel="stylesheet" href="../article.css">
 </head>
 <body class="home">
 
@@ -261,32 +259,31 @@ canvas.chart{display:block;border-radius:8px}
 <div id="labels"></div>
 
 <div id="top">
-  <div id="brand"><a href="../" title="返回 VIZ">←</a><b>一盒气体</b><span>BOLTZMANN · HILBERT VI</span></div>
+  <div id="brand"><a href="../" title="返回 VIZ">VIZ</a><b>一盒气体</b><span>BOLTZMANN · HILBERT VI</span></div>
   <nav id="nav">
-    <button data-go="home">开篇</button>
-    <button data-go="gas" class="g">演示</button>
-    <button data-go="tl">背景</button>
+    <button data-go="home">文章</button>
+    <button data-go="gas" class="g">互动</button>
+    <button data-go="tl">资料</button>
   </nav>
 </div>
 
 <!-- 首页 -->
 <section id="home">
-  <div class="eyebrow">物理 × 数学 · 可交互三维演示</div>
-  <h1>一盒气体<br><i>为什么知道时间方向</i></h1>
+  <div class="eyebrow">2026 年 7 月 29 日 · 物理 × 数学</div>
+  <h1>一盒气体为什么知道时间方向？</h1>
   <p class="sub">
-    粒子只服从牛顿定律，而牛顿定律倒着播放依然成立。可气体会扩散、咖啡会变凉，宏观世界从不倒着走。<br>
-    这支时间之箭到底从哪里出现？从一盒会碰撞的小球开始看。
+    粒子只服从牛顿定律，而牛顿定律倒着播放依然成立。可气体会扩散、咖啡会变凉，宏观世界从不倒着走。这支时间之箭到底从哪里出现？从一盒会碰撞的小球开始看。
   </p>
   <div id="cards">
     <div class="card gg" data-go="gas" style="width:520px">
-      <div class="who"><h3>开始演示</h3><span>7 章 · 约 5 分钟</span></div>
+      <div class="who"><h3>开始互动演示 ↗</h3><span>7 章 · 约 8 分钟</span></div>
       <div class="tag">希尔伯特第六问题</div>
       <p class="prob">观察粒子碰撞、速率分布与 H 函数，再亲手反转速度，看看微观可逆与宏观不可逆如何同时成立。</p>
       <div class="go">进入演示 →</div>
     </div>
   </div>
   <p class="foot">
-    拖动旋转 · 滚轮缩放 · 左右方向键翻章
+    7 章 · 约 8 分钟 · 可以拖动、调节参数和反转时间
   </p>
 </section>
 

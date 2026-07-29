@@ -4,533 +4,258 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<title>VIZ — 让复杂的问题变得可以理解</title>
-<meta name="description" content="关于数学、物理、数据与系统的交互式可视化刊物。把抽象问题变成可以观察、操作和验证的互动世界。">
+<title>VIZ — 可视化文章</title>
+<meta name="description" content="用交互式文章解释数学与物理中的复杂问题。">
 <link rel="canonical" href="https://viz.gopromp.com/">
 <link rel="icon" href="/favicon.png" type="image/png">
-<link rel="alternate" type="application/rss+xml" title="VIZ 最新作品" href="https://viz.gopromp.com/feed.xml">
-<meta property="og:title" content="VIZ — 让复杂的问题变得可以理解">
-<meta property="og:description" content="关于数学、物理、数据与系统的交互式可视化刊物。">
+<link rel="alternate" type="application/rss+xml" title="VIZ 最新文章" href="https://viz.gopromp.com/feed.xml">
+<meta property="og:title" content="VIZ — 可视化文章">
+<meta property="og:description" content="用交互式文章解释数学与物理中的复杂问题。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://viz.gopromp.com/">
-<meta property="og:image" content="https://viz.gopromp.com/og-v2.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://viz.gopromp.com/og-v2.png">
 <style>
 :root{
-  --white:#fff;
   --ink:#0a0a0a;
-  --muted:#636363;
-  --soft:#f4f4f1;
-  --soft-blue:#eef1ff;
+  --muted:#676767;
   --line:#deded9;
+  --soft:#f5f5f2;
   --blue:#4f64ff;
-  --cyan:#81e6f3;
-  --violet:#a68cff;
-  --yellow:#f3d35c;
   --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --mono:"SFMono-Regular","SF Mono",ui-monospace,Menlo,Consolas,monospace;
   --page:min(1440px,calc(100vw - 48px));
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{
-  background:var(--white);
-  color:var(--ink);
-  font-family:var(--sans);
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
+  background:#fff;color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
 }
 a{color:inherit}
-button{font:inherit}
-::selection{background:#dfe4ff;color:var(--ink)}
+::selection{background:#dfe4ff}
 .skip{
   position:fixed;top:-100px;left:18px;z-index:100;
-  background:var(--ink);color:#fff;padding:11px 15px;border-radius:8px;
+  background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px;
 }
 .skip:focus{top:14px}
 
 .site-header{
-  position:sticky;top:0;z-index:50;height:68px;
-  background:rgba(255,255,255,.9);
-  backdrop-filter:blur(18px);
-  border-bottom:1px solid transparent;
-  transition:border-color .2s;
+  position:sticky;top:0;z-index:30;height:68px;background:rgba(255,255,255,.92);
+  backdrop-filter:blur(18px);border-bottom:1px solid transparent;
 }
 .site-header.scrolled{border-bottom-color:var(--line)}
-.nav{
-  width:var(--page);height:100%;margin:auto;
-  display:flex;align-items:center;gap:42px;
-}
+.nav{width:var(--page);height:100%;margin:auto;display:flex;align-items:center;gap:40px}
 .logo{
-  display:inline-flex;align-items:center;gap:9px;
-  text-decoration:none;font-size:21px;font-weight:650;letter-spacing:-.055em;
+  display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+  font-size:21px;font-weight:650;letter-spacing:-.055em;
 }
 .logo-mark{width:10px;height:10px;border-radius:50%;background:var(--ink);box-shadow:7px 0 0 var(--blue)}
-.nav-links{display:flex;align-items:center;gap:30px}
-.nav-links a{
-  text-decoration:none;font-size:14px;letter-spacing:-.01em;
-  color:#292929;transition:opacity .2s;
-}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{font-size:14px;text-decoration:none;color:#292929}
 .nav-links a:hover{opacity:.55}
-.nav-actions{margin-left:auto;display:flex;align-items:center;gap:12px}
-.github-link{text-decoration:none;font-size:14px;padding:10px 12px}
-.nav-cta{
-  display:inline-flex;align-items:center;gap:9px;
-  border-radius:999px;background:var(--ink);color:#fff;
-  padding:11px 17px;text-decoration:none;font-size:14px;
-  transition:transform .2s,background .2s;
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.github{font-size:14px;text-decoration:none;padding:10px}
+.nav-pill{
+  border-radius:999px;background:var(--ink);color:#fff;text-decoration:none;
+  padding:11px 17px;font-size:14px;
 }
-.nav-cta:hover{background:#303030;transform:translateY(-1px)}
-.menu{
-  display:none;margin-left:auto;width:42px;height:42px;border:0;background:transparent;
-  align-items:center;justify-content:center;cursor:pointer;
-}
-.menu::before,.menu::after{
-  content:"";position:absolute;width:22px;height:1.5px;background:var(--ink);
-  transition:transform .2s,top .2s;
-}
-.menu::before{transform:translateY(-4px)}
-.menu::after{transform:translateY(4px)}
-.nav.open .menu::before{transform:rotate(45deg)}
-.nav.open .menu::after{transform:rotate(-45deg)}
+.menu{display:none;margin-left:auto;width:42px;height:42px;border:0;background:none;position:relative}
+.menu::before,.menu::after{content:"";position:absolute;left:10px;width:22px;height:1.5px;background:var(--ink)}
+.menu::before{top:17px}.menu::after{top:24px}
+.nav.open .menu::before{top:21px;transform:rotate(45deg)}
+.nav.open .menu::after{top:21px;transform:rotate(-45deg)}
 
 .hero{
-  width:var(--page);margin:auto;
-  padding:clamp(100px,11vw,160px) 0 64px;
-  text-align:center;
+  width:var(--page);margin:auto;text-align:center;
+  padding:clamp(116px,13vw,188px) 0 clamp(110px,12vw,168px);
 }
-.eyebrow{
-  font-size:14px;font-weight:550;letter-spacing:-.01em;
-  margin-bottom:28px;
-}
+.hero-label{font-size:14px;font-weight:550;margin-bottom:30px}
 .hero h1{
-  max-width:980px;margin:auto;
-  font-size:clamp(52px,5.25vw,78px);
-  font-weight:500;line-height:.99;letter-spacing:-.055em;
-  text-wrap:balance;
+  max-width:960px;margin:auto;font-size:clamp(54px,5.8vw,86px);
+  line-height:.98;letter-spacing:-.06em;font-weight:500;text-wrap:balance;
 }
-.hero h1 span{display:block}
-.hero-lead{
-  max-width:690px;margin:30px auto 0;
-  font-size:clamp(17px,1.45vw,21px);line-height:1.62;
-  letter-spacing:-.02em;color:#393939;text-wrap:balance;
-}
-.hero-actions{
-  margin-top:34px;display:flex;justify-content:center;align-items:center;gap:12px;
-}
-.pill{
-  min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:9px;
-  border-radius:999px;padding:0 21px;text-decoration:none;font-size:14px;font-weight:520;
-  border:1px solid transparent;transition:transform .2s,background .2s,border-color .2s;
-}
-.pill-dark{background:var(--ink);color:#fff}
-.pill-dark:hover{background:#303030;transform:translateY(-1px)}
-.pill-light{background:var(--soft);color:var(--ink)}
-.pill-light:hover{background:#e9e9e5}
-
-.visual-shell{
-  width:var(--page);height:min(650px,55vw);min-height:520px;margin:0 auto;
-  position:relative;overflow:hidden;border-radius:24px;background:#0b0c0e;color:#fff;
-}
-#heroCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.visual-top,.visual-bottom{
-  position:absolute;z-index:2;left:28px;right:28px;
-  display:flex;align-items:center;justify-content:space-between;
-  pointer-events:none;
-}
-.visual-top{top:26px}
-.visual-bottom{bottom:25px;align-items:flex-end}
-.visual-label{
-  font:10px/1.2 var(--mono);letter-spacing:.13em;text-transform:uppercase;
-  color:rgba(255,255,255,.62);
-}
-.visual-tabs{
-  pointer-events:auto;display:flex;gap:5px;padding:5px;
-  border:1px solid rgba(255,255,255,.14);border-radius:999px;
-  background:rgba(9,10,12,.52);backdrop-filter:blur(12px);
-}
-.visual-tabs button{
-  border:0;border-radius:999px;background:transparent;color:rgba(255,255,255,.63);
-  padding:8px 13px;font-size:12px;cursor:pointer;transition:background .2s,color .2s;
-}
-.visual-tabs button:hover,.visual-tabs button.on{background:#fff;color:var(--ink)}
-.visual-question{
-  max-width:580px;text-align:left;font-size:clamp(24px,3.1vw,46px);
-  font-weight:500;line-height:1.05;letter-spacing:-.045em;text-wrap:balance;
-}
-.visual-question span{display:block}
-.visual-index{font:10px/1.2 var(--mono);letter-spacing:.09em;color:rgba(255,255,255,.5)}
-
-.section{
-  width:var(--page);margin:auto;padding:clamp(100px,10vw,148px) 0;
-}
-.section-heading{
-  display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.6fr);
-  gap:60px;align-items:end;margin-bottom:52px;
-}
-.section-heading h2{
-  max-width:860px;font-size:clamp(42px,4.5vw,66px);
-  font-weight:500;line-height:1.02;letter-spacing:-.05em;text-wrap:balance;
-}
-.section-heading h2 span{display:block}
-.section-heading p{
-  max-width:430px;justify-self:end;
-  font-size:16px;line-height:1.6;letter-spacing:-.015em;color:var(--muted);
+.hero p{
+  max-width:620px;margin:30px auto 0;color:#3f3f3f;
+  font-size:clamp(17px,1.45vw,20px);line-height:1.65;letter-spacing:-.02em;
 }
 
-.works-grid{
-  display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:20px;
+.posts{width:var(--page);margin:auto;padding-bottom:clamp(110px,12vw,180px)}
+.posts-head{
+  display:flex;align-items:end;justify-content:space-between;gap:30px;
+  margin-bottom:32px;
 }
-.work-card{
-  grid-column:span 6;display:flex;flex-direction:column;min-width:0;
-  background:var(--soft);border-radius:20px;overflow:hidden;text-decoration:none;
-  transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s;
+.posts-head h2{font-size:clamp(42px,4.6vw,66px);font-weight:500;letter-spacing:-.055em}
+.posts-head p{color:var(--muted);font-size:14px}
+.post-list{border-top:1px solid var(--ink)}
+.post{
+  display:grid;grid-template-columns:170px minmax(0,1fr) 52px;gap:34px;
+  align-items:start;padding:34px 0 38px;border-bottom:1px solid var(--line);
+  text-decoration:none;transition:padding .2s,background .2s;
 }
-.work-card:hover{transform:translateY(-5px);box-shadow:0 18px 45px rgba(0,0,0,.08)}
-.work-visual{
-  position:relative;overflow:hidden;height:clamp(330px,38vw,520px);
-  background:#101115;
+.post:hover{background:var(--soft);padding-left:20px;padding-right:20px}
+.post-meta{font-size:13px;line-height:1.65;color:var(--muted)}
+.post-meta strong{display:block;color:var(--ink);font-weight:550}
+.post-copy h3{
+  max-width:900px;font-size:clamp(31px,3.3vw,48px);font-weight:500;
+  line-height:1.08;letter-spacing:-.045em;text-wrap:balance;
 }
-.work-body{padding:30px 30px 32px}
-.work-meta{
-  display:flex;align-items:center;justify-content:space-between;gap:18px;
-  color:var(--muted);font-size:13px;
+.post-copy p{max-width:720px;margin-top:16px;color:var(--muted);font-size:15px;line-height:1.65}
+.post-arrow{
+  width:44px;height:44px;border:1px solid var(--line);border-radius:50%;
+  display:grid;place-items:center;font-size:19px;transition:.2s;
 }
-.new-badge{
-  border-radius:999px;background:#fff;color:var(--ink);
-  padding:5px 9px;font-size:11px;
-}
-.work-title-row{
-  display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-top:45px;
-}
-.work-title-row h3{
-  max-width:520px;font-size:clamp(29px,2.6vw,40px);font-weight:500;
-  line-height:1.08;letter-spacing:-.04em;text-wrap:balance;
-}
-.arrow{
-  flex:none;width:44px;height:44px;border-radius:50%;background:#fff;
-  display:grid;place-items:center;font-size:20px;transition:transform .25s,background .25s;
-}
-.work-card:hover .arrow{transform:translate(3px,-3px);background:var(--ink);color:#fff}
-.work-body p{
-  max-width:560px;margin-top:20px;color:var(--muted);
-  font-size:15px;line-height:1.65;letter-spacing:-.01em;
-}
-.kakeya-art{
-  background:
-    radial-gradient(circle at 48% 52%,rgba(79,100,255,.24),transparent 35%),
-    linear-gradient(140deg,#101216,#151a25);
-}
-.kakeya-ring{
-  position:absolute;left:50%;top:50%;width:48%;aspect-ratio:1;border-radius:50%;
-  border:1px solid rgba(129,230,243,.28);transform:translate(-50%,-50%);
-  box-shadow:0 0 90px rgba(79,100,255,.16),inset 0 0 60px rgba(79,100,255,.08);
-}
-.beam{
-  position:absolute;left:47%;top:50%;width:62%;height:1px;transform-origin:0 50%;
-  background:linear-gradient(90deg,rgba(129,230,243,.98),rgba(166,140,255,.18),transparent);
-}
-.beam:nth-of-type(2){transform:rotate(-72deg)}.beam:nth-of-type(3){transform:rotate(-51deg)}
-.beam:nth-of-type(4){transform:rotate(-31deg)}.beam:nth-of-type(5){transform:rotate(-10deg)}
-.beam:nth-of-type(6){transform:rotate(11deg)}.beam:nth-of-type(7){transform:rotate(32deg)}
-.beam:nth-of-type(8){transform:rotate(53deg)}.beam:nth-of-type(9){transform:rotate(74deg)}
-.art-caption{
-  position:absolute;left:24px;bottom:21px;font:10px/1.55 var(--mono);
-  letter-spacing:.08em;color:rgba(255,255,255,.52);
-}
-.gas-art{
-  background:
-    radial-gradient(circle at 70% 25%,rgba(243,211,92,.14),transparent 30%),
-    linear-gradient(145deg,#151218,#201821);
-}
-.gas-orbit{
-  position:absolute;border:1px solid rgba(255,255,255,.1);border-radius:50%;
-  left:50%;top:50%;transform:translate(-50%,-50%);
-}
-.gas-orbit.a{width:62%;aspect-ratio:1}.gas-orbit.b{width:38%;aspect-ratio:1}.gas-orbit.c{width:78%;height:38%;transform:translate(-50%,-50%) rotate(24deg)}
-.particle{
-  position:absolute;width:11px;height:11px;border-radius:50%;background:var(--yellow);
-  box-shadow:0 0 18px rgba(243,211,92,.52);
-}
-.particle:nth-of-type(4){left:14%;top:31%}.particle:nth-of-type(5){left:27%;top:69%}
-.particle:nth-of-type(6){left:40%;top:42%}.particle:nth-of-type(7){left:55%;top:76%}
-.particle:nth-of-type(8){left:67%;top:24%}.particle:nth-of-type(9){left:82%;top:61%}
-.particle:nth-of-type(10){left:54%;top:15%}.particle:nth-of-type(11){left:88%;top:20%}
-.particle:nth-of-type(12){left:9%;top:81%}
+.post:hover .post-arrow{background:var(--ink);border-color:var(--ink);color:#fff;transform:translate(3px,-3px)}
 
-.topics-wrap{background:var(--soft)}
-.topics-wrap .section{padding-top:clamp(96px,9vw,132px);padding-bottom:clamp(96px,9vw,132px)}
-.topics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.topic{
-  min-height:275px;background:#fff;border-radius:18px;padding:24px;
-  display:flex;flex-direction:column;
+.archive{
+  width:var(--page);margin:auto;padding:0 0 clamp(110px,12vw,180px);
+  display:grid;grid-template-columns:1fr 2fr;gap:40px;
 }
-.topic-top{display:flex;justify-content:space-between;align-items:center}
-.topic-no{font:11px/1 var(--mono);color:#8b8b88}
-.topic-dot{width:10px;height:10px;border-radius:50%}
-.topic h3{margin-top:auto;font-size:29px;font-weight:520;letter-spacing:-.035em}
-.topic p{margin-top:11px;color:var(--muted);font-size:14px;line-height:1.55}
+.archive-label{font-size:14px;font-weight:550}
+.archive-copy{border-top:1px solid var(--line)}
+.archive-link{
+  display:grid;grid-template-columns:1fr auto;gap:24px;
+  padding:24px 0;border-bottom:1px solid var(--line);text-decoration:none;
+}
+.archive-link h3{font-size:23px;font-weight:520;letter-spacing:-.03em}
+.archive-link p{margin-top:7px;color:var(--muted);font-size:14px;line-height:1.55}
 
-.method-intro{
-  max-width:920px;margin:0 auto 72px;text-align:center;
+.about{
+  background:var(--soft);padding:clamp(90px,10vw,140px) 0;
 }
-.method-intro .small-label{font-size:14px;font-weight:550}
-.method-intro h2{
-  margin-top:26px;font-size:clamp(42px,4.8vw,70px);font-weight:500;
-  line-height:1.02;letter-spacing:-.05em;text-wrap:balance;
+.about-inner{
+  width:var(--page);margin:auto;display:grid;grid-template-columns:1fr 2fr;gap:40px;
 }
-.method-list{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line)}
-.method{
-  min-height:310px;padding:22px 28px 30px 0;border-bottom:1px solid var(--line);
-  display:flex;flex-direction:column;
+.about-label{font-size:14px;font-weight:550}
+.about h2{
+  max-width:940px;font-size:clamp(40px,4.6vw,66px);font-weight:500;
+  line-height:1.04;letter-spacing:-.05em;text-wrap:balance;
 }
-.method:not(:last-child){border-right:1px solid var(--line);padding-left:28px}
-.method:first-child{padding-left:0}
-.method-no{font:11px/1 var(--mono);color:#8b8b88}
-.method h3{margin-top:auto;font-size:24px;font-weight:520;letter-spacing:-.03em}
-.method p{margin-top:10px;color:var(--muted);font-size:14px;line-height:1.6}
+.about p{max-width:650px;margin-top:28px;color:var(--muted);font-size:16px;line-height:1.7}
 
-.manifesto{
-  width:var(--page);margin:0 auto 24px;padding:clamp(58px,7vw,100px);
-  min-height:590px;border-radius:24px;background:#0b0b0b;color:#fff;
-  display:flex;flex-direction:column;justify-content:space-between;
-}
-.manifesto-label{font-size:14px;color:rgba(255,255,255,.6)}
-.manifesto blockquote{
-  max-width:1130px;font-size:clamp(42px,5.4vw,78px);
-  font-weight:500;line-height:1.02;letter-spacing:-.055em;text-wrap:balance;
-}
-.manifesto blockquote span{color:#8b9aff}
-.manifesto-bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:30px}
-.manifesto-bottom p{max-width:540px;color:rgba(255,255,255,.58);font-size:15px;line-height:1.6}
-.manifesto-link{color:#fff;border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.1)}
-.manifesto-link:hover{background:#fff;color:var(--ink)}
-
-.site-footer{padding:70px 0 28px}
+.site-footer{padding:62px 0 26px}
 .footer-inner{width:var(--page);margin:auto}
-.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;padding-bottom:90px}
-.footer-brand p{max-width:390px;margin-top:17px;color:var(--muted);font-size:14px;line-height:1.65}
-.footer-col strong{font-size:13px;font-weight:550}
-.footer-col a{display:block;width:max-content;margin-top:14px;color:var(--muted);font-size:14px;text-decoration:none}
-.footer-col a:hover{color:var(--ink)}
+.footer-main{display:flex;align-items:flex-start;justify-content:space-between;gap:40px;padding-bottom:80px}
+.footer-main p{max-width:390px;margin-top:15px;color:var(--muted);font-size:14px;line-height:1.6}
+.footer-links{display:flex;gap:28px}
+.footer-links a{font-size:14px;text-decoration:none;color:var(--muted)}
 .footer-bottom{
-  padding-top:20px;border-top:1px solid var(--line);
-  display:flex;justify-content:space-between;gap:24px;color:#8a8a86;font-size:12px;
+  border-top:1px solid var(--line);padding-top:18px;
+  display:flex;justify-content:space-between;gap:24px;color:#8b8b86;font-size:12px;
 }
 
-@media(max-width:1000px){
-  .section-heading{grid-template-columns:1fr;gap:22px}
-  .section-heading p{justify-self:start}
-  .topics-grid,.method-list{grid-template-columns:repeat(2,1fr)}
-  .method:nth-child(2){border-right:0}.method:nth-child(3){padding-left:0}
-  .work-visual{height:430px}
-}
-@media(max-width:720px){
+@media(max-width:760px){
   :root{--page:calc(100vw - 32px)}
   .site-header{height:62px}.nav{gap:0}
-  .nav-links,.nav-actions{display:none}
-  .menu{display:flex;position:relative}
+  .nav-links,.nav-right{display:none}.menu{display:block}
   .nav.open .nav-links{
-    position:fixed;display:flex;left:0;right:0;top:62px;
-    padding:26px 16px 32px;flex-direction:column;align-items:flex-start;gap:22px;
-    background:#fff;border-bottom:1px solid var(--line);
+    position:fixed;top:62px;left:0;right:0;display:flex;
+    flex-direction:column;align-items:flex-start;gap:20px;
+    padding:26px 16px 30px;background:#fff;border-bottom:1px solid var(--line);
   }
   .nav.open .nav-links a{font-size:20px}
-  .hero{padding-top:82px;padding-bottom:46px}
-  .hero h1{font-size:42px;letter-spacing:-.065em}
-  .hero-lead{font-size:17px}
-  .hero-actions{flex-direction:column;align-items:stretch}
-  .pill{width:100%}
-  .visual-shell{height:600px;min-height:0;border-radius:18px}
-  .visual-top,.visual-bottom{left:18px;right:18px}
-  .visual-top{align-items:flex-start}
-  .visual-tabs{flex-direction:column;border-radius:18px}
-  .visual-tabs button{padding:8px 10px}
-  .visual-question{font-size:28px;max-width:100%}
-  .visual-index{display:none}
-  .section-heading h2{font-size:39px}
-  .method-intro h2{font-size:42px}
-  .works-grid{grid-template-columns:1fr}.work-card{grid-column:auto}
-  .work-visual{height:340px}.work-body{padding:24px}
-  .work-title-row{margin-top:34px}.work-title-row h3{font-size:31px}
-  .topics-grid,.method-list{grid-template-columns:1fr}
-  .topic{min-height:225px}
-  .method,.method:not(:last-child),.method:first-child{
-    min-height:220px;padding:20px 0 28px;border-right:0;
-  }
-  .manifesto{min-height:620px;padding:34px 26px;border-radius:18px}
-  .manifesto blockquote{font-size:43px}
-  .manifesto-bottom{align-items:flex-start;flex-direction:column}
-  .footer-top{grid-template-columns:1fr 1fr}.footer-brand{grid-column:1/-1}
+  .hero{padding:90px 0 110px;text-align:left}
+  .hero-label{margin-bottom:22px}
+  .hero h1{font-size:48px;text-wrap:pretty}
+  .hero p{margin-left:0;font-size:17px}
+  .posts-head{align-items:flex-start;flex-direction:column}
+  .post{grid-template-columns:1fr 44px;gap:20px}
+  .post-meta{grid-column:1/-1}
+  .post-copy h3{font-size:31px}
+  .post-copy p{font-size:14px}
+  .post-arrow{grid-column:2;grid-row:2}
+  .archive,.about-inner{grid-template-columns:1fr;gap:34px}
+  .about h2{font-size:40px}
+  .footer-main{flex-direction:column}.footer-links{flex-wrap:wrap}
   .footer-bottom{flex-direction:column}
-}
-@media(prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  .work-card,.nav-cta,.pill,.arrow{transition:none}
 }
 </style>
 </head>
 <body>
 <a class="skip" href="#content">跳到正文</a>
-
 <header class="site-header" id="header">
   <nav class="nav" id="nav" aria-label="主导航">
     <a class="logo" href="./" aria-label="VIZ 首页"><span class="logo-mark" aria-hidden="true"></span>VIZ</a>
     <div class="nav-links">
-      <a href="#works">作品</a>
-      <a href="#topics">主题</a>
-      <a href="#method">方法</a>
+      <a href="#articles">文章</a>
       <a href="#about">关于</a>
     </div>
-    <div class="nav-actions">
-      <a class="github-link" href="https://github.com/ma2214889041/viz" target="_blank" rel="noopener">GitHub</a>
-      <a class="nav-cta" href="kakeya/">开始探索 <span aria-hidden="true">↗</span></a>
+    <div class="nav-right">
+      <a class="github" href="https://github.com/ma2214889041/viz" target="_blank" rel="noopener">GitHub</a>
+      <a class="nav-pill" href="kakeya/">阅读最新文章 ↗</a>
     </div>
     <button class="menu" id="menu" aria-label="打开菜单" aria-expanded="false"></button>
   </nav>
 </header>
 
 <main id="content">
-  <section class="hero" aria-labelledby="heroTitle">
-    <div class="eyebrow">交互式可视化刊物</div>
-    <h1 id="heroTitle"><span>让复杂的问题，</span><span>变得可以亲手理解。</span></h1>
-    <p class="hero-lead">VIZ 把数学、物理、数据和系统里的抽象概念，变成可以观察、操作和验证的互动世界。</p>
-    <div class="hero-actions">
-      <a class="pill pill-dark" href="kakeya/">探索最新作品 <span aria-hidden="true">↗</span></a>
-      <a class="pill pill-light" href="#works">浏览全部作品</a>
-    </div>
+  <section class="hero">
+    <div class="hero-label">可视化博客</div>
+    <h1>把复杂问题，写成可以动手理解的文章。</h1>
+    <p>这里收录关于数学与物理的交互式文章。每一篇都从一个具体问题开始，并提供可以直接操作的演示。</p>
   </section>
 
-  <section class="visual-shell" id="heroStage" aria-label="可以切换结构、运动和数据模式的交互式预览">
-    <canvas id="heroCanvas" aria-hidden="true"></canvas>
-    <div class="visual-top">
-      <span class="visual-label">VIZ / VISUAL FIELD 001</span>
-      <div class="visual-tabs" role="group" aria-label="选择预览模式">
-        <button class="on" data-mode="structure" aria-pressed="true">结构</button>
-        <button data-mode="motion" aria-pressed="false">运动</button>
-        <button data-mode="data" aria-pressed="false">数据</button>
-      </div>
+  <section class="posts" id="articles" aria-labelledby="articlesTitle">
+    <div class="posts-head">
+      <h2 id="articlesTitle">文章</h2>
+      <p>共 2 篇 · 最近更新于 2026 年 7 月</p>
     </div>
-    <div class="visual-bottom">
-      <p class="visual-question" id="visualQuestion"><span>当体积趋近于零，</span><span>空间还可以保持完整吗？</span></p>
-      <span class="visual-index" id="visualIndex">01 / STRUCTURE</span>
-    </div>
-  </section>
-
-  <section class="section" id="works" aria-labelledby="worksTitle">
-    <div class="section-heading">
-      <h2 id="worksTitle"><span>从一个好问题开始，</span><span>走到真正看懂。</span></h2>
-      <p>每篇作品都是一个独立的互动实验：先建立直觉，再改变条件，最后回到定义、数据和事实。</p>
-    </div>
-    <div class="works-grid">
-      <a class="work-card" href="kakeya/">
-        <div class="work-visual kakeya-art" aria-hidden="true">
-          <span class="kakeya-ring"></span>
-          <span class="beam"></span><span class="beam"></span><span class="beam"></span><span class="beam"></span>
-          <span class="beam"></span><span class="beam"></span><span class="beam"></span><span class="beam"></span>
-          <span class="art-caption">DIRECTION SPACE<br>VOLUME → 0<br>DIMENSION → 3</span>
+    <div class="post-list">
+      <a class="post" href="kakeya/">
+        <div class="post-meta"><strong>数学</strong><time datetime="2026-07-29">2026 年 7 月 29 日</time><br>约 6 分钟</div>
+        <div class="post-copy">
+          <h3>一根针，最少能扫过多大地方？</h3>
+          <p>从挂谷转针问题出发，观察体积如何趋近于零，而集合的维数仍然保持完整。</p>
         </div>
-        <div class="work-body">
-          <div class="work-meta"><span>数学 · 几何测度论 · 约 6 分钟</span><span class="new-badge">最新</span></div>
-          <div class="work-title-row">
-            <h3>一根针，最少能扫过多大地方？</h3>
-            <span class="arrow" aria-hidden="true">↗</span>
-          </div>
-          <p>把一根长度为 1 的针转过所有方向。扫过的体积可以无限接近零，集合的维数却仍然完整。</p>
-        </div>
+        <span class="post-arrow" aria-hidden="true">↗</span>
       </a>
-
-      <a class="work-card" href="boltzmann/">
-        <div class="work-visual gas-art" aria-hidden="true">
-          <span class="gas-orbit a"></span><span class="gas-orbit b"></span><span class="gas-orbit c"></span>
-          <span class="particle"></span><span class="particle"></span><span class="particle"></span>
-          <span class="particle"></span><span class="particle"></span><span class="particle"></span>
-          <span class="particle"></span><span class="particle"></span><span class="particle"></span>
-          <span class="art-caption">REVERSIBLE LAWS<br>IRREVERSIBLE TIME<br>H(t) ↓</span>
+      <a class="post" href="boltzmann/">
+        <div class="post-meta"><strong>物理 × 数学</strong><time datetime="2026-07-29">2026 年 7 月 29 日</time><br>约 8 分钟</div>
+        <div class="post-copy">
+          <h3>一盒气体，为什么知道时间方向？</h3>
+          <p>粒子的运动定律可以倒放，宏观世界却不会。通过碰撞、速率分布与 H 函数理解时间之箭。</p>
         </div>
-        <div class="work-body">
-          <div class="work-meta"><span>物理 × 数学 · 统计力学 · 约 8 分钟</span><span>02</span></div>
-          <div class="work-title-row">
-            <h3>一盒气体，为什么知道时间方向？</h3>
-            <span class="arrow" aria-hidden="true">↗</span>
-          </div>
-          <p>粒子只服从可逆的运动定律，宏观世界不可逆的时间之箭究竟从哪里出现？</p>
-        </div>
+        <span class="post-arrow" aria-hidden="true">↗</span>
       </a>
     </div>
   </section>
 
-  <section class="topics-wrap" id="topics" aria-labelledby="topicsTitle">
-    <div class="section">
-      <div class="section-heading">
-        <h2 id="topicsTitle">一个持续生长的可视化知识空间。</h2>
-        <p>这里不会只停留在两个问题。新作品会沿着四个方向继续生长，并保持同一套阅读体验。</p>
-      </div>
-      <div class="topics-grid">
-        <article class="topic">
-          <div class="topic-top"><span class="topic-no">01</span><span class="topic-dot" style="background:var(--cyan)"></span></div>
-          <h3>数学</h3><p>把证明中的结构、极限与反直觉对象变成可以操控的空间。</p>
-        </article>
-        <article class="topic">
-          <div class="topic-top"><span class="topic-no">02</span><span class="topic-dot" style="background:var(--yellow)"></span></div>
-          <h3>物理</h3><p>从粒子到波，从混沌到涌现，让方程在屏幕上真正运动。</p>
-        </article>
-        <article class="topic">
-          <div class="topic-top"><span class="topic-no">03</span><span class="topic-dot" style="background:var(--violet)"></span></div>
-          <h3>数据</h3><p>不只展示图表，更解释关系、偏差、不确定性和推断边界。</p>
-        </article>
-        <article class="topic">
-          <div class="topic-top"><span class="topic-no">04</span><span class="topic-dot" style="background:var(--blue)"></span></div>
-          <h3>系统</h3><p>拆开算法、网络与复杂流程，看清局部规则如何塑造整体。</p>
-        </article>
-      </div>
+  <section class="archive" aria-labelledby="archiveTitle">
+    <div class="archive-label" id="archiveTitle">归档</div>
+    <div class="archive-copy">
+      <a class="archive-link" href="kakeya-boltzmann/">
+        <div><h3>一根针与一盒气体</h3><p>最初发布的双主题互动合集，保留两个演示之间的完整对照。</p></div>
+        <span aria-hidden="true">↗</span>
+      </a>
     </div>
   </section>
 
-  <section class="section" id="method" aria-labelledby="methodTitle">
-    <div class="method-intro">
-      <div class="small-label">VIZ 的阅读方法</div>
-      <h2 id="methodTitle">不是给答案配动画，而是重新设计理解的路径。</h2>
-    </div>
-    <div class="method-list">
-      <article class="method"><span class="method-no">01</span><h3>提出问题</h3><p>从一个不需要专业背景也能听懂的问题开始。</p></article>
-      <article class="method"><span class="method-no">02</span><h3>看见结构</h3><p>把抽象对象变成空间、运动、尺度或关系。</p></article>
-      <article class="method"><span class="method-no">03</span><h3>动手实验</h3><p>改变条件，让系统实时计算并对你的操作作出回应。</p></article>
-      <article class="method"><span class="method-no">04</span><h3>回到事实</h3><p>给出定义、数据、推导边界与资料来源。</p></article>
-    </div>
-  </section>
-
-  <section class="manifesto" id="about" aria-labelledby="aboutTitle">
-    <div class="manifesto-label" id="aboutTitle">关于 VIZ</div>
-    <blockquote>让你从“听说过”，走到<span>“我真的看懂了”</span>。</blockquote>
-    <div class="manifesto-bottom">
-      <p>每个作品都是可直接运行的独立网页。它们不要求你预先掌握公式，但会认真对待定义、证据与不确定性。</p>
-      <a class="pill manifesto-link" href="kakeya-boltzmann/">阅读首期合集 <span aria-hidden="true">↗</span></a>
+  <section class="about" id="about" aria-labelledby="aboutTitle">
+    <div class="about-inner">
+      <div class="about-label">关于 VIZ</div>
+      <div>
+        <h2 id="aboutTitle">文章负责解释，演示负责让你亲手验证。</h2>
+        <p>VIZ 不设置后台，也不发布占位内容。每次更新就是一篇完整的可视化文章，能够独立阅读、操作和分享。</p>
+      </div>
     </div>
   </section>
 </main>
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <div class="footer-top">
-      <div class="footer-brand">
+    <div class="footer-main">
+      <div>
         <a class="logo" href="./"><span class="logo-mark" aria-hidden="true"></span>VIZ</a>
-        <p>关于数学、物理、数据与系统的交互式可视化刊物。复杂的事，应该被看见。</p>
+        <p>关于数学与物理的交互式可视化文章。</p>
       </div>
-      <div class="footer-col"><strong>浏览</strong><a href="#works">全部作品</a><a href="#topics">主题</a><a href="#method">方法</a></div>
-      <div class="footer-col"><strong>更多</strong><a href="/feed.xml">RSS</a><a href="https://github.com/ma2214889041/viz" target="_blank" rel="noopener">GitHub ↗</a></div>
+      <div class="footer-links"><a href="#articles">文章</a><a href="/feed.xml">RSS</a><a href="https://github.com/ma2214889041/viz" target="_blank" rel="noopener">GitHub ↗</a></div>
     </div>
-    <div class="footer-bottom"><span>VIZ — VISUALIZE WHAT IS HARD TO SEE</span><span>2026 · BUILT FOR CURIOSITY</span></div>
+    <div class="footer-bottom"><span>VIZ</span><span>2026 · VISUAL ESSAYS</span></div>
   </div>
 </footer>
 
 <script>
 const header=document.getElementById('header');
-addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>8),{passive:true});
-
-const menu=document.getElementById('menu');
 const nav=document.getElementById('nav');
+const menu=document.getElementById('menu');
+addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>8),{passive:true});
 menu.addEventListener('click',()=>{
   const open=nav.classList.toggle('open');
   menu.setAttribute('aria-expanded',String(open));
@@ -539,137 +264,7 @@ menu.addEventListener('click',()=>{
 document.querySelectorAll('.nav-links a').forEach(link=>link.addEventListener('click',()=>{
   nav.classList.remove('open');
   menu.setAttribute('aria-expanded','false');
-  menu.setAttribute('aria-label','打开菜单');
 }));
-
-const stage=document.getElementById('heroStage');
-const canvas=document.getElementById('heroCanvas');
-const ctx=canvas.getContext('2d');
-const visualIndex=document.getElementById('visualIndex');
-const visualQuestion=document.getElementById('visualQuestion');
-const tabs=[...document.querySelectorAll('.visual-tabs button')];
-const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const labels={
-  structure:{index:'01 / STRUCTURE',question:['当体积趋近于零，','空间还可以保持完整吗？']},
-  motion:{index:'02 / MOTION',question:['微观定律可逆，','时间为什么只向前？']},
-  data:{index:'03 / DATA',question:['一条曲线，','究竟能告诉我们多少真相？']}
-};
-let mode='structure';
-let pointer={x:.5,y:.5};
-let time=0;
-let animationId=0;
-let stageVisible=true;
-
-tabs.forEach(button=>button.addEventListener('click',()=>{
-  mode=button.dataset.mode;
-  tabs.forEach(item=>{
-    const active=item===button;
-    item.classList.toggle('on',active);
-    item.setAttribute('aria-pressed',String(active));
-  });
-  visualIndex.textContent=labels[mode].index;
-  visualQuestion.innerHTML=labels[mode].question.map(line=>`<span>${line}</span>`).join('');
-}));
-stage.addEventListener('pointermove',event=>{
-  const rect=stage.getBoundingClientRect();
-  pointer.x=(event.clientX-rect.left)/rect.width;
-  pointer.y=(event.clientY-rect.top)/rect.height;
-});
-stage.addEventListener('pointerleave',()=>{pointer={x:.5,y:.5}});
-
-function fit(){
-  const d=Math.min(devicePixelRatio||1,2);
-  const rect=stage.getBoundingClientRect();
-  canvas.width=Math.round(rect.width*d);
-  canvas.height=Math.round(rect.height*d);
-  ctx.setTransform(d,0,0,d,0,0);
-}
-function line(x1,y1,x2,y2,color,width=1){
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
-  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();
-}
-function drawStructure(w,h){
-  const cx=w*(.5+(pointer.x-.5)*.12);
-  const cy=h*(.47+(pointer.y-.5)*.1);
-  const radius=Math.min(w,h)*.32;
-  for(let ring=1;ring<=5;ring++){
-    ctx.beginPath();ctx.arc(cx,cy,radius*ring/5,0,Math.PI*2);
-    ctx.strokeStyle=`rgba(129,230,243,${.045+ring*.018})`;ctx.stroke();
-  }
-  const points=[];
-  for(let i=0;i<30;i++){
-    const angle=i/30*Math.PI*2+time*.000055*(i%3-1);
-    const r=radius*(.28+.68*((i*11)%17)/17);
-    points.push([cx+Math.cos(angle)*r,cy+Math.sin(angle)*r]);
-  }
-  points.forEach((point,i)=>{
-    for(let j=i+1;j<points.length;j++){
-      const other=points[j];
-      const distance=Math.hypot(point[0]-other[0],point[1]-other[1]);
-      if(distance<radius*.54) line(point[0],point[1],other[0],other[1],`rgba(166,140,255,${.13*(1-distance/(radius*.54))})`);
-    }
-    ctx.beginPath();ctx.arc(point[0],point[1],i%7===0?4.5:2,0,Math.PI*2);
-    ctx.fillStyle=i%7===0?'#81e6f3':'rgba(255,255,255,.64)';ctx.fill();
-  });
-}
-function drawMotion(w,h){
-  const rows=8,cols=13,spacingX=w/(cols+1),spacingY=h/(rows+1);
-  for(let y=1;y<=rows;y++) for(let x=1;x<=cols;x++){
-    const phase=time*.0015+x*.54+y*.41;
-    const px=x*spacingX+Math.sin(phase)*22*(.5+pointer.x);
-    const py=y*spacingY+Math.cos(phase*.79)*18*(.5+pointer.y);
-    line(px,py,px+Math.cos(phase)*25,py-Math.sin(phase*.79)*18,'rgba(243,211,92,.2)');
-    ctx.beginPath();ctx.arc(px,py,2.5+(x+y)%3,0,Math.PI*2);
-    ctx.fillStyle=(x+y)%6===0?'#f3d35c':'rgba(255,255,255,.62)';ctx.fill();
-  }
-}
-function drawData(w,h){
-  const pad=58,base=h-pad,steps=90;
-  for(let g=0;g<6;g++) line(pad,base-g*(h-pad*2)/5,w-pad,base-g*(h-pad*2)/5,'rgba(255,255,255,.07)');
-  ['#81e6f3','#a68cff','#f3d35c'].forEach((color,k)=>{
-    ctx.beginPath();
-    for(let i=0;i<steps;i++){
-      const x=pad+i/(steps-1)*(w-pad*2);
-      const t=i/(steps-1);
-      const center=.27+k*.23+(pointer.x-.5)*.08*(k-1);
-      const spread=.05+.017*k+pointer.y*.02;
-      const value=Math.exp(-Math.pow(t-center,2)/spread)*(1-k*.1);
-      const y=base-value*(h-pad*2)*.72-Math.sin(time*.001+i*.28+k)*2;
-      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
-    }
-    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
-  });
-}
-function render(t=0){
-  animationId=0;
-  time=t;
-  const rect=stage.getBoundingClientRect();
-  const w=rect.width,h=rect.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#0b0c0e';ctx.fillRect(0,0,w,h);
-  const glow=ctx.createRadialGradient(w*pointer.x,h*pointer.y,0,w*pointer.x,h*pointer.y,Math.max(w,h)*.72);
-  glow.addColorStop(0,'rgba(79,100,255,.17)');
-  glow.addColorStop(1,'rgba(11,12,14,0)');
-  ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
-  if(mode==='structure') drawStructure(w,h);
-  else if(mode==='motion') drawMotion(w,h);
-  else drawData(w,h);
-  if(!reduceMotion&&stageVisible) animationId=requestAnimationFrame(render);
-}
-new ResizeObserver(fit).observe(stage);
-fit();
-if(reduceMotion) render();
-else{
-  new IntersectionObserver(([entry])=>{
-    stageVisible=entry.isIntersecting;
-    if(stageVisible&&!animationId) animationId=requestAnimationFrame(render);
-    if(!stageVisible&&animationId){
-      cancelAnimationFrame(animationId);
-      animationId=0;
-    }
-  },{threshold:.01}).observe(stage);
-  animationId=requestAnimationFrame(render);
-}
 </script>
 </body>
 </html>

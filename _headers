@@ -5,8 +5,5 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
   Content-Security-Policy: frame-ancestors 'self'
 
-/og.png
-  Cache-Control: public, max-age=86400
-
 /favicon.png
   Cache-Control: public, max-age=604800
