@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>两个黑洞合并，为什么能被听成一声鸟鸣？— VIZ</title>
+<meta name="description" content="听 LIGO 公布的 GW150914 音频，改变啁啾质量，并在可复现噪声中亲手完成一次匹配。">
+<link rel="canonical" href="https://viz.gopromp.com/gw150914/">
+<link rel="icon" href="../favicon.png" type="image/png">
+<meta property="og:title" content="两个黑洞合并，为什么能被听成一声鸟鸣？">
+<meta property="og:description" content="把声音当成可以审计的映射，而不是给引力波配一段音乐。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://viz.gopromp.com/gw150914/">
+<style>
+:root{
+  --ink:#0b0c0f;--muted:#666660;--line:#dcdcd6;--soft:#f3f3ef;--paper:#fafaf7;
+  --blue:#5868ff;--blue-soft:#eef0ff;--orange:#ef6a3a;--orange-soft:#fff0e9;--green:#18735a;
+  --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Songti SC","Noto Serif SC","STSong",Georgia,serif;
+  --page:min(1240px,calc(100vw - 48px));--text:min(760px,calc(100vw - 48px));
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#fff;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button,input{font:inherit}button{color:inherit}a{color:inherit}
+::selection{background:#dfe3ff}
+:where(a,button,input):focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.skip{position:fixed;top:-100px;left:18px;z-index:100;background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px}.skip:focus{top:14px}
+.header{position:sticky;top:0;z-index:40;height:68px;background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
+.nav{width:var(--page);height:100%;margin:auto;display:flex;align-items:center;gap:22px}
+.logo{font-size:21px;font-weight:650;letter-spacing:-.055em;text-decoration:none}.crumb{color:#777;font-size:13px}
+.progress{margin-left:auto;display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}.progress-track{width:112px;height:2px;background:#ddd}.progress-fill{display:block;width:0;height:100%;background:var(--ink)}
+
+.hero{width:var(--page);margin:auto;padding:clamp(96px,12vw,166px) 0 100px}
+.eyebrow{display:flex;justify-content:space-between;gap:24px;margin-bottom:36px;font-size:12px;font-weight:600}.eyebrow span:last-child{color:var(--muted);font-weight:500}
+h1{max-width:1120px;font-size:clamp(54px,7.5vw,104px);font-weight:500;line-height:.94;letter-spacing:-.068em;text-wrap:balance}
+.dek{max-width:800px;margin-top:38px;color:#383834;font:400 clamp(19px,1.75vw,24px)/1.65 var(--serif)}
+.hero-rule{display:grid;grid-template-columns:1fr 2fr;gap:40px;margin-top:76px;padding-top:22px;border-top:1px solid var(--ink)}
+.hero-rule b{font-size:12px}.hero-rule p{max-width:760px;color:var(--muted);font-size:14px;line-height:1.7}
+
+.lab-section{padding:110px 0}.lab-section.soft{background:var(--soft)}.lab-section.dark{background:#0e1015;color:#f7f7f4}
+.section-head{width:var(--page);margin:auto;display:grid;grid-template-columns:.72fr 1.55fr;gap:clamp(42px,8vw,120px)}
+.section-label{font-size:12px;font-weight:600}.section-copy h2{max-width:900px;font-size:clamp(38px,4.8vw,68px);font-weight:500;line-height:1.02;letter-spacing:-.055em;text-wrap:balance}
+.section-copy>p{max-width:770px;margin-top:24px;color:var(--muted);font-size:16px;line-height:1.8}.dark .section-copy>p{color:#b5b9c4}
+.lab{width:var(--page);margin:65px auto 0;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(340px,.72fr);gap:24px;align-items:stretch}
+.viz-panel{min-width:0;padding:22px;border:1px solid var(--line);border-radius:16px;background:#fff}.dark .viz-panel{background:#17191f;border-color:#383b45}
+.panel-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:16px}.panel-top b{font-size:13px}.panel-top span{color:var(--muted);font-size:11px}.dark .panel-top span{color:#959aa7}
+.canvas{display:block;width:100%;height:390px}.canvas.short{height:250px}.canvas-stack{display:grid;gap:14px}
+.controls{display:grid;align-content:start;gap:18px;padding:24px;border-radius:16px;background:var(--paper);border:1px solid var(--line)}.dark .controls{background:#17191f;border-color:#383b45}
+.control-label{font-size:11px;font-weight:600}.choices,.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.choice,.action{
+  border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;padding:11px 12px;text-align:left;font-size:12px;
+}
+.dark :where(.choice,.action){background:#1e2128;border-color:#3c404b;color:#f7f7f4}
+:where(.choice,.action):hover{border-color:var(--ink)}.dark :where(.choice,.action):hover{border-color:#b8bdc8}
+.choice[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}.dark .choice[aria-pressed=true]{background:#f7f7f4;border-color:#f7f7f4;color:#0e1015}
+.action{text-align:center}.action.primary{background:var(--ink);border-color:var(--ink);color:#fff}.dark .action.primary{background:#f7f7f4;border-color:#f7f7f4;color:#0e1015}
+.action:disabled{opacity:.38;cursor:not-allowed}
+.range-group{display:grid;gap:9px}.range-head{display:flex;justify-content:space-between;gap:20px;color:var(--muted);font-size:11px}.range-head output{color:var(--ink);font-weight:600}.dark .range-head output{color:#f7f7f4}
+input[type=range]{width:100%;accent-color:var(--blue);cursor:pointer}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metric{padding-top:12px;border-top:1px solid var(--line)}.dark .metric{border-color:#383b45}
+.metric span{display:block;color:var(--muted);font-size:9px}.dark .metric span{color:#959aa7}.metric b{display:block;margin-top:5px;font-size:14px;font-weight:600}
+.receipt{padding:14px;border-radius:10px;background:var(--blue-soft);color:#303b9b;font-size:11px;line-height:1.6}.dark .receipt{background:#22263c;color:#c7cdff}
+.answer{display:none;padding:15px;border-radius:10px;background:var(--orange-soft);color:#78311c;font-size:12px;line-height:1.65}.answer.show{display:block}
+.legend{display:flex;align-items:center;gap:13px;margin-top:12px;color:var(--muted);font-size:10px}.line-key{width:24px;height:2px;background:var(--orange)}.line-key.blue{background:var(--blue)}
+
+.explanation{width:var(--text);margin:auto;padding:105px 0}.explanation h2{font-size:clamp(34px,4.2vw,58px);font-weight:500;line-height:1.05;letter-spacing:-.052em;text-wrap:balance}
+.explanation>p{margin-top:28px;color:#40403c;font:400 18px/1.82 var(--serif)}
+.equation{margin:42px 0;padding:24px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);font-size:clamp(19px,2.2vw,29px);line-height:1.5;letter-spacing:-.02em}
+.equation small{display:block;margin-top:10px;color:var(--muted);font:400 12px/1.65 var(--sans)}
+.definition{display:grid;grid-template-columns:150px 1fr;gap:26px;margin-top:42px;padding-top:20px;border-top:1px solid var(--line)}.definition b{font-size:12px}.definition p{color:var(--muted);font-size:14px;line-height:1.7}
+
+.pipeline{width:var(--page);margin:50px auto 0;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #4d515c;border-bottom:1px solid #4d515c}
+.pipe{padding:22px 18px;border-right:1px solid #353943}.pipe:last-child{border:0}.pipe span{color:#8f95a3;font-size:10px}.pipe b{display:block;margin-top:8px;font-size:13px}.pipe p{margin-top:8px;color:#aeb3bf;font-size:11px;line-height:1.55}
+.audio-credit{width:var(--page);margin:22px auto 0;color:#8f95a3;font-size:10px;line-height:1.65}.audio-credit a{text-underline-offset:3px}
+
+.match-grid{width:var(--page);margin:65px auto 0;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,.65fr);gap:24px}
+.match-viz,.match-controls{padding:24px;border:1px solid var(--line);border-radius:16px;background:#fff}.match-controls{display:grid;align-content:start;gap:19px}
+.match-title{display:flex;justify-content:space-between;gap:20px;margin-bottom:14px;font-size:12px}.match-title span{color:var(--muted);font-size:10px}
+.segments{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.segments .choice{text-align:center}
+.score{padding:17px;border-radius:12px;background:var(--soft)}.score span{display:block;color:var(--muted);font-size:10px}.score b{display:block;margin-top:6px;font-size:34px;font-weight:520;letter-spacing:-.045em}.score em{font-size:12px;font-style:normal;letter-spacing:0}
+.verdict{min-height:56px;color:var(--muted);font-size:12px;line-height:1.65}.verdict.found{padding:14px;border-radius:10px;background:#e9f5f0;color:#0d5c45}
+.boundary{margin-top:3px;padding:15px;border-radius:10px;background:var(--soft);font-size:11px;line-height:1.65}
+
+.closing{background:#0e1015;color:#f7f7f4;padding:120px 0}.closing-inner{width:var(--page);margin:auto;display:grid;grid-template-columns:.72fr 1.55fr;gap:clamp(42px,8vw,120px)}
+.closing h2{font-size:clamp(40px,5.4vw,76px);font-weight:500;line-height:1;letter-spacing:-.06em;text-wrap:balance}.closing p{max-width:770px;margin-top:28px;color:#b5b9c4;font-size:16px;line-height:1.8}
+.takeaways{margin-top:50px;border-top:1px solid #50535b}.takeaway{display:grid;grid-template-columns:52px 1fr;gap:20px;padding:22px 0;border-bottom:1px solid #30333a}.takeaway span{color:#8d919b;font-size:11px}.takeaway p{margin:0;color:#e1e2e5;font-size:14px}
+.sources{width:var(--text);margin:auto;padding:95px 0}.sources h2{font-size:28px;font-weight:520;letter-spacing:-.035em}.sources ol{margin:24px 0 0 20px}.sources li{padding:6px 0;color:var(--muted);font-size:12px;line-height:1.65}.sources a{text-underline-offset:3px}
+.footer{border-top:1px solid var(--line)}.footer-inner{width:var(--page);margin:auto;padding:46px 0 26px;display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:12px}
+
+@media(max-width:820px){
+  :root{--page:calc(100vw - 32px);--text:calc(100vw - 32px)}
+  .header{height:62px}.crumb{display:none}.progress-track{width:72px}
+  .hero{padding:82px 0 75px}.eyebrow{flex-direction:column;gap:8px}.hero h1{font-size:50px}.dek{font-size:18px}
+  .hero-rule,.section-head,.closing-inner{grid-template-columns:1fr;gap:25px}
+  .lab-section{padding:82px 0}.lab,.match-grid{grid-template-columns:1fr}.canvas{height:310px}.canvas.short{height:220px}.controls{padding:20px}
+  .explanation{padding:82px 0}.definition{grid-template-columns:1fr;gap:10px}.pipeline{grid-template-columns:1fr 1fr}.pipe:nth-child(2){border-right:0}.pipe:nth-child(-n+2){border-bottom:1px solid #353943}
+  .closing{padding:85px 0}.footer-inner{flex-direction:column}
+}
+@media(max-width:480px){.choices,.actions{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.pipeline{grid-template-columns:1fr}.pipe{border-right:0;border-bottom:1px solid #353943!important}.pipe:last-child{border:0!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">跳到正文</a>
+<header class="header">
+  <nav class="nav" aria-label="页面导航">
+    <a class="logo" href="../">VIZ</a><span class="crumb">宇宙的啁啾</span>
+    <div class="progress" aria-label="阅读进度"><span id="progressText">质量</span><span class="progress-track"><span class="progress-fill" id="progressFill"></span></span></div>
+  </nav>
+</header>
+
+<main id="content">
+  <section class="hero">
+    <div class="eyebrow"><span>引力波 × 声音</span><span>2026 年 7 月 29 日 · 约 11 分钟</span></div>
+    <h1>两个黑洞合并，为什么能被听成一声鸟鸣？</h1>
+    <p class="dek">2015 年 9 月 14 日，一阵长度不到一秒的振荡先后经过 LIGO 的两个探测器。把经过说明的应变数据送进扬声器，我们听见的不是太空里的空气，而是频率越来越快的一条物理轨迹。</p>
+    <div class="hero-rule"><b>声音化契约</b><p>每一次播放都标明输入、处理和听觉映射。官方音频、最低阶物理模型与教学合成噪声不会互相冒充；音量只负责可听性，不代表天体真的“更响”。</p></div>
+  </section>
+
+  <section class="lab-section soft" aria-labelledby="massTitle">
+    <div class="section-head">
+      <div class="section-label">实验一 · 质量写进音高</div>
+      <div class="section-copy">
+        <h2 id="massTitle">黑洞越重，啁啾更长还是更短？</h2>
+        <p>先留下判断，再改变探测器参考系中的啁啾质量。图上画的是最低阶 inspiral 关系；播放的是同一条频率曲线，不是另配旋律。</p>
+      </div>
+    </div>
+    <div class="lab">
+      <div class="viz-panel">
+        <div class="panel-top"><b>合并前的频率加速</b><span>35 → 250 Hz · 只画 inspiral 近似</span></div>
+        <canvas class="canvas" id="chirpCanvas" aria-label="啁啾质量控制下的引力波频率曲线"></canvas>
+        <div class="legend"><span class="line-key"></span><span>当前质量</span><span class="line-key blue"></span><span>GW150914 参考值 30.6 M☉</span></div>
+      </div>
+      <div class="controls">
+        <div class="control-label">先预测：质量增加时，35→250 Hz 用时会怎样？</div>
+        <div class="choices" role="group" aria-label="预测质量对啁啾时长的影响">
+          <button class="choice" data-prediction="longer" aria-pressed="false">变得更长</button>
+          <button class="choice" data-prediction="shorter" aria-pressed="false">变得更短</button>
+        </div>
+        <div class="range-group">
+          <div class="range-head"><label for="mass">探测器参考系啁啾质量</label><output id="massOut">30.6 M☉</output></div>
+          <input id="mass" type="range" min="8" max="45" step=".1" value="30.6">
+        </div>
+        <div class="metrics">
+          <div class="metric"><span>35→250 Hz</span><b id="durationMetric">—</b></div>
+          <div class="metric"><span>100 Hz 处 ḟ</span><b id="fdotMetric">—</b></div>
+          <div class="metric"><span>音频映射</span><b id="pitchMetric">原频</b></div>
+        </div>
+        <div class="control-label">听觉映射</div>
+        <div class="choices" role="group" aria-label="啁啾播放音高">
+          <button class="choice" data-pitch="0" aria-pressed="true">原频 35–250 Hz</button>
+          <button class="choice" data-pitch="400" aria-pressed="false">整体 +400 Hz</button>
+        </div>
+        <button class="action primary" id="playModel" disabled>先选择预测</button>
+        <div class="answer" id="massAnswer" aria-live="polite"></div>
+        <div class="receipt">模型：Newtonian leading order · G M☉/c³ = 4.925490947 μs · 截止于 250 Hz · 播放 3 次</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="explanation">
+    <h2>所谓“啁啾质量”，正是频率怎样加速的系数。</h2>
+    <p>两个物体辐射引力波时失去轨道能量，于是越转越快。对近圆轨道的最低阶近似，频率变化率只通过一个对称质量组合进入；质量越大，同一频率处的 ḟ 越大，因此穿过听觉频段的时间反而更短。</p>
+    <div class="equation">ḟ = (96/5) π<sup>8/3</sup> (G𝓜/c³)<sup>5/3</sup> f<sup>11/3</sup>
+      <small>𝓜 = (m₁m₂)<sup>3/5</sup> / (m₁+m₂)<sup>1/5</sup>。接近合并时需要后牛顿展开与数值相对论；本文在 250 Hz 截止，不用最低阶式子伪装完整波形。</small>
+    </div>
+    <div class="definition"><b>为什么是探测器参考系？</b><p>宇宙学红移把源端时间尺度拉长，探测到的质量参数带有 (1+z) 因子。GWOSC 当前事件页给出的源参考系啁啾质量为 27.9<sup>+1.7</sup><sub>−1.5</sub> M☉、红移约 0.10；本文用约 30.6 M☉ 作为听觉模型参考。</p></div>
+  </section>
+
+  <section class="lab-section dark" aria-labelledby="officialTitle">
+    <div class="section-head">
+      <div class="section-label">实验二 · 官方音频到底是什么</div>
+      <div class="section-copy">
+        <h2 id="officialTitle">先听，然后把处理链打开。</h2>
+        <p>下面嵌入 LIGO 文档 G2501806-v4 公布的 3.5 秒 GW150914 单声道 WAV。它已带通并陷波；第一遍按文件原速度播放，第二种映射把播放率提高 30%，使啁啾更容易辨认。</p>
+      </div>
+    </div>
+    <div class="lab">
+      <div class="viz-panel">
+        <div class="panel-top"><b>官方处理后音频的时频图</b><span>固定色标 · 橙线为播放位置</span></div>
+        <canvas class="canvas" id="spectrogram" aria-label="GW150914 官方音频的时频图"></canvas>
+        <div class="legend"><span>0 秒</span><span style="margin-left:auto">3.5 秒</span><span>·</span><span>0–350 Hz</span></div>
+      </div>
+      <div class="controls dark-controls">
+        <div class="metrics">
+          <div class="metric"><span>文件采样率</span><b>1024 Hz</b></div>
+          <div class="metric"><span>样本数</span><b>3584</b></div>
+          <div class="metric"><span>事件附近</span><b>≈ 2.3 s</b></div>
+        </div>
+        <div class="control-label">播放官方文件</div>
+        <div class="actions">
+          <button class="action primary" id="playOfficial">原始音高</button>
+          <button class="action" id="playRaised">音高 +30%</button>
+          <button class="action" id="stopOfficial">停止</button>
+        </div>
+        <div class="receipt" id="officialReceipt" aria-live="polite">尚未播放 · 文件 SHA-256 425570900300…bf43c46</div>
+        <div class="boundary"><b>不是声压记录：</b>探测器测量的是无量纲应变 h(t)。WAV 只是把处理后的时间序列映射为扬声器位移；引力波以光速传播，不以声速传播。</div>
+      </div>
+    </div>
+    <div class="pipeline" aria-label="官方音频处理链">
+      <div class="pipe"><span>01 · 输入</span><b>探测器应变 h(t)</b><p>激光干涉仪臂长的相对变化，不是麦克风电压。</p></div>
+      <div class="pipe"><span>02 · 带通</span><b>保留敏感频段</b><p>抑制频带外的低频与高频噪声。</p></div>
+      <div class="pipe"><span>03 · 陷波</span><b>移除窄谱线</b><p>压低已知仪器共振和电源等窄带成分。</p></div>
+      <div class="pipe"><span>04 · 声音映射</span><b>归一化为 WAV</b><p>为可听性放大；提高播放率会同时缩短时长并升高音调。</p></div>
+    </div>
+    <p class="audio-credit">音频：LIGO/Virgo/KAGRA Collaboration，<a href="https://dcc.ligo.org/LIGO-G2501806/public" target="_blank" rel="noopener">LIGO-G2501806-v4 ↗</a>。GWOSC 开放数据按 CC BY 4.0 发布。</p>
+  </section>
+
+  <section class="explanation">
+    <h2>声音没有替代图，而是把时间结构交给另一种感官。</h2>
+    <p>波形图擅长显示振幅，时频图把上升轨迹铺在平面上；耳朵则对短暂的频率滑动和重复特别敏感。三者使用同一序列，却回答不同问题。真正的声音化必须公开映射，否则读者无法判断听见的是数据性质还是作者的音乐选择。</p>
+    <div class="definition"><b>两台探测器的交叉检查</b><p>GW150914 先到 Livingston，约 6.9 毫秒后到 Hanford。为把两条处理后曲线对齐，官方图还要把一条移动并反号，以补偿传播延迟与探测器相对朝向。好听的一声“啁啾”本身不是完整检测证据。</p></div>
+  </section>
+
+  <section class="lab-section soft" aria-labelledby="matchTitle">
+    <div class="section-head">
+      <div class="section-label">实验三 · 把声音埋回噪声</div>
+      <div class="section-copy">
+        <h2 id="matchTitle">听不见，不等于数据里没有。</h2>
+        <p>这里改用明确标注的教学数据：单位方差高斯白噪声、一个单位范数的最低阶模板和固定随机种子。先听混合序列并猜位置，再让模板逐个延迟扫描。</p>
+      </div>
+    </div>
+    <div class="match-grid">
+      <div class="match-viz">
+        <div class="match-title"><b>上：混合数据　下：模板匹配输出</b><span>橙线为当前延迟 · 蓝点为扫描峰值</span></div>
+        <div class="canvas-stack">
+          <canvas class="canvas short" id="dataCanvas" aria-label="噪声与注入啁啾的混合数据"></canvas>
+          <canvas class="canvas short" id="corrCanvas" aria-label="模板在不同延迟下的匹配输出"></canvas>
+        </div>
+      </div>
+      <div class="match-controls">
+        <div class="control-label">先听混合数据：信号结束在哪一段？</div>
+        <button class="action primary" id="playMix">播放 3 秒混合数据</button>
+        <div class="segments" role="group" aria-label="预测信号所在时间段">
+          <button class="choice" data-segment="0" aria-pressed="false">0–1 s</button>
+          <button class="choice" data-segment="1" aria-pressed="false">1–2 s</button>
+          <button class="choice" data-segment="2" aria-pressed="false">2–3 s</button>
+        </div>
+        <div class="range-group">
+          <div class="range-head"><label for="snr">注入的目标 SNR</label><output id="snrOut">5.5</output></div>
+          <input id="snr" type="range" min="2" max="8" step=".1" value="5.5">
+        </div>
+        <div class="range-group">
+          <div class="range-head"><label for="delay">手动模板延迟</label><output id="delayOut">0.00 s</output></div>
+          <input id="delay" type="range" min="0" max="2.5" step=".01" value="0">
+        </div>
+        <div class="score"><span>当前归一化匹配值</span><b id="scoreValue">0.00 <em>σ</em></b></div>
+        <div class="actions">
+          <button class="action primary" id="scan" disabled>先选择位置</button>
+          <button class="action" id="playTemplate">播放模板</button>
+          <button class="action" id="playResidual" disabled>播放扣除后残差</button>
+        </div>
+        <p class="verdict" id="matchVerdict" aria-live="polite">只听一次很可能找不到。先选择一段，再扫描全部延迟。</p>
+        <div class="receipt">教学合成 · 1024 Hz · 3 秒 · seed 150914 · 注入真值已锁定（扫描后公开）· 单模板 · 白噪声 PSD = 1</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="explanation">
+    <h2>匹配滤波把一整段形状，压缩成某个延迟上的一个峰。</h2>
+    <p>白噪声会偶然在某些点与模板同号、另一些点反号；把整条模板相乘求和后，这些偶然贡献大多抵消。只有频率、相位和时间都对齐时，注入信号的贡献会同向累积。声音帮助提出候选，匹配值才给出可比较的量。</p>
+    <div class="equation">ρ(τ) = Σ d[i] h[i − τ]　　（本文中 Σh² = 1，噪声方差 = 1）
+      <small>真实搜索在频域中用噪声功率谱加权，跨越约 25 万个模板，并加入 χ² 一致性检验、背景估计与双探测器时间一致性。这个白噪声单模板实验只证明匹配机制，不复现 GW150914 的正式显著性。</small>
+    </div>
+    <div class="definition"><b>为什么还要听残差？</b><p>在峰值延迟处减去最佳幅度模板，如果原来的啁啾结构消失而噪声仍在，说明模板解释了那段相干结构。残差不是“什么都没有”，也不能替代对噪声模型和其他波形的检验。</p></div>
+  </section>
+
+  <section class="closing">
+    <div class="closing-inner">
+      <div class="section-label">结论</div>
+      <div>
+        <h2>一声鸟鸣，是一条公开的映射链。</h2>
+        <p>GW150914 的声音之所以有解释力，不是因为宇宙碰巧像乐器，而是频率加速同时存在于轨道动力学、应变序列、时频图、匹配模板与听觉经验里。任何一步改变，都应该被写在收据上。</p>
+        <div class="takeaways">
+          <div class="takeaway"><span>01</span><p>啁啾质量控制最低阶频率演化；更大的质量使同一频率处的变化更快。</p></div>
+          <div class="takeaway"><span>02</span><p>本文嵌入的官方 WAV 是带通、陷波并转为音频后的数据映射，不是太空中的空气声。</p></div>
+          <div class="takeaway"><span>03</span><p>听觉擅长发现短促频率轨迹，但检测仍需要模板匹配、噪声背景和多探测器一致性。</p></div>
+          <div class="takeaway"><span>04</span><p>声音化的可信度来自可审计的输入、处理、映射和边界，而不是“听起来很科学”。</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sources">
+    <h2>来源与处理说明</h2>
+    <ol>
+      <li><a href="https://gwosc.org/events/GW150914/" target="_blank" rel="noopener">GWOSC, GW150914 Open Data</a>：应变数据、两台探测器 6.9 ms 延迟、35–350 Hz 图示处理与数值相对论模板。</li>
+      <li><a href="https://gwosc.org/eventapi/html/event/GW150914/" target="_blank" rel="noopener">GWOSC Event API, GW150914-v4</a>：当前事件参数，包括源参考系啁啾质量、红移和网络匹配滤波 SNR。</li>
+      <li><a href="https://dcc.ligo.org/LIGO-G2501806/public" target="_blank" rel="noopener">LVK, LIGO-G2501806-v4</a>：本文嵌入的官方 3.5 秒 WAV，以及带通、陷波和 +30% 音高说明。</li>
+      <li><a href="https://gwosc.org/s/events/GW150914/GW150914_tutorial.html" target="_blank" rel="noopener">GWOSC Signal Processing Tutorial</a>：白化、20–300 Hz 带通、音频生成和 +400 Hz 频移方法。</li>
+      <li><a href="https://ligo.org/science-summaries/gw150914cbc/" target="_blank" rel="noopener">LIGO, How we searched for merging black holes</a>：模板库、PyCBC/GstLAL、SNR 与 χ² 检验。</li>
+    </ol>
+  </section>
+</main>
+
+<footer class="footer"><div class="footer-inner"><span>VIZ · 宇宙的啁啾</span><a href="../">返回全部文章 ↗</a></div></footer>
+
+<audio id="officialAudio" preload="auto"></audio>
+<script>
+const OFFICIAL_WAV="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";
+const $=id=>document.getElementById(id),TAU_CONST=4.925490947e-6,PI=Math.PI;
+const wavBytes=Uint8Array.from(atob(OFFICIAL_WAV),c=>c.charCodeAt(0));
+const wavView=new DataView(wavBytes.buffer),wavRate=wavView.getUint32(24,true),wavSamples=new Float32Array((wavBytes.length-44)/2);
+for(let i=0;i<wavSamples.length;i++)wavSamples[i]=wavView.getInt16(44+i*2,true)/32768;
+const audio=$('officialAudio');audio.src='data:audio/wav;base64,'+OFFICIAL_WAV;audio.preservesPitch=false;audio.webkitPreservesPitch=false;
+let mass=30.6,pitchShift=0,prediction='',audioCtx=null,modelSource=null,mixSource=null,officialRaf=0;
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function chirpTau(f,m){return 5/256*Math.pow(PI*f,-8/3)*Math.pow(TAU_CONST*m,-5/3)}
+function chirpFdot(f,m){return 96/5*Math.pow(PI,8/3)*Math.pow(TAU_CONST*m,5/3)*Math.pow(f,11/3)}
+function chirpFrequency(tau,m){return Math.pow(5/(256*tau),3/8)/(PI*Math.pow(TAU_CONST*m,5/8))}
+function canvasSetup(canvas){
+  const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect(),w=Math.max(300,r.width),h=Math.max(180,r.height);
+  if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}
+  const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w,h};
+}
+function axes(ctx,w,h,pad,xLabel,yLabel,dark=false){
+  ctx.strokeStyle=dark?'#393d47':'#deded8';ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){let x=pad.l+(w-pad.l-pad.r)*i/5;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke()}
+  for(let i=0;i<=4;i++){let y=pad.t+(h-pad.t-pad.b)*i/4;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke()}
+  ctx.fillStyle=dark?'#9297a4':'#777771';ctx.font='10px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText(xLabel,(pad.l+w-pad.r)/2,h-8);
+  ctx.save();ctx.translate(13,(pad.t+h-pad.b)/2);ctx.rotate(-PI/2);ctx.fillText(yLabel,0,0);ctx.restore();
+}
+function drawChirp(){
+  const {ctx,w,h}=canvasSetup($('chirpCanvas')),pad={l:52,r:20,t:20,b:42},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+  ctx.clearRect(0,0,w,h);axes(ctx,w,h,pad,'距离合并的时间（秒）','频率（Hz）');
+  ctx.fillStyle='#777771';ctx.textAlign='center';for(let i=0;i<=5;i++)ctx.fillText((-1+i*.2).toFixed(1),pad.l+iw*i/5,h-24);
+  ctx.textAlign='right';for(let i=0;i<=3;i++)ctx.fillText(String(i*100),pad.l-8,pad.t+ih*(1-i/3)+3);
+  const draw=m=>{ctx.beginPath();let started=false;for(let p=0;p<=500;p++){const t=-1+p/500,f=chirpFrequency(Math.max(-t,.0008),m);if(f<20||f>300)continue;const x=pad.l+(t+1)*iw,y=pad.t+(1-f/300)*ih;if(!started){ctx.moveTo(x,y);started=true}else ctx.lineTo(x,y)}ctx.stroke()};
+  ctx.lineWidth=2;ctx.strokeStyle='#5868ff';draw(30.6);ctx.lineWidth=3;ctx.strokeStyle='#ef6a3a';draw(mass);
+}
+function updateMass(){
+  mass=+$('mass').value;$('massOut').textContent=mass.toFixed(1)+' M☉';
+  const duration=chirpTau(35,mass)-chirpTau(250,mass),fdot=chirpFdot(100,mass);
+  $('durationMetric').textContent=(duration*1000).toFixed(0)+' ms';$('fdotMetric').textContent=fdot.toFixed(0)+' Hz/s';drawChirp();
+}
+async function context(){if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')await audioCtx.resume();return audioCtx}
+function stopSources(){if(modelSource){try{modelSource.stop()}catch{}modelSource=null}if(mixSource){try{mixSource.stop()}catch{}mixSource=null}}
+async function playArray(samples,sampleRate=1024,volume=.18){
+  stopSources();const ctx=await context(),ratio=ctx.sampleRate/sampleRate,length=Math.ceil(samples.length*ratio),buffer=ctx.createBuffer(1,length,ctx.sampleRate),out=buffer.getChannelData(0);
+  for(let i=0;i<length;i++){const p=i/ratio,a=Math.floor(p),q=p-a;out[i]=((samples[a]||0)*(1-q)+(samples[Math.min(a+1,samples.length-1)]||0)*q)*volume}
+  const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buffer;gain.gain.value=1;src.connect(gain).connect(ctx.destination);src.start();mixSource=src;return src;
+}
+async function playModel(){
+  const ctx=await context(),rate=ctx.sampleRate,start=35,end=250,duration=chirpTau(start,mass)-chirpTau(end,mass),gap=.42,repeats=3,total=repeats*(duration+gap),buffer=ctx.createBuffer(1,Math.ceil(total*rate),rate),out=buffer.getChannelData(0);
+  for(let rep=0;rep<repeats;rep++){const base=rep*(duration+gap);let phase=0;for(let i=0;i<duration*rate;i++){const elapsed=i/rate,tau=chirpTau(start,mass)-elapsed,f=clamp(chirpFrequency(Math.max(tau,.0008),mass),start,end)+pitchShift;phase+=2*PI*f/rate;const envelope=Math.sin(PI*i/(duration*rate));out[Math.floor((base+elapsed)*rate)]=Math.sin(phase)*envelope*.18}}
+  stopSources();const src=ctx.createBufferSource();src.buffer=buffer;src.connect(ctx.destination);src.start();modelSource=src;
+  const correct=prediction==='shorter';$('massAnswer').classList.add('show');$('massAnswer').textContent=`你的预测：${prediction==='shorter'?'更短':'更长'}。${correct?'方向正确。':'这次方向相反。'} 质量进入 ḟ 的 5/3 次方；质量越大，频率上升越快，因此穿过 35–250 Hz 的时间越短。`;
+}
+document.querySelectorAll('[data-prediction]').forEach(btn=>btn.addEventListener('click',()=>{prediction=btn.dataset.prediction;document.querySelectorAll('[data-prediction]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));$('playModel').disabled=false;$('playModel').textContent='播放这个质量的模型'}));
+document.querySelectorAll('[data-pitch]').forEach(btn=>btn.addEventListener('click',()=>{pitchShift=+btn.dataset.pitch;document.querySelectorAll('[data-pitch]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));$('pitchMetric').textContent=pitchShift?'+400 Hz':'原频'}));
+$('mass').addEventListener('input',updateMass);$('playModel').addEventListener('click',playModel);
+
+const specCanvas=$('spectrogram');let specCache=null;
+function computeSpectrogram(){
+  const W=128,H=8,bins=45,cols=Math.floor((wavSamples.length-W)/H)+1,values=new Float32Array(cols*bins),realKernel=new Float32Array(bins*W),imagKernel=new Float32Array(bins*W);let max=-Infinity,min=Infinity;
+  for(let k=3;k<bins;k++)for(let j=0;j<W;j++){const win=.5-.5*Math.cos(2*PI*j/(W-1)),ph=2*PI*k*j/W;realKernel[k*W+j]=win*Math.cos(ph);imagKernel[k*W+j]=-win*Math.sin(ph)}
+  for(let c=0;c<cols;c++)for(let k=3;k<bins;k++){let re=0,im=0;for(let j=0;j<W;j++){const a=wavSamples[c*H+j];re+=a*realKernel[k*W+j];im+=a*imagKernel[k*W+j]}const db=Math.log10(1e-7+Math.hypot(re,im));values[c*bins+k]=db;max=Math.max(max,db);min=Math.min(min,db)}
+  return{values,cols,bins,min,max};
+}
+function drawSpectrogram(playhead=-1){
+  const {ctx,w,h}=canvasSetup(specCanvas),pad={l:48,r:18,t:18,b:38},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;if(!specCache)specCache=computeSpectrogram();
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#101218';ctx.fillRect(pad.l,pad.t,iw,ih);
+  const {values,cols,bins,min,max}=specCache;
+  for(let c=0;c<cols;c++)for(let k=3;k<bins;k++){const f=k*wavRate/128;if(f>350)continue;const t=clamp((values[c*bins+k]-min)/(max-min),0,1),x=pad.l+c/cols*iw,y=pad.t+(1-f/350)*ih;
+    const r=Math.round(16+235*Math.pow(t,2.2)),g=Math.round(19+82*t),b=Math.round(26+34*t);ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(x,y,iw/cols+1,ih/(350/(wavRate/128))+1)}
+  axes(ctx,w,h,pad,'时间（秒）','频率（Hz）',true);ctx.fillStyle='#9a9fab';ctx.textAlign='center';for(let i=0;i<=7;i++)ctx.fillText((i*.5).toFixed(1),pad.l+iw*i/7,h-21);ctx.textAlign='right';for(let i=0;i<=3;i++)ctx.fillText(String(i*100),pad.l-8,pad.t+ih*(1-i*100/350)+3);
+  if(playhead>=0){ctx.strokeStyle='#ef6a3a';ctx.lineWidth=2;const x=pad.l+clamp(playhead/3.5,0,1)*iw;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke()}
+}
+function stopOfficial(){audio.pause();try{audio.currentTime=0}catch{}cancelAnimationFrame(officialRaf);drawSpectrogram();$('officialReceipt').textContent='已停止 · 文件未做额外处理'}
+function officialFrame(){drawSpectrogram(audio.currentTime);if(!audio.paused)officialRaf=requestAnimationFrame(officialFrame)}
+async function playOfficial(rate){stopSources();audio.pause();audio.currentTime=0;audio.playbackRate=rate;await audio.play();cancelAnimationFrame(officialRaf);officialFrame();$('officialReceipt').textContent=rate===1?'正在播放：LIGO 公布文件 · 1.00× · 3.50 秒':'正在播放：同一文件 · 1.30× · 约 2.69 秒 · 音高随播放率升高';}
+$('playOfficial').addEventListener('click',()=>playOfficial(1));$('playRaised').addEventListener('click',()=>playOfficial(1.3));$('stopOfficial').addEventListener('click',stopOfficial);audio.addEventListener('ended',()=>{drawSpectrogram();$('officialReceipt').textContent='播放完成 · 可切换映射再次比较'});
+
+const SR=1024,DATA_N=SR*3,TEMPLATE_N=512,TRUE_OFFSET=Math.round(1.35*SR);let targetSnr=5.5,manualDelay=0,segmentChoice='',scanned=false;
+function randomNormal(seed=150914){let s=seed>>>0,spare=null;return()=>{if(spare!==null){const x=spare;spare=null;return x}s=(Math.imul(1664525,s)+1013904223)>>>0;const u=(s+.5)/4294967296;s=(Math.imul(1664525,s)+1013904223)>>>0;const v=(s+.5)/4294967296;const r=Math.sqrt(-2*Math.log(u)),a=2*PI*v;spare=r*Math.sin(a);return r*Math.cos(a)}}
+function makeTemplate(){
+  const out=new Float32Array(TEMPLATE_N),duration=chirpTau(35,30.6)-chirpTau(250,30.6),start=Math.floor((.43-duration)*SR);let phase=0;
+  for(let i=start;i<start+duration*SR&&i<TEMPLATE_N;i++){const elapsed=(i-start)/SR,tau=chirpTau(35,30.6)-elapsed,f=clamp(chirpFrequency(Math.max(tau,.0008),30.6),35,250);phase+=2*PI*f/SR;out[i]=Math.sin(phase)*Math.sin(PI*(i-start)/(duration*SR))}
+  let norm=Math.sqrt(out.reduce((s,x)=>s+x*x,0));for(let i=0;i<out.length;i++)out[i]/=norm;return out;
+}
+const matchTemplate=makeTemplate(),noise=new Float32Array(DATA_N),rand=randomNormal();for(let i=0;i<DATA_N;i++)noise[i]=rand();
+let mixed=new Float32Array(DATA_N),corr=new Float32Array(DATA_N-TEMPLATE_N+1),peakIndex=0,peakScore=0;
+function rebuildMatch(){
+  targetSnr=+$('snr').value;$('snrOut').textContent=targetSnr.toFixed(1);for(let i=0;i<DATA_N;i++)mixed[i]=noise[i];
+  for(let j=0;j<TEMPLATE_N;j++)mixed[TRUE_OFFSET+j]+=targetSnr*matchTemplate[j];
+  peakScore=-Infinity;peakIndex=0;for(let off=0;off<corr.length;off++){let sum=0;for(let j=0;j<TEMPLATE_N;j++)sum+=mixed[off+j]*matchTemplate[j];corr[off]=sum;if(sum>peakScore){peakScore=sum;peakIndex=off}}
+  scanned=false;$('playResidual').disabled=true;$('matchVerdict').className='verdict';$('matchVerdict').textContent='噪声保持同一个随机种子；只改变注入模板的目标 SNR。先猜位置，再扫描。';updateManual();
+}
+function scoreAt(off){let s=0;for(let j=0;j<TEMPLATE_N;j++)s+=mixed[off+j]*matchTemplate[j];return s}
+function updateManual(){
+  manualDelay=Math.round(+$('delay').value*SR);manualDelay=clamp(manualDelay,0,corr.length-1);const score=scoreAt(manualDelay);$('delayOut').textContent=(manualDelay/SR).toFixed(2)+' s';$('scoreValue').innerHTML=score.toFixed(2)+' <em>σ</em>';drawMatch();
+}
+function drawSeries(canvas,values,color,label,minY,maxY,marker=-1,peak=-1){
+  const {ctx,w,h}=canvasSetup(canvas),pad={l:45,r:18,t:18,b:34},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;ctx.clearRect(0,0,w,h);axes(ctx,w,h,pad,'时间 / 模板起点（秒）',label);
+  const mid=pad.t+ih*(-minY)/(maxY-minY);ctx.strokeStyle='#c8c8c2';ctx.beginPath();ctx.moveTo(pad.l,mid);ctx.lineTo(w-pad.r,mid);ctx.stroke();
+  ctx.strokeStyle=color;ctx.lineWidth=1;ctx.beginPath();const stride=Math.max(1,Math.floor(values.length/iw));for(let i=0;i<values.length;i+=stride){const x=pad.l+i/(values.length-1)*iw,y=pad.t+(maxY-clamp(values[i],minY,maxY))/(maxY-minY)*ih;i?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke();
+  if(marker>=0){ctx.strokeStyle='#ef6a3a';ctx.lineWidth=2;const x=pad.l+marker/(values.length-1)*iw;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke()}
+  if(peak>=0){const x=pad.l+peak/(values.length-1)*iw,y=pad.t+(maxY-clamp(values[peak],minY,maxY))/(maxY-minY)*ih;ctx.fillStyle='#5868ff';ctx.beginPath();ctx.arc(x,y,5,0,2*PI);ctx.fill()}
+}
+function drawMatch(){
+  drawSeries($('dataCanvas'),mixed,'#15171b','幅度（σ）',-4,4,manualDelay,-1);
+  let lo=Infinity,hi=-Infinity;for(const x of corr){lo=Math.min(lo,x);hi=Math.max(hi,x)}const bound=Math.max(4,Math.abs(lo),Math.abs(hi));
+  drawSeries($('corrCanvas'),corr,'#5868ff','匹配值（σ）',-bound,bound,manualDelay,scanned?peakIndex:-1);
+}
+$('snr').addEventListener('input',rebuildMatch);$('delay').addEventListener('input',updateManual);
+document.querySelectorAll('[data-segment]').forEach(btn=>btn.addEventListener('click',()=>{segmentChoice=btn.dataset.segment;document.querySelectorAll('[data-segment]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));$('scan').disabled=false;$('scan').textContent='扫描所有延迟'}));
+$('scan').addEventListener('click',()=>{scanned=true;$('delay').value=(peakIndex/SR).toFixed(2);manualDelay=peakIndex;updateManual();scanned=true;drawMatch();$('playResidual').disabled=false;const correct=segmentChoice==='1';$('matchVerdict').className='verdict found';$('matchVerdict').textContent=`扫描峰值：${(peakIndex/SR).toFixed(3)} 秒，匹配值 ${peakScore.toFixed(2)}σ。你的分段判断${correct?'命中':'未命中'}；注入真值起点是 1.350 秒。峰值与真值相差 ${Math.abs(peakIndex-TRUE_OFFSET)/SR*1000|0} 毫秒。`;});
+$('playMix').addEventListener('click',()=>playArray(mixed,SR,.12));$('playTemplate').addEventListener('click',()=>playArray(matchTemplate,SR,2.2));
+$('playResidual').addEventListener('click',()=>{const residual=new Float32Array(mixed);const amp=scoreAt(manualDelay);for(let j=0;j<TEMPLATE_N;j++)residual[manualDelay+j]-=amp*matchTemplate[j];playArray(residual,SR,.12)});
+
+const sections=[['质量',$('massTitle')],['官方',$('officialTitle')],['匹配',$('matchTitle')]];
+function updateProgress(){const max=document.documentElement.scrollHeight-innerHeight,p=max?scrollY/max:0;$('progressFill').style.width=p*100+'%';let label='质量';for(const [name,el] of sections)if(scrollY+innerHeight*.35>=el.offsetTop)label=name;$('progressText').textContent=label}
+addEventListener('scroll',updateProgress,{passive:true});addEventListener('resize',()=>{drawChirp();drawSpectrogram(audio.currentTime||-1);drawMatch();updateProgress()});
+addEventListener('visibilitychange',()=>{if(document.hidden){stopSources();audio.pause()}});
+updateMass();drawSpectrogram();rebuildMatch();updateProgress();
+</script>
+</body>
+</html>
