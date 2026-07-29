@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://viz.gopromp.com/sitemap.xml

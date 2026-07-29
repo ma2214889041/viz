@@ -1,0 +1,16 @@
+{
+  "name": "VIZ — 交互式可视化刊物",
+  "short_name": "VIZ",
+  "description": "关于数学、物理、数据与系统的交互式可视化刊物。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f3ef",
+  "theme_color": "#f4f3ef",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    }
+  ]
+}
