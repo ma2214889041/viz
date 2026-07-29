@@ -278,14 +278,14 @@ canvas.chart{display:block;border-radius:8px}
   </p>
   <div id="cards">
     <div class="card kk" data-go="kakeya" style="width:520px">
-      <div class="who"><h3>开始互动演示 ↗</h3><span>10 章 · 约 6 分钟</span></div>
+      <div class="who"><h3>开始互动演示 ↗</h3><span>11 章 · 约 8 分钟</span></div>
       <div class="tag">三维挂谷猜想</div>
       <p class="prob">从一根针转一圈开始，一步步看它怎么被压到几乎没有体积，而每个方向仍在里面。所有数值实时计算。</p>
       <div class="go">进入 →</div>
     </div>
   </div>
   <p class="foot">
-    10 章 · 约 6 分钟 · 可以拖动、调节递归深度和观察方向覆盖
+    11 章 · 约 8 分钟 · 可以预测、寻找证明裂缝并检验盒维数
   </p>
 </section>
 
@@ -1049,6 +1049,26 @@ const SC={
        en(){camTo(0.5,0.40,3.5,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'tDepth',5,900);to(KAK,'boxes',1,700,300);}},
+
+      {t:'案发现场：一份几乎正确的证明',
+       b:`<p>有人据此写下了一份四步“证明”，声称体积趋近 0 就能推出维数小于 3。前三行看起来都很熟悉，结论也很顺。</p>
+          <div class="proof-detective" data-proof-detective>
+            <div class="proof-case">
+              <span>待审结论</span>
+              <strong>V(K<sub>δ</sub>) → 0，所以 D &lt; 3</strong>
+            </div>
+            <div class="proof-steps" role="group" aria-label="选择最早失效的证明步骤">
+              <button type="button" data-proof-step="1"><i>1</i><span><b>加粗集合</b>K<sub>δ</sub> 的体积在 δ → 0 时趋近 0。</span></button>
+              <button type="button" data-proof-step="2"><i>2</i><span><b>盒计数夹逼</b>N(2δ)·δ³ ≲ V(K<sub>δ</sub>) ≲ N(δ)·δ³。</span></button>
+              <button type="button" data-proof-step="3" data-crack><i>3</i><span><b>偷换尺度</b>把 N(δ) 的对数增长率直接写成固定幂律 N(δ) ≍ δ<sup>−D</sup>。</span></button>
+              <button type="button" data-proof-step="4"><i>4</i><span><b>推出结论</b>若 V(K<sub>δ</sub>) ≍ δ<sup>3−D</sup> 且趋近 0，那么 D &lt; 3。</span></button>
+            </div>
+            <div class="proof-feedback" aria-live="polite">请选择你认为最早出现裂缝的一步。</div>
+          </div>
+          <p>关键不是找到一句“听着不严谨”的话，而是给出一个能穿过裂缝的反例。</p>`,
+       en(){camTo(0.62,0.30,3.8,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
+            KAK.shadow=0;KAK.cones=0;CAM.spin=0.025;
+            to(KAK,'tDepth',7,900);to(KAK,'boxes',1,500);}},
 
       {t:'王虹 & Zahl：维数必须是 3',
        b:`<p>右下角是实测数据。把针不断变细（δ 每次减半），看体积怎么变：</p>

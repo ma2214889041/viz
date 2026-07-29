@@ -769,6 +769,12 @@ function gasStats(){
   GAS.Hcur=H;GAS.vrms=vrms;GAS.binw=bw;GAS.top=top;
   return H;
 }
+window.vizGasApi={
+  state:GAS,
+  init:gasInit,
+  step:gasStep,
+  stats:gasStats
+};
 function gasMacro(){
   const G=GAS.macroN,N=GAS.N,L=GAS.L;
   if(!GAS.dens||GAS.dens.length!==G*G*G){
@@ -868,7 +874,27 @@ const SC={
           <p>它<b>真的会先爬回去</b>，然后因离散仿真的数值误差与重新混合再次下降。上方实验回执记录的是本次运行中反演后的 <b>H 峰值</b>，不使用写死的示范数字。</p>
           <p>可是如果先让它跑到平衡，再按 <b>⇄ 时间反演</b>，H 会<em>纹丝不动</em>。</p>
           <p>区别不在定律，而在<b>初始状态有多特殊</b>。反演后的那个状态特殊到几乎不可能被“碰”出来；一旦系统忘记了出身，反演就什么也换不回来。</p>
-          <span class="fml">可逆的定律 + 特殊的初态 = 不可逆的世界</span>`,
+          <span class="fml">可逆的定律 + 特殊的初态 = 不可逆的世界</span>
+          <div class="counterfactual-lab" data-counterfactual-lab>
+            <div class="cf-head">
+              <div><span>共享初态实验</span><strong>只改变反演时刻</strong></div>
+              <button type="button" data-cf-run>运行双轨实验</button>
+            </div>
+            <p class="cf-rule">同一 seed 20260723 · 同一组 520 个粒子 · 同一时间步长。左轨在关联尚未丢失时反演，右轨等速率分布接近平衡后再反演。</p>
+            <div class="cf-grid">
+              <section data-cf-branch="early">
+                <span>轨道 A · 早期反演</span>
+                <canvas width="420" height="128" aria-label="早期反演 H 曲线"></canvas>
+                <strong data-cf-value>等待运行</strong>
+              </section>
+              <section data-cf-branch="late">
+                <span>轨道 B · 平衡后反演</span>
+                <canvas width="420" height="128" aria-label="平衡后反演 H 曲线"></canvas>
+                <strong data-cf-value>等待运行</strong>
+              </section>
+            </div>
+            <div class="cf-verdict" data-cf-verdict aria-live="polite">两条轨道尚未运行。</div>
+          </div>`,
        en(){camTo(1.05,0.16,3.6,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;
             GAS.reversed=0;}},
 

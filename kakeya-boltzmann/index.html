@@ -1082,6 +1082,12 @@ function gasStats(){
   GAS.Hcur=H;GAS.vrms=vrms;GAS.binw=bw;GAS.top=top;
   return H;
 }
+window.vizGasApi={
+  state:GAS,
+  init:gasInit,
+  step:gasStep,
+  stats:gasStats
+};
 function gasMacro(){
   const G=GAS.macroN,N=GAS.N,L=GAS.L;
   if(!GAS.dens||GAS.dens.length!==G*G*G){
@@ -1233,6 +1239,26 @@ const SC={
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'tDepth',5,900);to(KAK,'boxes',1,700,300);}},
 
+      {t:'案发现场：一份几乎正确的证明',
+       b:`<p>有人据此写下了一份四步“证明”，声称体积趋近 0 就能推出维数小于 3。前三行看起来都很熟悉，结论也很顺。</p>
+          <div class="proof-detective" data-proof-detective>
+            <div class="proof-case">
+              <span>待审结论</span>
+              <strong>V(K<sub>δ</sub>) → 0，所以 D &lt; 3</strong>
+            </div>
+            <div class="proof-steps" role="group" aria-label="选择最早失效的证明步骤">
+              <button type="button" data-proof-step="1"><i>1</i><span><b>加粗集合</b>K<sub>δ</sub> 的体积在 δ → 0 时趋近 0。</span></button>
+              <button type="button" data-proof-step="2"><i>2</i><span><b>盒计数夹逼</b>N(2δ)·δ³ ≲ V(K<sub>δ</sub>) ≲ N(δ)·δ³。</span></button>
+              <button type="button" data-proof-step="3" data-crack><i>3</i><span><b>偷换尺度</b>把 N(δ) 的对数增长率直接写成固定幂律 N(δ) ≍ δ<sup>−D</sup>。</span></button>
+              <button type="button" data-proof-step="4"><i>4</i><span><b>推出结论</b>若 V(K<sub>δ</sub>) ≍ δ<sup>3−D</sup> 且趋近 0，那么 D &lt; 3。</span></button>
+            </div>
+            <div class="proof-feedback" aria-live="polite">请选择你认为最早出现裂缝的一步。</div>
+          </div>
+          <p>关键不是找到一句“听着不严谨”的话，而是给出一个能穿过裂缝的反例。</p>`,
+       en(){camTo(0.62,0.30,3.8,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
+            KAK.shadow=0;KAK.cones=0;CAM.spin=0.025;
+            to(KAK,'tDepth',7,900);to(KAK,'boxes',1,500);}},
+
       {t:'王虹 & Zahl：维数必须是 3',
        b:`<p>右下角是实测数据。把针不断变细（δ 每次减半），看体积怎么变：</p>
           <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的维数从 1.90 一路爬到 <b>2.9 附近</b>，还在往 3 去。</p>
@@ -1309,7 +1335,27 @@ const SC={
           <p>它<b>真的会先爬回去</b>，然后因离散仿真的数值误差与重新混合再次下降。上方实验回执记录的是本次运行中反演后的 <b>H 峰值</b>，不使用写死的示范数字。</p>
           <p>可是如果先让它跑到平衡，再按 <b>⇄ 时间反演</b>，H 会<em>纹丝不动</em>。</p>
           <p>区别不在定律，而在<b>初始状态有多特殊</b>。反演后的那个状态特殊到几乎不可能被“碰”出来；一旦系统忘记了出身，反演就什么也换不回来。</p>
-          <span class="fml">可逆的定律 + 特殊的初态 = 不可逆的世界</span>`,
+          <span class="fml">可逆的定律 + 特殊的初态 = 不可逆的世界</span>
+          <div class="counterfactual-lab" data-counterfactual-lab>
+            <div class="cf-head">
+              <div><span>共享初态实验</span><strong>只改变反演时刻</strong></div>
+              <button type="button" data-cf-run>运行双轨实验</button>
+            </div>
+            <p class="cf-rule">同一 seed 20260723 · 同一组 520 个粒子 · 同一时间步长。左轨在关联尚未丢失时反演，右轨等速率分布接近平衡后再反演。</p>
+            <div class="cf-grid">
+              <section data-cf-branch="early">
+                <span>轨道 A · 早期反演</span>
+                <canvas width="420" height="128" aria-label="早期反演 H 曲线"></canvas>
+                <strong data-cf-value>等待运行</strong>
+              </section>
+              <section data-cf-branch="late">
+                <span>轨道 B · 平衡后反演</span>
+                <canvas width="420" height="128" aria-label="平衡后反演 H 曲线"></canvas>
+                <strong data-cf-value>等待运行</strong>
+              </section>
+            </div>
+            <div class="cf-verdict" data-cf-verdict aria-live="polite">两条轨道尚未运行。</div>
+          </div>`,
        en(){camTo(1.05,0.16,3.6,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;
             GAS.reversed=0;}},
 

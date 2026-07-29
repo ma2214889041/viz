@@ -2,11 +2,11 @@
   "slug": "kakeya",
   "title": "一根针",
   "question": "一根针最少能扫过多大地方？",
-  "description": "从挂谷转针问题出发，探索体积可以消失、维数却依旧完整的几何世界。",
+  "description": "从挂谷转针问题出发，先留下预测，再通过递归压缩、盒计数与错误证明检验体积和维数。",
   "date": "2026-07-29",
   "category": ["数学", "几何"],
-  "duration": "6 分钟",
-  "chapters": 10,
+  "duration": "8 分钟",
+  "chapters": 11,
   "featured": true,
   "accent": "#72d9ee"
 }
