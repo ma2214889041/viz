@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "viz-site",
+  "compatibility_date": "2026-07-29",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "viz.gopromp.com",
+      "custom_domain": true
+    }
+  ]
+}

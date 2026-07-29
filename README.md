@@ -37,7 +37,9 @@ npm run preview
 
 正式地址：<https://viz.gopromp.com>
 
-Cloudflare Pages 项目名为 `viz`，构建命令为 `npm run build`，输出目录为 `dist`。当前使用 Wrangler 直接部署；也可以将 GitHub 仓库连接到 Pages，在每次推送后自动构建。
+正式环境使用 Cloudflare Workers Static Assets，配置文件为 `wrangler.jsonc`。运行 `npm run deploy` 会完成构建并更新正式站点。
+
+同时保留 Cloudflare Pages 项目 `viz` 作为备用部署与预览地址；构建命令为 `npm run build`，输出目录为 `dist`。
 
 ## 关于内容的准确性
 
