@@ -4,40 +4,104 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#f4f3ef">
+<meta name="theme-color" content="#ffffff">
 <link rel="icon" href="/favicon.png" type="image/png">
-<title>没有找到这个页面 — VIZ</title>
+<link rel="manifest" href="/site.webmanifest">
+<title>页面不存在 — VIZ</title>
 <style>
-:root{--paper:#f4f3ef;--ink:#171715;--blue:#315cff;--line:#d4d2ca;--serif:"Songti SC","Noto Serif SC",Georgia,serif;--sans:"PingFang SC","Noto Sans SC",system-ui,sans-serif}
+:root{
+  --ink:#0a0a0a;
+  --muted:#676767;
+  --line:#deded9;
+  --soft:#f5f5f2;
+  --blue:#4f64ff;
+  --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --page:min(1440px,calc(100vw - 48px));
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{min-height:100svh;background:var(--paper);color:var(--ink);font-family:var(--sans);display:grid;grid-template-rows:72px 1fr}
-header{border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px}
-.logo{font-size:22px;font-weight:700;letter-spacing:-.06em;text-decoration:none;display:flex;gap:9px;align-items:center}
-.mark{width:11px;height:11px;border-radius:50%;background:var(--ink);box-shadow:8px 0 0 var(--blue)}
-main{display:grid;grid-template-columns:1fr 1fr;min-height:0}
-.copy{padding:9vw 5vw;display:flex;flex-direction:column;justify-content:center}
-.code{font:11px ui-monospace,monospace;letter-spacing:.14em;margin-bottom:28px}
-h1{font:500 clamp(52px,8vw,118px)/.98 var(--serif);letter-spacing:-.055em}
-h1 span{display:block;color:var(--blue)}
-p{max-width:520px;margin-top:30px;line-height:1.8;color:#64635d}
-.go{display:inline-flex;width:max-content;margin-top:34px;padding:14px 18px;background:var(--ink);color:white;text-decoration:none;font-size:13px}
-.field{background:var(--ink);position:relative;overflow:hidden}
-.field::before,.field::after{content:"";position:absolute;left:50%;top:50%;border:1px solid rgba(114,217,238,.26);border-radius:50%;transform:translate(-50%,-50%)}
-.field::before{width:46%;aspect-ratio:1}.field::after{width:72%;aspect-ratio:1}
-.dot{position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:#72d9ee;transform:translate(-50%,-50%);box-shadow:0 0 40px 18px rgba(49,92,255,.28)}
-@media(max-width:700px){body{grid-template-rows:62px 1fr}main{grid-template-columns:1fr}.field{min-height:38vh}.copy{padding:64px 24px}}
+body{
+  min-height:100svh;background:#fff;color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;
+}
+a{color:inherit}
+::selection{background:#dfe4ff}
+header{height:68px;border-bottom:1px solid var(--line)}
+.nav{width:var(--page);height:100%;margin:auto;display:flex;align-items:center;justify-content:space-between}
+.logo{
+  display:inline-flex;align-items:center;gap:9px;text-decoration:none;
+  font-size:21px;font-weight:650;letter-spacing:-.055em;
+}
+.mark{width:10px;height:10px;border-radius:50%;background:var(--ink);box-shadow:7px 0 0 var(--blue)}
+.all{font-size:14px;text-decoration:none}
+.all:hover{opacity:.55}
+main{
+  width:var(--page);margin:auto;flex:1;display:grid;
+  grid-template-columns:minmax(0,1.45fr) minmax(280px,.55fr);
+  gap:clamp(48px,8vw,140px);align-items:center;padding:90px 0;
+}
+.code{font-size:14px;font-weight:550;margin-bottom:30px}
+h1{
+  max-width:920px;font-size:clamp(58px,7.2vw,106px);font-weight:500;
+  line-height:.96;letter-spacing:-.065em;text-wrap:balance;
+}
+.lead{max-width:590px;margin-top:30px;color:#444;font-size:17px;line-height:1.7}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:32px}
+.button{
+  display:inline-flex;align-items:center;min-height:46px;padding:0 19px;
+  border-radius:999px;text-decoration:none;font-size:14px;background:var(--ink);color:#fff;
+}
+.button.secondary{background:var(--soft);color:var(--ink)}
+.button:hover{transform:translateY(-1px)}
+.suggestions{border-top:1px solid var(--ink)}
+.suggestions-label{padding:18px 0;color:var(--muted);font-size:13px}
+.suggestions a{
+  display:grid;grid-template-columns:1fr auto;gap:18px;padding:22px 0;
+  border-top:1px solid var(--line);text-decoration:none;
+}
+.suggestions h2{font-size:21px;font-weight:520;line-height:1.25;letter-spacing:-.025em}
+.suggestions span{font-size:17px}
+:where(a,button):focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+footer{
+  width:var(--page);margin:auto;border-top:1px solid var(--line);
+  padding:18px 0 24px;color:#8b8b86;font-size:12px;
+  display:flex;justify-content:space-between;gap:24px;
+}
+@media(max-width:760px){
+  :root{--page:calc(100vw - 32px)}
+  header{height:62px}
+  main{grid-template-columns:1fr;gap:74px;padding:72px 0 90px}
+  h1{font-size:55px}
+  .lead{font-size:16px}
+  footer{flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important}
+}
 </style>
 </head>
 <body>
-<header><a class="logo" href="/"><span class="mark"></span>VIZ</a></header>
+<header>
+  <nav class="nav" aria-label="错误页导航">
+    <a class="logo" href="/" aria-label="VIZ 首页"><span class="mark" aria-hidden="true"></span>VIZ</a>
+    <a class="all" href="/#articles">全部文章</a>
+  </nav>
+</header>
 <main>
-  <section class="copy">
-    <div class="code">404 / OUTSIDE THE MAP</div>
-    <h1>这里还没有<span>可视化。</span></h1>
-    <p>这个地址不存在，或者作品已经移动。回到 VIZ，继续探索数学、物理、数据与系统里的复杂问题。</p>
-    <a class="go" href="/">返回全部作品&nbsp;&nbsp;→</a>
+  <section>
+    <div class="code">404 · 页面不存在</div>
+    <h1>这个页面不在这里。</h1>
+    <p class="lead">地址可能已经更改，或者输入有误。你可以返回首页，也可以直接阅读已经发布的文章。</p>
+    <div class="actions">
+      <a class="button" href="/">返回首页 ↗</a>
+      <a class="button secondary" href="/#articles">查看全部文章</a>
+    </div>
   </section>
-  <div class="field" aria-hidden="true"><span class="dot"></span></div>
+  <aside class="suggestions" aria-label="推荐文章">
+    <div class="suggestions-label">继续阅读</div>
+    <a href="/kakeya/"><h2>一根针最少能扫过多大地方？</h2><span aria-hidden="true">↗</span></a>
+    <a href="/boltzmann/"><h2>一盒气体为什么知道时间方向？</h2><span aria-hidden="true">↗</span></a>
+  </aside>
 </main>
+<footer><span>VIZ</span><span>关于数学与物理的可视化文章</span></footer>
 </body>
 </html>

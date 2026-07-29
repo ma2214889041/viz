@@ -2,6 +2,40 @@
    The interactive scene keeps its dark canvas; article and source views stay text-first. */
 
 #gl,#vignette,#labels{transition:opacity .45s}
+#mobilePanels{display:none}
+
+#brand,
+#story h2,
+.card .who h3{
+  font-family:var(--sans);
+}
+body:not(.home) #brand a{
+  color:#f2f5fa;
+  font-weight:650;
+  letter-spacing:-.04em;
+}
+#story h2{
+  font-weight:550;
+  letter-spacing:-.025em;
+}
+.panel{
+  background:rgba(8,10,18,.82);
+  border-color:rgba(255,255,255,.12);
+  box-shadow:0 20px 56px rgba(0,0,0,.42);
+}
+.btn{
+  font-weight:500;
+  letter-spacing:0;
+}
+:where(a,button,[role="button"],input):focus-visible{
+  outline:2px solid currentColor;
+  outline-offset:3px;
+}
+.card[role="button"]:focus-visible{
+  border-color:rgba(255,255,255,.5);
+  transform:translateY(-2px);
+}
+
 body.home{
   background:#fff;
   color:#0a0a0a;
@@ -54,6 +88,11 @@ body.home #nav button{
   padding:8px 14px;
 }
 body.home #nav button:hover{color:#0a0a0a}
+body.home #nav button:focus{outline:none}
+body.home #nav button:focus-visible{
+  outline:2px solid #0a0a0a;
+  outline-offset:2px;
+}
 body.home #nav button.on,
 body.home #nav button.on.k,
 body.home #nav button.on.g{
@@ -122,6 +161,7 @@ body.home .card.gg{
   box-shadow:none;
   backdrop-filter:none;
   color:#0a0a0a;
+  font:inherit;
 }
 body.home .card:hover{
   transform:translateY(-1px);
@@ -172,15 +212,17 @@ body.home #tl .lead{
 }
 body.home .bios{
   grid-template-columns:1fr;
-  gap:12px;
+  gap:0;
   margin:50px 0;
 }
 body.home .bio{
-  padding:26px;
+  padding:28px 0;
   border:0;
-  border-radius:14px;
-  background:#f5f5f2;
+  border-top:1px solid #deded9;
+  border-radius:0;
+  background:transparent;
 }
+body.home .bio:last-child{border-bottom:1px solid #deded9}
 body.home .bio h4{
   font-family:var(--sans);
   font-size:22px;
@@ -219,6 +261,12 @@ body.home .srcs a:hover{color:#0a0a0a}
 @media(max-width:900px){
   body.home #top{height:62px;padding:0 14px}
   body.home #brand b{display:none}
+  body.home #nav{
+    max-width:calc(100vw - 74px);
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  body.home #nav::-webkit-scrollbar{display:none}
   body.home #nav button{padding:7px 10px;font-size:12px}
   body.home #home{padding:112px 18px 60px}
   body.home #home h1{font-size:clamp(43px,12vw,62px)}
@@ -230,4 +278,85 @@ body.home .srcs a:hover{color:#0a0a0a}
   body.home #tl h2{font-size:42px}
   body.home .ev{gap:16px}
   body.home .ev .yr{width:70px}
+
+  body:not(.home) #brand b,
+  body:not(.home) #brand span{display:none}
+  body:not(.home) #top{height:58px}
+  body:not(.home) #nav{
+    max-width:calc(100vw - 64px);
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  body:not(.home) #nav::-webkit-scrollbar{display:none}
+  body:not(.home) #nav button{padding:6px 9px}
+
+  body:not(.home) #mobilePanels{
+    position:fixed;
+    top:64px;
+    right:10px;
+    z-index:32;
+    display:flex;
+    gap:3px;
+    padding:3px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:999px;
+    background:rgba(8,10,18,.82);
+    backdrop-filter:blur(18px);
+  }
+  #mobilePanels button{
+    border:0;
+    border-radius:999px;
+    background:transparent;
+    color:var(--dim);
+    padding:7px 12px;
+    font:500 11px/1 var(--sans);
+    cursor:pointer;
+  }
+  #mobilePanels button.on{
+    background:rgba(255,255,255,.13);
+    color:#fff;
+  }
+
+  body:not(.home) #right{display:none!important}
+  body:not(.home) #hud{
+    top:104px;
+    max-width:184px;
+  }
+  body:not(.home) #hud .stat:nth-child(n+3){display:none}
+  body:not(.home) #story{
+    max-height:42vh;
+  }
+  body.mobile-controls #story,
+  body.mobile-controls #hud{display:none!important}
+  body.mobile-controls #right{
+    display:flex!important;
+    left:10px;
+    right:10px;
+    top:104px;
+    bottom:10px;
+    width:auto;
+    max-height:none;
+    overflow-y:auto;
+  }
+  body.mobile-controls #ctrl{
+    overflow-y:auto;
+  }
+}
+
+@media(max-width:430px){
+  body.home #home h1{font-size:clamp(41px,12vw,52px)}
+  body.home #nav button{padding:7px 8px}
+  body:not(.home) #nav button{padding:6px 8px;font-size:11px}
+  body:not(.home) #story{max-height:40vh}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    scroll-behavior:auto!important;
+    transition-duration:.01ms!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+  }
 }

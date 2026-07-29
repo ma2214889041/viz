@@ -7,3 +7,9 @@
 
 /favicon.png
   Cache-Control: public, max-age=604800
+
+/article.css
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/article-shell.js
+  Cache-Control: public, max-age=3600, must-revalidate

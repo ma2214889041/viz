@@ -13,6 +13,7 @@ const fixedFiles = [
   "robots.txt",
   "site.webmanifest",
   "article.css",
+  "article-shell.js",
   "favicon.png"
 ];
 const extraDirs = ["kakeya-boltzmann"];
@@ -78,14 +79,14 @@ await writeFile(join(out, "sitemap.xml"), sitemap);
 const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>VIZ 最新作品</title>
+    <title>VIZ 最新文章</title>
     <link>${baseUrl}/</link>
-    <description>数学、物理、数据与系统的交互式可视化刊物。</description>
+    <description>用交互式文章解释数学与物理中的复杂问题。</description>
     <language>zh-CN</language>
 ${works
   .map(
     (work) => `    <item>
-      <title>${escapeXml(work.title)}</title>
+      <title>${escapeXml(work.question || work.title)}</title>
       <link>${escapeXml(work.url)}</link>
       <guid isPermaLink="true">${escapeXml(work.url)}</guid>
       <pubDate>${new Date(`${work.date}T12:00:00Z`).toUTCString()}</pubDate>

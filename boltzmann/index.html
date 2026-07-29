@@ -7,6 +7,7 @@
 <meta name="description" content="一堆只服从可逆牛顿定律的粒子，为什么会产生不可逆的时间方向？用可交互三维演示理解玻尔兹曼方程、H 定理与希尔伯特第六问题。">
 <link rel="canonical" href="https://viz.gopromp.com/boltzmann/">
 <link rel="icon" href="/favicon.png" type="image/png">
+<link rel="manifest" href="/site.webmanifest">
 <meta property="og:title" content="一盒气体为什么知道时间方向">
 <meta property="og:description" content="可交互三维演示：从可逆的粒子运动，到宏观世界的时间之箭。">
 <meta property="og:type" content="article">
@@ -251,6 +252,7 @@ canvas.chart{display:block;border-radius:8px}
 }
 </style>
 <link rel="stylesheet" href="../article.css">
+<script src="../article-shell.js" defer></script>
 </head>
 <body class="home">
 
@@ -339,7 +341,7 @@ canvas.chart{display:block;border-radius:8px}
 
   <div class="srcs">
     资料来源：
-    <a href="https://www.simonsfoundation.org/2026/07/23/2026-fields-medals-awarded-to-four-of-worlds-top-mathematicians/" target="_blank" rel="noopener">Simons Foundation · 2026 Fields Medals</a> ·
+    <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">国际数学联盟 · 2026 菲尔兹奖</a> ·
     <a href="https://www.nature.com/articles/d41586-026-02169-1" target="_blank" rel="noopener">Nature</a> ·
     <a href="https://arxiv.org/abs/2503.01800" target="_blank" rel="noopener">arXiv:2503.01800</a> ·
     <a href="https://arxiv.org/abs/2408.07818" target="_blank" rel="noopener">arXiv:2408.07818</a>
@@ -901,13 +903,13 @@ const SC={
         <input type="range" id="s_sp" min="0.1" max="4" step="0.1"></div>
       <div class="sep"></div>
       <div class="btns">
-        <button class="btn on" id="b_run">⏸ 暂停</button>
-        <button class="btn" id="b_rev">⇄ 时间反演</button>
-        <button class="btn" id="b_early" style="min-width:100%">⏮ 早期反演（看 H 爬回去）</button>
-        <button class="btn" id="b_same">↺ 同速重置</button>
-        <button class="btn" id="b_hot">🌡 冷热两半</button>
-        <button class="btn" id="b_macro">▦ 宏观视角</button>
-        <button class="btn" id="b_spin2">⟳ 自转</button>
+        <button class="btn on" id="b_run">暂停</button>
+        <button class="btn" id="b_rev">时间反演</button>
+        <button class="btn" id="b_early" style="min-width:100%">早期反演（观察 H 回升）</button>
+        <button class="btn" id="b_same">同速重置</button>
+        <button class="btn" id="b_hot">冷热两半</button>
+        <button class="btn" id="b_macro">宏观视角</button>
+        <button class="btn" id="b_spin2">自动旋转</button>
       </div>`
   }
 };
@@ -956,7 +958,7 @@ function setScene(name){
     labels([]);
     if(name==='home'){CAM.spin=0.035;camTo(CAM.taz,0.16,3.5,0,0,0);}
   }
-  if(!GAS.px)gasInit('same');
+  if(name==='gas'&&!GAS.px)gasInit('same');
 }
 function buildDots(){
   const n=SC[scene].steps.length;
@@ -1050,7 +1052,7 @@ function syncCtrl(){
       e('#v_sp').textContent=GAS.speed.toFixed(1)+'×';}
     if(e('#s_N'))e('#s_N').value=GAS.N;
     if(e('#s_r'))e('#s_r').value=GAS.r;
-    if(e('#b_run')){e('#b_run').textContent=GAS.running?'⏸ 暂停':'▶ 继续';e('#b_run').classList.toggle('on',GAS.running);}
+    if(e('#b_run')){e('#b_run').textContent=GAS.running?'暂停':'继续';e('#b_run').classList.toggle('on',GAS.running);}
     if(e('#b_macro'))e('#b_macro').classList.toggle('on',GAS.mode==='macro');
     if(e('#b_spin2'))e('#b_spin2').classList.toggle('on',!!CAM.spin);
   }
@@ -1148,6 +1150,7 @@ function resize(){
 }
 function frame(now){
   requestAnimationFrame(frame);
+  if(document.hidden||scene!=='gas'){last=now;return;}
   const dt=Math.min(0.05,(now-last)/1000);last=now;
   resize();stepAnims();camUpdate(dt);
   gl.viewport(0,0,cv.width,cv.height);

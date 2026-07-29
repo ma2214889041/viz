@@ -7,6 +7,7 @@
 <meta name="description" content="用可交互的三维动画讲清楚三维挂谷猜想与希尔伯特第六问题：一根针最少能扫过多大地方？一堆只服从牛顿定律的小球，为什么会产生时间之箭？">
 <link rel="canonical" href="https://viz.gopromp.com/kakeya-boltzmann/">
 <link rel="icon" href="/favicon.png" type="image/png">
+<link rel="manifest" href="/site.webmanifest">
 <meta property="og:title" content="一根针与一盒气体 — 两个百年问题的三维可视化">
 <meta property="og:description" content="可交互三维演示：挂谷猜想与希尔伯特第六问题。">
 <meta property="og:type" content="website">
@@ -251,6 +252,7 @@ canvas.chart{display:block;border-radius:8px}
 }
 </style>
 <link rel="stylesheet" href="../article.css">
+<script src="../article-shell.js" defer></script>
 </head>
 <body class="home">
 
@@ -328,7 +330,7 @@ canvas.chart{display:block;border-radius:8px}
 <!-- 背景 -->
 <section id="tl" class="hide"><div class="tlin">
   <h2>两个问题的一百年</h2>
-  <p class="lead">一个问的是“一根针最少能扫过多大地方”，一个问的是“一堆小球为什么会有时间方向”。它们看起来毫无关系，却都在提出一个多世纪之后、几乎同时被解决——并因此获得了 2026 年的菲尔兹奖。</p>
+  <p class="lead">一个问“一根针最少能扫过多大地方”，一个问“一堆小球为什么会有时间方向”。它们看起来毫无关系，却都在提出一个多世纪后迎来关键突破，并分别成为 Hong Wang 与 Yu Deng 获得 2026 年菲尔兹奖的重要成果。</p>
 
   <div class="bios">
     <div class="bio">
@@ -356,13 +358,12 @@ canvas.chart{display:block;border-radius:8px}
 
   <div class="srcs">
     资料来源：
-    <a href="https://www.simonsfoundation.org/2026/07/23/2026-fields-medals-awarded-to-four-of-worlds-top-mathematicians/" target="_blank" rel="noopener">Simons Foundation · 2026 Fields Medals</a> ·
+    <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">国际数学联盟 · 2026 菲尔兹奖</a> ·
     <a href="https://www.nature.com/articles/d41586-026-02169-1" target="_blank" rel="noopener">Nature</a> ·
     <a href="https://www.quantamagazine.org/once-in-a-century-proof-settles-maths-kakeya-conjecture-20250314/" target="_blank" rel="noopener">Quanta Magazine · Kakeya</a> ·
     <a href="https://terrytao.wordpress.com/2025/02/25/the-three-dimensional-kakeya-conjecture-after-wang-and-zahl/" target="_blank" rel="noopener">陶哲轩博客解读</a> ·
     <a href="https://arxiv.org/abs/2503.01800" target="_blank" rel="noopener">arXiv:2503.01800</a> ·
-    <a href="https://arxiv.org/abs/2408.07818" target="_blank" rel="noopener">arXiv:2408.07818</a> ·
-    <a href="https://zh.wikipedia.org/wiki/%E7%8E%8B%E8%99%B9_(%E6%95%B8%E5%AD%B8%E5%AE%B6)" target="_blank" rel="noopener">维基百科 · 王虹</a>
+    <a href="https://arxiv.org/abs/2408.07818" target="_blank" rel="noopener">arXiv:2408.07818</a>
   </div>
 </div></section>
 
@@ -1249,13 +1250,13 @@ const SC={
         <input type="range" id="s_cell" min="0.04" max="0.30" step="0.005" value="0.14"></div>
       <div class="sep"></div>
       <div class="btns">
-        <button class="btn" id="b_shadow">◱ 投影板</button>
-        <button class="btn" id="b_cones">✦ 12 个方向锥</button>
-        <button class="btn" id="b_globe">◉ 方向罗盘</button>
-        <button class="btn" id="b_sweep">↻ 转动的针</button>
-        <button class="btn" id="b_box">▦ 盒计数</button>
-        <button class="btn" id="b_spin">⟳ 自转</button>
-        <button class="btn" id="b_reset" style="min-width:100%">▶ 重播压缩过程</button>
+        <button class="btn" id="b_shadow">投影板</button>
+        <button class="btn" id="b_cones">12 个方向锥</button>
+        <button class="btn" id="b_globe">方向罗盘</button>
+        <button class="btn" id="b_sweep">转动的针</button>
+        <button class="btn" id="b_box">盒计数</button>
+        <button class="btn" id="b_spin">自动旋转</button>
+        <button class="btn" id="b_reset" style="min-width:100%">重播压缩过程</button>
       </div>`
   },
 
@@ -1343,13 +1344,13 @@ const SC={
         <input type="range" id="s_sp" min="0.1" max="4" step="0.1"></div>
       <div class="sep"></div>
       <div class="btns">
-        <button class="btn on" id="b_run">⏸ 暂停</button>
-        <button class="btn" id="b_rev">⇄ 时间反演</button>
-        <button class="btn" id="b_early" style="min-width:100%">⏮ 早期反演（看 H 爬回去）</button>
-        <button class="btn" id="b_same">↺ 同速重置</button>
-        <button class="btn" id="b_hot">🌡 冷热两半</button>
-        <button class="btn" id="b_macro">▦ 宏观视角</button>
-        <button class="btn" id="b_spin2">⟳ 自转</button>
+        <button class="btn on" id="b_run">暂停</button>
+        <button class="btn" id="b_rev">时间反演</button>
+        <button class="btn" id="b_early" style="min-width:100%">早期反演（观察 H 回升）</button>
+        <button class="btn" id="b_same">同速重置</button>
+        <button class="btn" id="b_hot">冷热两半</button>
+        <button class="btn" id="b_macro">宏观视角</button>
+        <button class="btn" id="b_spin2">自动旋转</button>
       </div>`
   }
 };
@@ -1391,6 +1392,7 @@ function setScene(name){
   $('#hint').textContent=play?'拖动旋转 · 滚轮缩放':'';
   if(play){
     KAK.alpha=1;
+    if(name==='kakeya')queueScaleData();
     $('#ctrlbody').innerHTML=SC[name].ctrl;
     bindCtrl(name);
     si=0;gotoStep(0);
@@ -1495,7 +1497,7 @@ function syncCtrl(){
       e('#v_sp').textContent=GAS.speed.toFixed(1)+'×';}
     if(e('#s_N'))e('#s_N').value=GAS.N;
     if(e('#s_r'))e('#s_r').value=GAS.r;
-    if(e('#b_run')){e('#b_run').textContent=GAS.running?'⏸ 暂停':'▶ 继续';e('#b_run').classList.toggle('on',GAS.running);}
+    if(e('#b_run')){e('#b_run').textContent=GAS.running?'暂停':'继续';e('#b_run').classList.toggle('on',GAS.running);}
     if(e('#b_macro'))e('#b_macro').classList.toggle('on',GAS.mode==='macro');
     if(e('#b_spin2'))e('#b_spin2').classList.toggle('on',!!CAM.spin);
   }
@@ -1571,7 +1573,12 @@ function drawH(){
   x.fillText('H(t)',10,12);
 }
 /* δ→0 的标度数据：与交互参数无关，算一次即可 */
-let scaleData=null;
+let scaleData=null,scaleQueued=false;
+function queueScaleData(){
+  if(scaleData||scaleQueued)return;
+  scaleQueued=true;
+  (window.requestIdleCallback||(f=>setTimeout(f,500)))(()=>getScaleData());
+}
 function getScaleData(){
   if(scaleData)return scaleData;
   const pts=[];
@@ -1640,6 +1647,7 @@ function resize(){
 }
 function frame(now){
   requestAnimationFrame(frame);
+  if(document.hidden||(scene!=='kakeya'&&scene!=='gas')){last=now;return;}
   const dt=Math.min(0.05,(now-last)/1000);last=now;
   resize();stepAnims();camUpdate(dt);
   gl.viewport(0,0,cv.width,cv.height);
@@ -1731,8 +1739,6 @@ function frame(now){
     }else labels([]);
   }
 }
-/* 标度数据要算 190ms，先在空闲时算好，避免翻到那一章时卡一下 */
-(window.requestIdleCallback||(f=>setTimeout(f,1200)))(()=>getScaleData());
 $('#loader').classList.add('hide');
 setTimeout(()=>$('#loader').style.display='none',700);
 setScene('home');

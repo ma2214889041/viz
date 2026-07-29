@@ -8,6 +8,7 @@
 <meta name="description" content="用交互式文章解释数学与物理中的复杂问题。">
 <link rel="canonical" href="https://viz.gopromp.com/">
 <link rel="icon" href="/favicon.png" type="image/png">
+<link rel="manifest" href="/site.webmanifest">
 <link rel="alternate" type="application/rss+xml" title="VIZ 最新文章" href="https://viz.gopromp.com/feed.xml">
 <meta property="og:title" content="VIZ — 可视化文章">
 <meta property="og:description" content="用交互式文章解释数学与物理中的复杂问题。">
@@ -31,6 +32,7 @@ body{
 }
 a{color:inherit}
 ::selection{background:#dfe4ff}
+:where(a,button):focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .skip{
   position:fixed;top:-100px;left:18px;z-index:100;
   background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px;
@@ -57,6 +59,7 @@ a{color:inherit}
   border-radius:999px;background:var(--ink);color:#fff;text-decoration:none;
   padding:11px 17px;font-size:14px;
 }
+.nav-pill:hover{background:#303030}
 .menu{display:none;margin-left:auto;width:42px;height:42px;border:0;background:none;position:relative}
 .menu::before,.menu::after{content:"";position:absolute;left:10px;width:22px;height:1.5px;background:var(--ink)}
 .menu::before{top:17px}.menu::after{top:24px}
@@ -136,6 +139,7 @@ a{color:inherit}
 .footer-main p{max-width:390px;margin-top:15px;color:var(--muted);font-size:14px;line-height:1.6}
 .footer-links{display:flex;gap:28px}
 .footer-links a{font-size:14px;text-decoration:none;color:var(--muted)}
+.footer-links a:hover{color:var(--ink)}
 .footer-bottom{
   border-top:1px solid var(--line);padding-top:18px;
   display:flex;justify-content:space-between;gap:24px;color:#8b8b86;font-size:12px;
@@ -151,6 +155,7 @@ a{color:inherit}
     padding:26px 16px 30px;background:#fff;border-bottom:1px solid var(--line);
   }
   .nav.open .nav-links a{font-size:20px}
+  body.menu-open{overflow:hidden}
   .hero{padding:90px 0 110px;text-align:left}
   .hero-label{margin-bottom:22px}
   .hero h1{font-size:48px;text-wrap:pretty}
@@ -166,6 +171,16 @@ a{color:inherit}
   .footer-main{flex-direction:column}.footer-links{flex-wrap:wrap}
   .footer-bottom{flex-direction:column}
 }
+@media(prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    scroll-behavior:auto!important;
+    transition-duration:.01ms!important;
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+  }
+}
 </style>
 </head>
 <body>
@@ -173,7 +188,7 @@ a{color:inherit}
 <header class="site-header" id="header">
   <nav class="nav" id="nav" aria-label="主导航">
     <a class="logo" href="./" aria-label="VIZ 首页"><span class="logo-mark" aria-hidden="true"></span>VIZ</a>
-    <div class="nav-links">
+    <div class="nav-links" id="primary-links">
       <a href="#articles">文章</a>
       <a href="#about">关于</a>
     </div>
@@ -181,7 +196,7 @@ a{color:inherit}
       <a class="github" href="https://github.com/ma2214889041/viz" target="_blank" rel="noopener">GitHub</a>
       <a class="nav-pill" href="kakeya/">阅读最新文章 ↗</a>
     </div>
-    <button class="menu" id="menu" aria-label="打开菜单" aria-expanded="false"></button>
+    <button class="menu" id="menu" aria-label="打开菜单" aria-expanded="false" aria-controls="primary-links"></button>
   </nav>
 </header>
 
@@ -258,13 +273,23 @@ const menu=document.getElementById('menu');
 addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>8),{passive:true});
 menu.addEventListener('click',()=>{
   const open=nav.classList.toggle('open');
+  document.body.classList.toggle('menu-open',open);
   menu.setAttribute('aria-expanded',String(open));
   menu.setAttribute('aria-label',open?'关闭菜单':'打开菜单');
 });
 document.querySelectorAll('.nav-links a').forEach(link=>link.addEventListener('click',()=>{
   nav.classList.remove('open');
+  document.body.classList.remove('menu-open');
   menu.setAttribute('aria-expanded','false');
 }));
+addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||!nav.classList.contains('open'))return;
+  nav.classList.remove('open');
+  document.body.classList.remove('menu-open');
+  menu.setAttribute('aria-expanded','false');
+  menu.setAttribute('aria-label','打开菜单');
+  menu.focus();
+});
 </script>
 </body>
 </html>
