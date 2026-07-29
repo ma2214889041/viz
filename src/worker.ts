@@ -20,6 +20,10 @@ interface SocketAttachment {
   joinedAt: number;
 }
 
+interface MatchAttachment extends SocketAttachment {
+  status: "waiting" | "matched";
+}
+
 interface GameResult {
   target: number;
   signal: number;
@@ -110,10 +114,14 @@ export class Matchmaker extends DurableObject<Env> {
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
-    const attachment: SocketAttachment = { clientId, joinedAt: Date.now() };
+    const attachment: MatchAttachment = {
+      clientId,
+      joinedAt: Date.now(),
+      status: "waiting"
+    };
 
     const duplicate = this.ctx.getWebSockets().find((socket) => {
-      const data = socket.deserializeAttachment() as SocketAttachment | null;
+      const data = socket.deserializeAttachment() as MatchAttachment | null;
       return data?.clientId === clientId;
     });
     if (duplicate) duplicate.close(4001, "replaced");
@@ -121,7 +129,11 @@ export class Matchmaker extends DurableObject<Env> {
     this.ctx.acceptWebSocket(server, ["waiting"]);
     server.serializeAttachment(attachment);
 
-    const peer = this.ctx.getWebSockets("waiting").find((socket) => socket !== server);
+    const peer = this.ctx.getWebSockets("waiting").find((socket) => {
+      if (socket === server) return false;
+      const data = socket.deserializeAttachment() as MatchAttachment | null;
+      return data?.status === "waiting";
+    });
     if (!peer) {
       server.send(JSON.stringify({ type: "queued" }));
       return websocketResponse(client);
@@ -129,10 +141,11 @@ export class Matchmaker extends DurableObject<Env> {
 
     const room = randomRoomCode();
     const matched = JSON.stringify({ type: "matched", room });
+    const peerAttachment = peer.deserializeAttachment() as MatchAttachment;
+    peer.serializeAttachment({ ...peerAttachment, status: "matched" });
+    server.serializeAttachment({ ...attachment, status: "matched" });
     peer.send(matched);
     server.send(matched);
-    peer.close(1000, "matched");
-    server.close(1000, "matched");
     return websocketResponse(client);
   }
 
