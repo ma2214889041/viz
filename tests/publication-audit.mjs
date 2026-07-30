@@ -17,7 +17,6 @@ const works = [
   { slug: "optimization", method: "可探索论文" },
   { slug: "boltzmann", method: "反事实分屏" },
   { slug: "reaction-diffusion", method: "生成式场景" },
-  { slug: "gw150914", method: "声音化" },
   { slug: "kakeya", method: "证明侦探片" }
 ];
 
@@ -25,7 +24,7 @@ const home = await readFile("index.html", "utf8");
 assert.match(home, new RegExp(`共 ${works.length} 篇`), "首页文章计数与实际不符");
 
 // 已删除的文章不应留下任何引用
-for (const gone of ["consciousness", "language-game", "methods", "kakeya-boltzmann", "braess"]) {
+for (const gone of ["consciousness", "language-game", "methods", "kakeya-boltzmann", "braess", "gw150914"]) {
   assert.doesNotMatch(home, new RegExp(`href="${gone}/"`), `首页仍引用已删除的 ${gone}`);
 }
 
