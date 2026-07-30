@@ -673,6 +673,7 @@ function initBoxLines(L){
 initBoxLines(1);
 
 function gasInit(preset){
+  GAS.preset=preset||'same';
   const N=GAS.N,L=GAS.L,r=GAS.r;
   GAS.px=new Float32Array(N);GAS.py=new Float32Array(N);GAS.pz=new Float32Array(N);
   GAS.vx=new Float32Array(N);GAS.vy=new Float32Array(N);GAS.vz=new Float32Array(N);
@@ -1217,7 +1218,12 @@ function frame(now){
       {k:'N·r²',v:(GAS.N*GAS.r*GAS.r).toFixed(2)}
     ]);
     if(si>=2){drawMB();
-      $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';$('#cap2').textContent='玻尔兹曼 H 函数（只减不增）';drawH();
+      $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';
+      /* 冷热两半时空间不均匀，此处 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
+      $('#cap2').textContent=(GAS.preset==='hot')
+        ?'H 函数 · 全局速率分布（此时空间不均匀）'
+        :'玻尔兹曼 H 函数（只减不增）';
+      drawH();
       $('#charts').classList.add('show');}
     else $('#charts').classList.remove('show');
     const GL2_=[];

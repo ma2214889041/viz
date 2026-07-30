@@ -1044,7 +1044,7 @@ const SC={
             beat(500,()=>to(KAK,'cones',1,3600));}},
 
       {t:'换一把尺子：维数',
-       b:`<p>体积是 0，这把尺子已经废了。数学家换了一把——<em>维数</em>。</p>
+       b:`<p>体积几乎没有了，这把尺子废了。数学家换了一把——<em>维数</em>。</p>
           <p>办法叫<b>盒计数</b>：拿边长 δ 的小盒子把东西盖住，数用了多少个。然后把 δ 减半，再数一次。</p>
           <ul>
             <li>一条线：盒子数 <b>×2</b> → D = 1</li>
@@ -1052,7 +1052,10 @@ const SC={
             <li>一块实心物体：盒子数 <b>×8</b> → D = 3</li>
           </ul>
           <span class="fml">N(δ) ≈ δ<sup>−D</sup></span>
-          <p>拖动“盒子尺寸”看看：这个体积为零的东西，要盖住它需要的盒子数，却像实心物体一样疯长。</p>`,
+          <p>拖动“盒子尺寸”看看盒子是怎么盖住它的。但接下来这件事必须说清楚，否则整个测量都是假的——</p>
+          <p><b>陷阱：</b>如果把屏幕上这个<em>有限层数</em>的集合固定住、只把盒子越缩越小，你会量到 D = 3.00。可这什么也没说明：有限层数的构造体积是<b>正的</b>（左下角读数就是一个正数），它本来就是个实心物体，维数当然满格。</p>
+          <p>挂谷猜想问的是<em>极限</em>：针无限细、方向无限密。所以正确的量法是让两件事<b>一起细化</b>——δ 减半的同时，方向也加密一倍（递归再深一层）。</p>
+          <p>这叫<b>离散化的挂谷问题</b>。它问的不是“这个物体多大”，而是“当针细到 δ 时，要装下所有方向<em>至少</em>得占多少地方”。下一章右下角那张图，做的就是这件事。</p>`,
        en(){camTo(0.5,0.40,3.5,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'tDepth',5,900);to(KAK,'boxes',1,700,300);}},
@@ -1457,7 +1460,7 @@ function frame(now){
       if(si>1&&KAK.cones>0.5)items.push({k:'方向锥',v:nCone,u:'/ 12'});
       if(si>1&&KAK.boxes>0.5)items.push({k:'需要的盒子',v:kakBoxN.toLocaleString()});
       hud(items);
-      if(si>=7){$('#cap1').textContent='体积 V 随针粗细 δ 的变化';$('#cap2').textContent='每次 δ 减半后测得的维数';
+      if(si>=7){$('#cap1').textContent='δ 与方向密度同步细化时的体积 V';$('#cap2').textContent='每次 δ 减半后测得的维数';
         drawScale();drawDimBars();$('#charts').classList.add('show');}
       else $('#charts').classList.remove('show');
       const L=[];
