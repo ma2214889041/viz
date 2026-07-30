@@ -14,7 +14,6 @@ import { readFile } from "node:fs/promises";
  */
 
 const works = [
-  { slug: "braess", method: "可玩论证" },
   { slug: "optimization", method: "可探索论文" },
   { slug: "boltzmann", method: "反事实分屏" },
   { slug: "reaction-diffusion", method: "生成式场景" },
@@ -26,7 +25,7 @@ const home = await readFile("index.html", "utf8");
 assert.match(home, new RegExp(`共 ${works.length} 篇`), "首页文章计数与实际不符");
 
 // 已删除的文章不应留下任何引用
-for (const gone of ["consciousness", "language-game", "methods", "kakeya-boltzmann"]) {
+for (const gone of ["consciousness", "language-game", "methods", "kakeya-boltzmann", "braess"]) {
   assert.doesNotMatch(home, new RegExp(`href="${gone}/"`), `首页仍引用已删除的 ${gone}`);
 }
 
