@@ -221,149 +221,7 @@ body.counterfactual-active:not(.home) #story{
   background:rgba(255,196,87,.055);
 }
 
-body.prediction-open{overflow:hidden}
-#predictionGate{
-  position:fixed;
-  inset:0;
-  z-index:90;
-  display:none;
-  place-items:center;
-  padding:24px;
-  background:rgba(2,4,10,.78);
-  backdrop-filter:blur(18px);
-}
-#predictionGate.open{display:grid}
-.prediction-card{
-  width:min(680px,100%);
-  padding:clamp(28px,5vw,52px);
-  border:1px solid rgba(255,255,255,.16);
-  border-radius:24px;
-  background:#0b0d15;
-  color:#f5f7fb;
-  box-shadow:0 34px 100px rgba(0,0,0,.5);
-}
-.prediction-eyebrow{
-  margin-bottom:20px;
-  color:#9ba7be;
-  font:600 12px/1 var(--sans);
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-.prediction-card h2{
-  max-width:610px;
-  font:500 clamp(27px,4vw,42px)/1.12 var(--sans);
-  letter-spacing:-.045em;
-  text-wrap:balance;
-}
-.prediction-card>p{
-  max-width:580px;
-  margin-top:18px;
-  color:#aeb6c6;
-  font:400 14px/1.75 var(--sans);
-}
-.prediction-options{
-  display:grid;
-  gap:8px;
-  margin-top:30px;
-}
-.prediction-options button{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  width:100%;
-  padding:16px 18px;
-  border:1px solid rgba(255,255,255,.13);
-  border-radius:12px;
-  background:rgba(255,255,255,.045);
-  color:#f6f7fa;
-  text-align:left;
-  font:500 15px/1.35 var(--sans);
-  cursor:pointer;
-}
-.prediction-options button:hover{
-  border-color:rgba(255,255,255,.35);
-  background:rgba(255,255,255,.09);
-}
-.prediction-options i{
-  display:grid;
-  flex:0 0 26px;
-  width:26px;
-  height:26px;
-  place-items:center;
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:50%;
-  color:#9ba7be;
-  font:500 11px/1 var(--sans);
-  font-style:normal;
-}
-.prediction-card small{
-  display:block;
-  margin-top:20px;
-  color:#737d90;
-  font:400 12px/1.5 var(--sans);
-}
-#predictionReceipt{
-  position:fixed;
-  z-index:55;
-  top:76px;
-  left:50%;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  max-width:min(620px,calc(100vw - 32px));
-  padding:9px 10px 9px 14px;
-  border:1px solid rgba(255,255,255,.14);
-  border-radius:14px;
-  background:rgba(8,10,18,.88);
-  color:#f4f6fa;
-  box-shadow:0 14px 38px rgba(0,0,0,.28);
-  backdrop-filter:blur(18px);
-  transform:translateX(-50%);
-}
-#predictionReceipt[hidden]{display:none}
-#predictionReceipt>div{display:flex;min-width:0;flex-direction:column;gap:2px}
-#predictionReceipt span{
-  color:#95a0b4;
-  font:600 9px/1.2 var(--sans);
-  letter-spacing:.08em;
-  text-transform:uppercase;
-}
-#predictionReceipt strong{
-  overflow:hidden;
-  max-width:390px;
-  color:#eef1f6;
-  font:500 11px/1.35 var(--sans);
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-#predictionReceipt>button:not(.receipt-close){
-  flex:0 0 auto;
-  padding:8px 11px;
-  border:0;
-  border-radius:8px;
-  background:#eef1f6;
-  color:#11141c;
-  font:600 10px/1 var(--sans);
-  cursor:pointer;
-}
-#predictionReceipt .receipt-close{
-  display:grid;
-  flex:0 0 28px;
-  width:28px;
-  height:28px;
-  place-items:center;
-  border:0;
-  border-radius:50%;
-  background:transparent;
-  color:#8d97aa;
-  font:400 18px/1 var(--sans);
-  cursor:pointer;
-}
-#predictionReceipt.is-correct{border-color:rgba(94,231,255,.4)}
-#predictionReceipt.is-correct span{color:#75dff3}
-#predictionReceipt.is-wrong{border-color:rgba(255,196,87,.42)}
-#predictionReceipt.is-wrong span{color:#ffc457}
-
+body
 #brand,
 #story h2,
 .card .who h3{
@@ -663,15 +521,7 @@ body.home .srcs a:hover{color:#0a0a0a}
     background:rgba(8,10,18,.82);
     backdrop-filter:blur(18px);
   }
-  #predictionReceipt{
-    top:68px;
-    right:10px;
-    left:10px;
-    max-width:none;
-    transform:none;
-  }
-  #predictionReceipt strong{max-width:calc(100vw - 190px)}
-  #mobilePanels button{
+      #mobilePanels button{
     border:0;
     border-radius:999px;
     background:transparent;
@@ -718,12 +568,7 @@ body.home .srcs a:hover{color:#0a0a0a}
 }
 
 @media(max-width:520px){
-  #predictionGate{padding:12px}
-  .prediction-card{padding:26px 20px;border-radius:18px}
-  .prediction-card h2{font-size:28px}
-  #predictionReceipt>div{flex:1}
-  #predictionReceipt strong{max-width:46vw}
-}
+          }
 
 @media(max-width:430px){
   body.home #home h1{font-size:clamp(41px,12vw,52px)}

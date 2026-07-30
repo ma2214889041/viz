@@ -5,578 +5,708 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
 <title>多修一条路，为什么所有人反而更慢？— VIZ</title>
-<meta name="description" content="亲手把 4000 名通勤者送进布雷斯悖论，再用通行成本和需求量找出悖论的边界。">
+<meta name="description" content="4000 个司机，每个人只挑眼下更快的路。一条零成本的新连接会把他们一起送进更差的均衡。你可以亲手把他们拖到最优，然后松手。">
 <link rel="canonical" href="https://viz.gopromp.com/braess/">
 <link rel="icon" href="../favicon.png" type="image/png">
 <meta property="og:title" content="多修一条路，为什么所有人反而更慢？">
-<meta property="og:description" content="零分钟的新路，让所有人的通勤从 65 分钟变成 80 分钟。">
+<meta property="og:description" content="布雷斯悖论：好状态存在，但你守不住它。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://viz.gopromp.com/braess/">
 <style>
 :root{
-  --ink:#0b0b0b;
-  --muted:#666660;
-  --line:#d9d9d3;
-  --soft:#f3f3ef;
-  --paper:#fafaf7;
-  --orange:#f05a35;
-  --orange-soft:#fff0ea;
-  --blue:#5065ff;
-  --green:#17745b;
+  --ink:#0b0b0b; --muted:#66665f; --faint:#98988f;
+  --line:#d9d9d3; --soft:#f3f3ef;
+  --up:#3556d8; --down:#17745b; --cut:#f05a35; --warn:#c2410c;
   --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  --serif:"Songti SC","Noto Serif SC","STSong",Georgia,serif;
-  --page:min(1240px,calc(100vw - 48px));
-  --text:min(760px,calc(100vw - 48px));
+  --mono:"SFMono-Regular",ui-monospace,Menlo,monospace;
+  --page:min(1200px,calc(100vw - 48px));
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:#fff;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{background:#fff;color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;line-height:1.6}
 button,input{font:inherit}
 a{color:inherit}
 ::selection{background:#ffe0d5}
-:where(a,button,input):focus-visible{outline:2px solid var(--ink);outline-offset:4px}
-.skip{position:fixed;top:-100px;left:18px;z-index:100;background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px}
+:where(a,button,input):focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.skip{position:fixed;top:-100px;left:18px;z-index:100;background:var(--ink);color:#fff;
+  padding:10px 14px;border-radius:8px}
 .skip:focus{top:14px}
-.header{position:sticky;top:0;z-index:40;height:68px;background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
-.nav{width:var(--page);height:100%;margin:auto;display:flex;align-items:center;gap:22px}
-.logo{font-size:21px;font-weight:650;letter-spacing:-.055em;text-decoration:none}
-.crumb{color:#777;font-size:13px}
-.progress{margin-left:auto;display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}
-.progress-track{width:112px;height:2px;background:#ddd}.progress-fill{display:block;width:0;height:100%;background:var(--ink)}
 
-.hero{width:var(--page);margin:auto;padding:clamp(96px,12vw,166px) 0 100px}
-.eyebrow{display:flex;justify-content:space-between;gap:24px;margin-bottom:36px;font-size:12px;font-weight:600}
-.eyebrow span:last-child{color:var(--muted);font-weight:500}
-h1{max-width:1100px;font-size:clamp(54px,7.5vw,104px);font-weight:500;line-height:.94;letter-spacing:-.068em;text-wrap:balance}
-.dek{max-width:780px;margin-top:38px;color:#383834;font:400 clamp(19px,1.75vw,24px)/1.65 var(--serif)}
-.hero-rule{display:grid;grid-template-columns:1fr 2fr;gap:40px;margin-top:76px;padding-top:22px;border-top:1px solid var(--ink)}
-.hero-rule b{font-size:12px}.hero-rule p{max-width:720px;color:var(--muted);font-size:14px;line-height:1.7}
+.header{position:sticky;top:0;z-index:40;height:58px;background:rgba(255,255,255,.94);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(18px)}
+.header-in{width:var(--page);height:100%;margin:auto;display:flex;align-items:center;gap:18px}
+.logo{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-size:19px;
+  font-weight:650;letter-spacing:-.05em}
+.logo i{width:9px;height:9px;border-radius:50%;background:var(--ink);box-shadow:6px 0 0 var(--up)}
+.where{font-size:12.5px;color:var(--muted)}
+.back{margin-left:auto;font-size:13px;text-decoration:none;color:var(--muted)}
+.back:hover{color:var(--ink)}
 
-.lab-section{padding:110px 0}
-.lab-section.soft{background:var(--soft)}
-.lab-section.dark{background:#0d0e11;color:#f7f7f4}
-.section-head{width:var(--page);margin:auto;display:grid;grid-template-columns:.72fr 1.55fr;gap:clamp(42px,8vw,120px)}
-.section-label{font-size:12px;font-weight:600}
-.section-copy h2{max-width:850px;font-size:clamp(38px,4.8vw,68px);font-weight:500;line-height:1.02;letter-spacing:-.055em;text-wrap:balance}
-.section-copy>p{max-width:740px;margin-top:24px;color:var(--muted);font-size:16px;line-height:1.8}
-.dark .section-copy>p{color:#b4b7c0}
+.lede{width:var(--page);margin:auto;padding:74px 0 50px;max-width:830px}
+.kicker{font-size:12.5px;font-weight:600}
+.dateline{margin-top:9px;font-size:12.5px;color:var(--faint);font-family:var(--mono)}
+.lede h1{margin-top:26px;font-size:clamp(37px,5.3vw,63px);font-weight:500;
+  line-height:1.04;letter-spacing:-.05em;text-wrap:balance}
+.dek{margin-top:24px;font-size:clamp(16.5px,1.5vw,19px);color:#3a3a37;
+  line-height:1.68;letter-spacing:-.015em;max-width:670px}
+.rule{width:var(--page);margin:0 auto;border-top:1px solid var(--ink)}
 
-.lab{width:var(--page);margin:65px auto 0;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.72fr);gap:24px;align-items:stretch}
-.network-panel{min-width:0;padding:22px 22px 18px;border:1px solid var(--line);border-radius:16px;background:#fff}
-.dark .network-panel{background:#15171b;border-color:#343740}
-.panel-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:14px}
-.panel-top b{font-size:13px}.panel-top span{color:var(--muted);font-size:11px}
-.dark .panel-top span{color:#90949f}
-.network-canvas{display:block;width:100%;height:390px}
-.controls{display:grid;gap:18px;padding:25px;border-radius:16px;background:var(--paper);border:1px solid var(--line)}
-.dark .controls{background:#15171b;border-color:#343740}
-.metric-main{padding-bottom:20px;border-bottom:1px solid var(--line)}
-.dark .metric-main{border-color:#343740}
-.metric-main span{display:block;color:var(--muted);font-size:11px}
-.dark .metric-main span{color:#90949f}
-.metric-main strong{display:block;margin-top:7px;font-size:clamp(36px,4vw,54px);font-weight:520;letter-spacing:-.055em}
-.metric-main strong em{font-size:.42em;font-style:normal;font-weight:500;letter-spacing:0}
-.metric-row{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:end}
-.metric-row span{color:var(--muted);font-size:12px}.dark .metric-row span{color:#90949f}
-.metric-row strong{font-size:15px;font-weight:600}
-.range-head{display:flex;align-items:center;justify-content:space-between;gap:18px;font-size:12px}
-.range-head output{font-weight:600}
-input[type="range"]{width:100%;accent-color:var(--orange);cursor:pointer}
-.choice-label{font-size:12px;font-weight:600}
-.choices{display:grid;grid-template-columns:1fr;gap:8px}
-.choice{
-  padding:12px 14px;text-align:left;border:1px solid var(--line);border-radius:10px;
-  background:#fff;color:var(--ink);cursor:pointer;
-}
-.dark .choice{background:#1b1e24;color:#f7f7f4;border-color:#3b3e47}
-.choice:hover{border-color:var(--ink)}.dark .choice:hover{border-color:#b4b7c0}
-.choice[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
-.dark .choice[aria-pressed="true"]{background:#f7f7f4;border-color:#f7f7f4;color:#0d0e11}
-.run{
-  width:100%;padding:13px 16px;border:0;border-radius:999px;background:var(--ink);color:#fff;
-  cursor:pointer;font-weight:600;
-}
-.dark .run{background:#f7f7f4;color:#0d0e11}
-.run:disabled{opacity:.35;cursor:not-allowed}
-.lab-note{min-height:42px;color:var(--muted);font-size:12px;line-height:1.6}
-.dark .lab-note{color:#90949f}
-.receipt{display:none;padding:17px;border-radius:12px;background:var(--orange-soft);color:#7c2d19;font-size:12px;line-height:1.65}
-.receipt.show{display:block}.dark .receipt{background:#25212a;color:#ffc8b8}
+.axiom{width:var(--page);margin:auto;padding:28px 0 56px;display:grid;
+  grid-template-columns:172px minmax(0,1fr);gap:32px;align-items:start}
+.axiom b{font-size:12.5px}
+.axiom p{color:var(--muted);font-size:14.5px;max-width:640px}
+.axiom code{font-family:var(--mono);font-size:13px;background:var(--soft);
+  padding:1px 5px;border-radius:4px}
 
-.explanation{width:var(--text);margin:0 auto;padding:105px 0}
-.explanation h2{font-size:clamp(34px,4.2vw,58px);font-weight:500;line-height:1.05;letter-spacing:-.052em}
-.explanation>p{margin-top:28px;color:#40403c;font:400 18px/1.82 var(--serif)}
-.equation{margin:42px 0;padding:26px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);font-size:clamp(20px,2.5vw,32px);line-height:1.55;letter-spacing:-.03em}
-.equation small{display:block;margin-top:10px;color:var(--muted);font:400 12px/1.6 var(--sans);letter-spacing:0}
-.definition{display:grid;grid-template-columns:150px 1fr;gap:26px;margin-top:42px;padding-top:20px;border-top:1px solid var(--line)}
-.definition b{font-size:12px}.definition p{color:var(--muted);font-size:14px;line-height:1.7}
+.stage-wrap{width:var(--page);margin:auto;display:grid;
+  grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr);gap:36px;align-items:start;
+  padding-bottom:80px}
+.stage{position:sticky;top:78px}
+.frame{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fbfbf8}
+#net{display:block;width:100%;height:min(58vh,460px)}
 
-.bridge-banner{width:var(--page);margin:80px auto 0;padding:30px 0;border-top:1px solid #50535b;border-bottom:1px solid #50535b;display:grid;grid-template-columns:1fr 2fr;gap:40px}
-.bridge-banner span{font-size:12px;color:#9da0aa}
-.bridge-banner strong{font:400 clamp(23px,3vw,40px)/1.3 var(--serif)}
+.hud{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
+.cell{padding:10px 13px;border-right:1px solid var(--line)}
+.cell:last-child{border-right:0}
+.cell span{display:block;font-size:10.5px;color:var(--faint)}
+.cell b{display:block;margin-top:4px;font-family:var(--mono);font-size:18px;font-weight:500;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cell.lead b{font-size:22px}
+.cell b em{font-style:normal;font-size:11px;color:var(--faint);margin-left:2px}
+.cell.up b{color:var(--up)} .cell.down b{color:var(--down)} .cell.cut b{color:var(--cut)}
+.cell.lead.hot b{color:var(--warn)}
 
-.policy{width:var(--page);margin:65px auto 0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(330px,.85fr);gap:24px}
-.chart-panel,.policy-controls{padding:24px;border:1px solid var(--line);border-radius:16px;background:#fff}
-.chart-panel canvas{display:block;width:100%;height:320px}
-.policy-controls{display:grid;align-content:start;gap:21px}
-.policy-value{padding-bottom:20px;border-bottom:1px solid var(--line)}
-.policy-value span{display:block;color:var(--muted);font-size:11px}
-.policy-value strong{display:block;margin-top:7px;font-size:46px;font-weight:520;letter-spacing:-.055em}
-.policy-value strong em{font-size:.38em;font-style:normal;letter-spacing:0}
-.policy-flows{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.policy-flow{padding:12px 0;border-top:1px solid var(--line)}
-.policy-flow span{display:block;color:var(--muted);font-size:10px}.policy-flow b{display:block;margin-top:5px;font-size:15px}
-.policy-verdict{padding:18px;border-radius:12px;background:var(--soft);font-size:13px;line-height:1.65}
-.policy-verdict.optimum{background:#e9f5f0;color:#0d5d46}
+.trace{border-top:1px solid var(--line);padding:8px 13px 10px}
+.trace-head{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint)}
+#tr{display:block;width:100%;height:50px;margin-top:4px}
 
-.boundary{background:var(--soft);padding:110px 0}
-.boundary-inner{width:var(--page);margin:auto}
-.boundary-lab{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr);gap:24px;margin-top:65px}
-.boundary-chart,.boundary-controls{padding:24px;border-radius:16px;background:#fff;border:1px solid var(--line)}
-.boundary-chart canvas{display:block;width:100%;height:340px}
-.boundary-controls{display:grid;align-content:start;gap:22px}
-.comparison{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.comparison div{padding:16px;border-top:1px solid var(--line)}
-.comparison span{display:block;color:var(--muted);font-size:10px}.comparison b{display:block;margin-top:7px;font-size:24px;font-weight:520}
-.boundary-verdict{padding:18px;border-radius:12px;background:var(--soft);font-size:13px;line-height:1.65}
-.boundary-verdict.paradox{background:var(--orange-soft);color:#7c2d19}
+.ctrl{border-top:1px solid var(--line);padding:13px;display:grid;gap:12px;background:#fafaf7}
+.knob{display:grid;gap:5px}
+.knob[hidden]{display:none}
+.knob-head{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:12px;font-weight:550}
+.knob-head output{font-family:var(--mono);font-size:12.5px;color:var(--cut);
+  font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;
+  background:none;cursor:grab}
+input[type=range]:active{cursor:grabbing}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:#dbdbd4}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;
+  margin-top:-7px;border-radius:50%;background:var(--ink);border:3px solid #fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.26)}
+input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:#dbdbd4}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border:3px solid #fff;
+  border-radius:50%;background:var(--ink)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts button{flex:1 1 auto;min-width:118px;padding:9px 12px;border:1px solid var(--line);
+  border-radius:9px;background:#fff;font-size:12.5px;cursor:pointer;transition:.16s}
+.acts button:hover{border-color:#b6b6ae;background:var(--soft)}
+.acts button.key{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:550}
+.acts button.key:hover{background:#2b2b2b}
+.hint{font-size:11.5px;color:var(--faint);line-height:1.55;min-height:2.6em}
+.hint.live{color:var(--warn)}
 
-.closing{background:#0d0e11;color:#f7f7f4;padding:120px 0}
-.closing-inner{width:var(--page);margin:auto;display:grid;grid-template-columns:.72fr 1.55fr;gap:clamp(42px,8vw,120px)}
-.closing h2{font-size:clamp(40px,5.4vw,76px);font-weight:500;line-height:1;letter-spacing:-.06em;text-wrap:balance}
-.closing p{max-width:750px;margin-top:28px;color:#b4b7c0;font-size:16px;line-height:1.8}
-.takeaways{margin-top:50px;border-top:1px solid #50535b}
-.takeaway{display:grid;grid-template-columns:52px 1fr;gap:20px;padding:22px 0;border-bottom:1px solid #30333a}
-.takeaway span{color:#8d919b;font-size:11px}.takeaway p{margin:0;color:#e1e2e5;font-size:14px}
-.sources{width:var(--text);margin:auto;padding:95px 0}
-.sources h2{font-size:28px;font-weight:520;letter-spacing:-.035em}
-.sources ol{margin:24px 0 0 20px}.sources li{padding:6px 0;color:var(--muted);font-size:12px;line-height:1.65}
-.sources a{text-underline-offset:3px}
-.footer{border-top:1px solid var(--line)}.footer-inner{width:var(--page);margin:auto;padding:46px 0 26px;display:flex;justify-content:space-between;gap:24px;color:var(--muted);font-size:12px}
+.chapters{display:grid}
+.chapter{padding:24vh 0;border-bottom:1px solid var(--line)}
+.chapter:first-child{padding-top:3vh}
+.chapter:last-child{border-bottom:0;padding-bottom:18vh}
+.chapter .no{font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+.chapter h2{margin-top:11px;font-size:clamp(23px,2.5vw,32px);font-weight:500;
+  line-height:1.17;letter-spacing:-.035em;text-wrap:balance}
+.chapter p{margin-top:15px;font-size:15px;color:#393936;line-height:1.78}
+.chapter p.q{color:var(--muted);font-size:14px}
+.chapter b{font-weight:600}
+.chapter em{font-style:normal;background:linear-gradient(transparent 62%,#ffe0d5 62%)}
+.fml{display:block;margin-top:17px;padding:12px 15px;background:var(--soft);
+  border-left:2px solid var(--ink);border-radius:0 7px 7px 0;
+  font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre-wrap;overflow-x:auto}
+.chapter:not(.on){opacity:.34;transition:opacity .45s}
+.chapter.on{opacity:1}
 
-@media(max-width:820px){
-  :root{--page:calc(100vw - 32px);--text:calc(100vw - 32px)}
-  .header{height:62px}.crumb{display:none}.progress-track{width:72px}
-  .hero{padding:82px 0 75px}.eyebrow{flex-direction:column;gap:8px}.hero h1{font-size:50px}.dek{font-size:18px}
-  .hero-rule,.section-head,.bridge-banner,.closing-inner{grid-template-columns:1fr;gap:25px}
-  .lab-section{padding:82px 0}.lab,.policy,.boundary-lab{grid-template-columns:1fr}
-  .network-canvas{height:300px}.controls{padding:20px}
-  .explanation{padding:82px 0}.definition{grid-template-columns:1fr;gap:10px}
-  .bridge-banner{margin-top:55px}.chart-panel canvas,.boundary-chart canvas{height:280px}
-  .policy-flows{grid-template-columns:1fr 1fr}.boundary{padding:82px 0}.closing{padding:85px 0}
-  .footer-inner{flex-direction:column}
+.closing{background:#0d0f13;color:#f6f6f3;padding:100px 0 88px}
+.closing-in{width:var(--page);margin:auto;max-width:870px}
+.closing h2{font-size:clamp(28px,3.3vw,43px);font-weight:500;line-height:1.1;
+  letter-spacing:-.04em;text-wrap:balance}
+.closing p{margin-top:22px;color:#c3c5cb;font-size:15.5px;line-height:1.8;max-width:660px}
+.pts{margin-top:44px;border-top:1px solid #33363d}
+.pt{display:grid;grid-template-columns:44px minmax(0,1fr);gap:18px;padding:19px 0;
+  border-bottom:1px solid #262930}
+.pt span{font-family:var(--mono);font-size:11px;color:#7e828c}
+.pt p{margin:0;color:#dfe0e3;font-size:14.5px}
+.srcs{width:var(--page);margin:auto;padding:58px 0 20px;max-width:870px}
+.srcs h3{font-size:13px;font-weight:600}
+.srcs ol{margin-top:15px;padding-left:19px;display:grid;gap:11px}
+.srcs li{font-size:13.5px;color:var(--muted);line-height:1.7}
+.srcs a{text-decoration:none;border-bottom:1px solid var(--line)}
+.srcs a:hover{border-color:var(--ink)}
+.srcs code{font-family:var(--mono);font-size:12.5px}
+.foot{width:var(--page);margin:auto;padding:20px 0 44px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;gap:20px;font-size:12.5px;color:var(--faint)}
+.foot a{text-decoration:none}.foot a:hover{color:var(--ink)}
+
+@media(max-width:940px){
+  :root{--page:calc(100vw - 30px)}
+  .lede{padding:50px 0 36px}
+  .axiom{grid-template-columns:1fr;gap:11px;padding-bottom:34px}
+  .stage-wrap{grid-template-columns:1fr;gap:0;padding-bottom:40px}
+  .stage{top:58px;z-index:20;background:#fff;margin:0 -15px;padding:10px 15px 12px;
+    box-shadow:0 12px 22px -20px rgba(0,0,0,.55)}
+  #net{height:36vh}
+  .hud{grid-template-columns:repeat(2,1fr)}
+  .cell:nth-child(2n){border-right:0}
+  .cell:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .trace{display:none}
+  .chapter{padding:11vh 0}
+  .chapter:not(.on){opacity:1}
+  .closing{padding:66px 0 58px}
 }
 @media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
+  html{scroll-behavior:auto}
+  .chapter:not(.on){opacity:1}
 }
 </style>
 </head>
 <body>
-<a class="skip" href="#content">跳到正文</a>
+<a class="skip" href="#chapters">跳到正文</a>
+
 <header class="header">
-  <nav class="nav" aria-label="页面导航">
-    <a class="logo" href="../">VIZ</a><span class="crumb">多出来的路</span>
-    <div class="progress" aria-label="阅读进度"><span id="progressText">选择</span><span class="progress-track"><span class="progress-fill" id="progressFill"></span></span></div>
-  </nav>
+  <div class="header-in">
+    <a class="logo" href="../"><i aria-hidden="true"></i>VIZ</a>
+    <span class="where">博弈论 × 网络</span>
+    <a class="back" href="../">全部文章 ↗</a>
+  </div>
 </header>
 
-<main id="content">
-  <section class="hero">
-    <div class="eyebrow"><span>博弈论 × 网络</span><span>2026 年 7 月 29 日 · 约 9 分钟</span></div>
-    <h1>多修一条路，为什么所有人反而更慢？</h1>
-    <p class="dek">没有事故，没有信息差，也没有人做出愚蠢选择。只要每个人都换到眼下更快的路，一条零分钟的新连接就能让 4000 人一起多堵 15 分钟。</p>
-    <div class="hero-rule"><b>唯一行为规则</b><p>每名通勤者只比较自己可走路线的当前时间，并换到更快的一条。文章不会替他们“优化全局”。</p></div>
-  </section>
+<main>
+  <div class="lede">
+    <div class="kicker">布雷斯悖论</div>
+    <div class="dateline">2026 年 7 月 30 日 · 约 9 分钟</div>
+    <h1>多修一条路，<br>为什么所有人反而更慢？</h1>
+    <p class="dek">没有事故，没有信息差，也没有人做出愚蠢选择。4000 个司机各自只挑眼下更快的路——一条完全免费的新连接，就能让他们一起多堵 15 分钟。<br><br>右边这张路网从现在开始一直活着。往下读，它会跟着变；你也可以随时接手，把所有人拖到最好的状态，然后松手看看会发生什么。</p>
+  </div>
+  <div class="rule"></div>
 
-  <section class="lab-section soft" aria-labelledby="baseTitle">
-    <div class="section-head">
-      <div class="section-label">第一回合 · 两条路</div>
-      <div class="section-copy">
-        <h2 id="baseTitle">先让每个人自己选。</h2>
-        <p>上路的第一段、下路的第二段会随车流变慢；另外两段固定 45 分钟。拖动人数，看看什么时候再也没人愿意换路。</p>
-      </div>
-    </div>
-    <div class="lab" id="baseLab">
-      <div class="network-panel">
-        <div class="panel-top"><b>没有新连接</b><span>线宽表示该路段车流</span></div>
-        <canvas class="network-canvas" id="baseCanvas" aria-label="两条路线的交通网络"></canvas>
-      </div>
-      <div class="controls">
-        <div class="metric-main"><span>平均通勤时间</span><strong id="baseAverage">—</strong></div>
-        <div>
-          <div class="range-head"><label for="baseFlow">走上路的人</label><output id="baseFlowOutput">3200</output></div>
-          <input id="baseFlow" type="range" min="0" max="4000" step="100" value="3200">
-        </div>
-        <div class="metric-row"><span>上路</span><strong id="baseTopTime">—</strong></div>
-        <div class="metric-row"><span>下路</span><strong id="baseBottomTime">—</strong></div>
-        <div class="choice-label">最终均衡会是多少？</div>
-        <div class="choices" role="group" aria-label="预测原网络均衡时间">
-          <button class="choice" data-base-prediction="45" aria-pressed="false">45 分钟</button>
-          <button class="choice" data-base-prediction="65" aria-pressed="false">65 分钟</button>
-          <button class="choice" data-base-prediction="80" aria-pressed="false">80 分钟</button>
-        </div>
-        <button class="run" id="baseRun" disabled>让通勤者逐步换路</button>
-        <p class="lab-note" id="baseNote" aria-live="polite">先留下预测，再运行。</p>
-        <div class="receipt" id="baseReceipt" aria-live="polite"></div>
-      </div>
-    </div>
-  </section>
+  <div class="axiom">
+    <b>唯一行为规则</b>
+    <p>每个司机只比较自己可选路线的<b>当前</b>用时，往更快的那条迁移。没有人计算全局，也没有人被指挥。画面上的点是车流抽样，它们的<b>移动速度就是所在路段的实时速度</b>——路段越挤，点走得越慢、挤得越密。两条固定路段恒为 <code>45</code> 分钟；两条会堵的窄路，用时是 <code>车流 ÷ 100</code> 分钟。</p>
+  </div>
 
-  <section class="explanation">
-    <h2>均衡不是“最好”，只是没人能独自变得更好。</h2>
-    <p>如果上路有 <i>x</i> 人，它需要 <i>x</i>/100 + 45 分钟；下路有 4000 − <i>x</i> 人，需要 (4000 − <i>x</i>)/100 + 45 分钟。只要两边不同，较慢路线上的人就会换路。变化停在两边各 2000 人。</p>
-    <div class="equation">x/100 + 45 = (4000 − x)/100 + 45　→　x = 2000
-      <small>两条正在使用的路线都需要 65 分钟。</small>
-    </div>
-    <div class="definition"><b>沃德罗普均衡</b><p>把每名通勤者视为对总车流影响极小：所有正在使用的路线成本相等，未使用路线不会更便宜。它描述的是分散选择停止的位置，不是规划者最想要的位置。</p></div>
-  </section>
-
-  <section class="lab-section dark" aria-labelledby="bridgeTitle">
-    <div class="section-head">
-      <div class="section-label">第二回合 · 免费新路</div>
-      <div class="section-copy">
-        <h2 id="bridgeTitle">现在送给他们一条零分钟的连接。</h2>
-        <p>A 到 B 不花时间。新路线“起点 → A → B → 终点”一开始只要 40 分钟，比原来的 65 分钟快得多。让每个人继续遵守同一条行为规则。</p>
-      </div>
-    </div>
-    <div class="lab" id="bridgeLab">
-      <div class="network-panel">
-        <div class="panel-top"><b>开放 A → B</b><span>橙色路段为零分钟连接</span></div>
-        <canvas class="network-canvas" id="bridgeCanvas" aria-label="增加零分钟连接后的交通网络"></canvas>
-      </div>
-      <div class="controls">
-        <div class="metric-main"><span>当前平均通勤时间</span><strong id="bridgeAverage">—</strong></div>
-        <div>
-          <div class="range-head"><label for="shortcutFlow">已改走捷径的人</label><output id="shortcutOutput">0</output></div>
-          <input id="shortcutFlow" type="range" min="0" max="4000" step="100" value="0">
+  <section class="stage-wrap">
+    <div class="stage">
+      <div class="frame">
+        <canvas id="net" aria-label="路网与实时车流"></canvas>
+        <div class="hud">
+          <div class="cell lead"><span>平均通勤 · 真实车程</span><b id="hAvg">—</b></div>
+          <div class="cell up"><span>上路 · 人数 / 用时</span><b id="hUp">—</b></div>
+          <div class="cell down"><span>下路 · 人数 / 用时</span><b id="hDown">—</b></div>
+          <div class="cell cut"><span>捷径 · 人数 / 用时</span><b id="hCut">—</b></div>
         </div>
-        <div class="metric-row"><span>原上／下路时间</span><strong id="outerTime">—</strong></div>
-        <div class="metric-row"><span>新捷径时间</span><strong id="shortcutTime">—</strong></div>
-        <div class="choice-label">所有人重新选完后，通勤会怎样？</div>
-        <div class="choices" role="group" aria-label="预测开放新路后的均衡时间">
-          <button class="choice" data-bridge-prediction="better" aria-pressed="false">低于 65 分钟</button>
-          <button class="choice" data-bridge-prediction="same" aria-pressed="false">仍是 65 分钟</button>
-          <button class="choice" data-bridge-prediction="worse" aria-pressed="false">高于 65 分钟</button>
+        <div class="trace">
+          <div class="trace-head"><span>平均通勤随时间</span><span id="trNow"></span></div>
+          <canvas id="tr" aria-label="平均通勤时间随时间的变化"></canvas>
         </div>
-        <button class="run" id="bridgeRun" disabled>开放新路，让选择发生</button>
-        <p class="lab-note" id="bridgeNote" aria-live="polite">捷径上的人数越多，两段共享道路就越堵。</p>
-        <div class="receipt" id="bridgeReceipt" aria-live="polite"></div>
-      </div>
-    </div>
-    <div class="bridge-banner"><span>最后一次单独换路检查</span><strong>全走捷径时，捷径 80 分钟；任何人改回原路线都会变成 85 分钟。所以 80 分钟真的是稳定均衡。</strong></div>
-  </section>
-
-  <section class="explanation">
-    <h2>新路没有制造延误，它改变了谁在共享拥堵。</h2>
-    <p>当 <i>z</i> 人走捷径时，上下两条旧路线各剩 (4000 − <i>z</i>)/2 人。但捷径与旧路线共享两段拥堵道路，因此每段承受 (4000 + <i>z</i>)/2 人。</p>
-    <div class="equation">旧路线：65 + z/200　　捷径：40 + z/100
-      <small>在 0 ≤ z ≤ 4000 内，捷径始终更快；个人理性的方向从未反转，直到所有人都进去。</small>
-    </div>
-    <p>这正是可玩论证的关键：系统没有用结论反驳你的预测，而是让你看见每一次局部改善如何连续累积成全局恶化。</p>
-  </section>
-
-  <section class="lab-section soft" aria-labelledby="policyTitle">
-    <div class="section-head">
-      <div class="section-label">第三回合 · 改变激励</div>
-      <div class="section-copy">
-        <h2 id="policyTitle">不命令任何人，能不能把均衡推回更好位置？</h2>
-        <p>给连接加入一个可感知成本 <i>τ</i>：可以理解为收费折算成的时间成本。滑动它，下面始终重新计算通勤者自由选择后的均衡；主指标只统计真实车程，不把收费当成消失的时间。</p>
-      </div>
-    </div>
-    <div class="policy">
-      <div class="chart-panel">
-        <div class="panel-top"><b>均衡的真实平均车程</b><span>横轴为连接成本 τ</span></div>
-        <canvas id="tollChart" aria-label="连接成本与均衡平均车程曲线"></canvas>
-      </div>
-      <div class="policy-controls">
-        <div class="policy-value"><span>真实平均车程</span><strong id="policyAverage">—</strong></div>
-        <div>
-          <div class="range-head"><label for="toll">连接成本 τ</label><output id="tollOutput">0 分钟</output></div>
-          <input id="toll" type="range" min="0" max="30" step="0.5" value="0">
-        </div>
-        <div class="policy-flows">
-          <div class="policy-flow"><span>上路</span><b id="policyTop">—</b></div>
-          <div class="policy-flow"><span>下路</span><b id="policyBottom">—</b></div>
-          <div class="policy-flow"><span>捷径</span><b id="policyShortcut">—</b></div>
-        </div>
-        <div class="policy-verdict" id="policyVerdict" aria-live="polite"></div>
-      </div>
-    </div>
-  </section>
-
-  <section class="boundary" aria-labelledby="boundaryTitle">
-    <div class="boundary-inner">
-      <div class="section-head">
-        <div class="section-label">边界测试</div>
-        <div class="section-copy">
-          <h2 id="boundaryTitle">不是每条新路都会变坏。</h2>
-          <p>保持道路函数不变，只改变总需求 <i>Q</i>。悖论需要足够的拥堵才能出现，又会在需求高到新连接不再诱人时消失。</p>
-        </div>
-      </div>
-      <div class="boundary-lab">
-        <div class="boundary-chart">
-          <div class="panel-top"><b>均衡通勤时间</b><span>橙线：有连接 · 黑线：无连接</span></div>
-          <canvas id="demandChart" aria-label="不同通勤需求下有无新连接的均衡时间"></canvas>
-        </div>
-        <div class="boundary-controls">
-          <div>
-            <div class="range-head"><label for="demand">总通勤需求 Q</label><output id="demandOutput">4000 人</output></div>
+        <div class="ctrl" id="ctrl">
+          <div class="knob" id="kSplit" hidden>
+            <div class="knob-head"><label for="split">手动调配 · 走上路的人数</label><output id="oSplit"></output></div>
+            <input id="split" type="range" min="0" max="4000" step="20" value="2000">
+          </div>
+          <div class="knob" id="kCut" hidden>
+            <div class="knob-head"><label for="cutFlow">手动调配 · 走捷径的人数</label><output id="oCut"></output></div>
+            <input id="cutFlow" type="range" min="0" max="4000" step="20" value="4000">
+          </div>
+          <div class="knob" id="kToll" hidden>
+            <div class="knob-head"><label for="toll">连接成本 τ · 折算成时间</label><output id="oToll"></output></div>
+            <input id="toll" type="range" min="0" max="30" step="0.5" value="0">
+          </div>
+          <div class="knob" id="kDemand" hidden>
+            <div class="knob-head"><label for="demand">总通勤需求 Q</label><output id="oDemand"></output></div>
             <input id="demand" type="range" min="1000" max="10000" step="100" value="4000">
           </div>
-          <div class="comparison">
-            <div><span>没有连接</span><b id="withoutTime">—</b></div>
-            <div><span>开放连接</span><b id="withTime">—</b></div>
-          </div>
-          <div class="boundary-verdict" id="boundaryVerdict" aria-live="polite"></div>
+          <div class="acts" id="acts"></div>
+          <p class="hint" id="hint" aria-live="polite"></p>
         </div>
       </div>
     </div>
-  </section>
 
-  <section class="closing">
-    <div class="closing-inner">
-      <div class="section-label">结论</div>
-      <div>
-        <h2>更多选择，不保证更好的均衡。</h2>
-        <p>布雷斯悖论并不反对修路。它指出：当一条资源的价值取决于多少人同时使用，而每个人只承担自己的延误时，局部最优可以稳定地偏离集体最优。</p>
-        <div class="takeaways">
-          <div class="takeaway"><span>01</span><p>“没人愿意单独改变”只定义均衡，不证明均衡有效率。</p></div>
-          <div class="takeaway"><span>02</span><p>增加一条边会改变整张网络的流量分配，不能只看新边本身的速度。</p></div>
-          <div class="takeaway"><span>03</span><p>政策不一定禁止选择；它可以让个人看到自己施加给别人的边际拥堵。</p></div>
-          <div class="takeaway"><span>04</span><p>悖论有参数边界。这个网络只在 3000 &lt; Q &lt; 9000 时因新连接变慢。</p></div>
-        </div>
-      </div>
+    <div class="chapters" id="chapters">
+
+      <section class="chapter" data-ch="0">
+        <div class="no">01</div>
+        <h2>4000 个人，两条路</h2>
+        <p>上路先过一段会堵的窄路，再走一段恒为 45 分钟的路。下路正好相反。两条路完全对称。</p>
+        <p>我故意给了一个失衡的起点：大部分人挤在上路。现在没有人指挥，每个司机只做一件事——<b>发现另一条更快，就换过去</b>。</p>
+        <p>它自己停在了两条路各 2000 人、都是 65 分钟。此后没有人再动，不是因为满意，而是因为<em>单独换路只会更慢</em>。</p>
+        <p class="q">这个状态叫沃德罗普均衡：所有正在被使用的路线用时相等，没有人能靠自己改善。</p>
+      </section>
+
+      <section class="chapter" data-ch="1">
+        <div class="no">02</div>
+        <h2>均衡不是最好的，<br>只是没人能独自变好</h2>
+        <p>试着推翻它。拖动滑块，把人往一边赶。</p>
+        <p>被赶去的那侧立刻变慢——上路和下路的用时数字会分开。这时候<b>松手</b>。</p>
+        <p>没有人被强制回去，可它自己就滑回 2000 / 2000 了。均衡不是被规定的，它是<em>每个人各自逃离拥堵</em>的合力。</p>
+        <span class="fml">上路 x/100 + 45 ＝ 下路 (4000−x)/100 + 45
+→ x = 2000，两边都是 65 分钟</span>
+      </section>
+
+      <section class="chapter" data-ch="2">
+        <div class="no">03</div>
+        <h2>送他们一条免费的路</h2>
+        <p>在两条路中间接一条连接段，用时 <b>0</b> 分钟。它不占任何人的时间，纯属白给。</p>
+        <p>新路线出现了：走上路的窄段，横穿过去，再走下路的窄段。它一开始只要 40 分钟，比 65 快得多。</p>
+        <p>按同一条规则，人会往那边挪。盯住左上角那个平均通勤数字，和下面那条曲线。</p>
+        <p>它<em>涨</em>了。65 → 80。所有人都慢了 15 分钟，而那条新路是免费的。</p>
+      </section>
+
+      <section class="chapter" data-ch="3">
+        <div class="no">04</div>
+        <h2>可是每个人都做对了</h2>
+        <p>这里没有蠢人。橙色那个点是被跟踪的一个司机，右上角是他此刻的私人账本。</p>
+        <p>无论已经有多少人挤进捷径，对他个人来说，换过去<b>总是更快</b>：</p>
+        <span class="fml">旧路线 65 + z/200　　捷径 40 + z/100
+在 0 ≤ z ≤ 4000 内，捷径始终更快</span>
+        <p>他的动机从头到尾没有反转过一次。<em>每一步局部改善都是真的</em>，它们只是连续累积成了全局恶化。</p>
+        <p class="q">代价没有消失，只是被转移了：捷径与两条旧路线共享那两段窄路，于是每段承受的车流从 2000 涨到 4000。</p>
+      </section>
+
+      <section class="chapter" data-ch="4">
+        <div class="no">05</div>
+        <h2>你守不住那个最好的状态</h2>
+        <p>这一章的滑块直接控制捷径上的人数。</p>
+        <p>先按<b>「跳到社会最优」</b>：1750 / 1750 / 500，平均通勤 <b>64.69</b> 分钟——比修路前的 65 还好一点。这条新路本来是有价值的。</p>
+        <p>现在<b>松手</b>。</p>
+        <p>看曲线怎么爬。它一路涨回 80，而你什么都没做错——你只是<em>停止了强制</em>。</p>
+        <p class="q">这就是悖论的准确形状：好状态存在，但它不是均衡。只要每个人还能自由选更快的路，系统就会自己离开它。</p>
+      </section>
+
+      <section class="chapter" data-ch="5">
+        <div class="no">06</div>
+        <h2>不下命令，改激励</h2>
+        <p>既然按不住，就换个办法：给连接段加一个可感知的成本 τ（可以理解为收费折算成的时间）。</p>
+        <p>司机的规则一个字都不改，他们仍然只挑自己最快的路。但他们眼中的"最快"变了。</p>
+        <p>拖动 τ 找最低点。注意主指标只统计<b>真实车程</b>，不把收费算成消失的时间。</p>
+        <p>最低点不在 τ 最大的地方：收太多，捷径没人用，网络退回 65；收太少，人又全挤进去。<em>它在 τ = 22.5</em>，此时 500 人走捷径，平均 64.69 分钟。</p>
+        <span class="fml">均衡时走捷径的人数 z* = 9000 − 200τ − Q
+真实平均车程在 z* = 500 处取到最小</span>
+      </section>
+
+      <section class="chapter" data-ch="6">
+        <div class="no">07</div>
+        <h2>这不是"修路会更堵"的普遍规律</h2>
+        <p>把收费撤掉，改动总需求 Q，道路函数一个字不变。</p>
+        <p>需求低的时候路根本不挤，新连接是纯赚——它把用时压下来了。</p>
+        <p>需求高到一定程度，捷径共享的两段窄路已经比 45 分钟的固定段更贵，于是没有人愿意走它，新连接自动闲置，有没有都一样。</p>
+        <p>悖论只活在中间那一段：<em>3000 &lt; Q &lt; 9000</em>。</p>
+        <p class="q">所以布雷斯悖论不是反对修路。它是在说：一条边的价值取决于整张网络的流量分配，不能只看这条边本身有多快。</p>
+      </section>
+
     </div>
-  </section>
-
-  <section class="sources">
-    <h2>来源与模型边界</h2>
-    <ol>
-      <li><a href="https://doi.org/10.1007/BF01918335" target="_blank" rel="noopener">Dietrich Braess (1968), “Über ein Paradoxon aus der Verkehrsplanung”</a> — 原始悖论与交通分配框架。</li>
-      <li><a href="https://supernet.isenberg.umass.edu/braess/braess-new.html" target="_blank" rel="noopener">UMass Virtual Center for Supernetworks</a> — 原文、英译与历史材料入口。</li>
-      <li><a href="https://web.mit.edu/blossoms/videos/lessons/selfish_drivers_braess_paradox_and_traffic_planning/" target="_blank" rel="noopener">MIT BLOSSOMS: Selfish Drivers</a> — 教学案例与均衡解释。</li>
-    </ol>
   </section>
 </main>
 
-<footer class="footer"><div class="footer-inner"><a href="../">← 返回 VIZ 文章首页</a><span>VIZ · PLAYABLE ARGUMENT · 2026</span></div></footer>
+<section class="closing">
+  <div class="closing-in">
+    <h2>更多选择，不保证更好的均衡。</h2>
+    <p>当一条资源的价值取决于多少人同时使用，而每个人只承担自己造成的那一份延误时，个体理性可以稳定地停在集体最优之外。这件事在道路上叫布雷斯悖论，在别处有别的名字。</p>
+    <div class="pts">
+      <div class="pt"><span>01</span><p>"没人愿意单独改变"只定义均衡，不证明均衡有效率。</p></div>
+      <div class="pt"><span>02</span><p>好状态可以存在却守不住——它不是均衡，自由选择会自动离开它。</p></div>
+      <div class="pt"><span>03</span><p>有效的政策不必禁止选择，只要让每个人看见自己施加给别人的那部分拥堵。</p></div>
+      <div class="pt"><span>04</span><p>悖论有参数边界。这张网络只在 3000 &lt; Q &lt; 9000 时因新连接变慢。</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="srcs">
+  <h3>模型与来源</h3>
+  <ol>
+    <li>Dietrich Braess (1968), <a href="https://homepage.ruhr-uni-bochum.de/Dietrich.Braess/paradox.pdf" target="_blank" rel="noopener">Über ein Paradoxon aus der Verkehrsplanung</a>：原始悖论与交通分配框架。</li>
+    <li>J. G. Wardrop (1952)：均衡原则——所有被使用的路线成本相等，未被使用的不会更便宜。</li>
+    <li>画面里的迁移不是插值动画，而是一条真实的最优反应动力学：每一帧把流量从高于均值的路线移向低于均值的路线。它的不动点已用独立脚本核验，在 8 组 <code>(Q, τ)</code> 上与闭式解 <code>z* = clamp(9000 − 200τ − Q, 0, Q)</code> 完全一致；页面载入时也会自检一次。</li>
+    <li>点是车流抽样（约 200 个），不是 4000 辆车。点速取自所在路段的实时用时；连接段成本为 0，动画只给了它很短的渲染时间，以便看清轨迹。</li>
+  </ol>
+</div>
+
+<div class="foot">
+  <span>VIZ · 多出来的路</span>
+  <a href="../">返回全部文章 ↗</a>
+</div>
 
 <script>
-const $=selector=>document.querySelector(selector);
-const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
-const fmt=value=>Number.isInteger(value)?String(value):value.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+"use strict";
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const fmt=v=>Number.isInteger(v)?String(v):v.toFixed(1).replace(/\.0$/,"");
 
-function canvasSize(canvas){
-  const ratio=Math.min(devicePixelRatio||1,2);
-  const rect=canvas.getBoundingClientRect();
-  const width=Math.max(300,Math.round(rect.width));
-  const height=Math.max(240,Math.round(rect.height));
-  if(canvas.width!==Math.round(width*ratio)||canvas.height!==Math.round(height*ratio)){
-    canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);
-  }
-  const ctx=canvas.getContext('2d');ctx.setTransform(ratio,0,0,ratio,0,0);
-  return {ctx,width,height};
+/* ══════════ 模型 ══════════
+   0 上路 S→A→E ：窄路 S→A + 固定 45
+   1 下路 S→B→E ：固定 45 + 窄路 B→E
+   2 捷径 S→A→B→E：两段窄路 + 零成本连接（+τ）
+   窄路用时 = 该段车流 / 100
+*/
+const M={Q:4000,tau:0,open:false,f:[3400,600,0],hold:null,spot:false,fade:0};
+
+function costs(f,tau){
+  const xSA=f[0]+f[2], xBE=f[1]+f[2];
+  return [xSA/100+45, 45+xBE/100, xSA/100+xBE/100+tau];
 }
-function pointAlong(points,t){
-  const lengths=[];let total=0;
-  for(let i=1;i<points.length;i++){const length=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);lengths.push(length);total+=length}
-  let target=(t%1)*total;
-  for(let i=0;i<lengths.length;i++){
-    if(target<=lengths[i]){const p=target/lengths[i];return{x:points[i].x+(points[i+1].x-points[i].x)*p,y:points[i].y+(points[i+1].y-points[i].y)*p}}
-    target-=lengths[i];
-  }
-  return points[points.length-1];
+function realAverage(f,Q,tau){
+  const c=costs(f,tau);
+  return (f[0]*c[0]+f[1]*c[1]+f[2]*(c[2]-tau))/Math.max(1,Q);
 }
-function drawNetwork(canvas,{top,bottom,shortcut=0,bridge=false,phase=0}){
-  const {ctx,width:w,height:h}=canvasSize(canvas);
-  const dark=canvas.closest('.dark')!==null;
-  const ink=dark?'#f7f7f4':'#0b0b0b',muted=dark?'#868b96':'#777771',road=dark?'#343740':'#deded8';
-  ctx.clearRect(0,0,w,h);
-  const S={x:w*.08,y:h*.5},A={x:w*.39,y:h*.18},B={x:w*.61,y:h*.82},T={x:w*.92,y:h*.5};
-  const edges=[
-    {a:S,b:A,load:top+shortcut,label:`${Math.round(top+shortcut)} 人 · ${fmt((top+shortcut)/100)} 分`,side:-1},
-    {a:A,b:T,load:top,label:'固定 45 分',side:-1},
-    {a:S,b:B,load:bottom,label:'固定 45 分',side:1},
-    {a:B,b:T,load:bottom+shortcut,label:`${Math.round(bottom+shortcut)} 人 · ${fmt((bottom+shortcut)/100)} 分`,side:1}
-  ];
-  ctx.lineCap='round';ctx.lineJoin='round';
-  for(const edge of edges){
-    ctx.strokeStyle=road;ctx.lineWidth=18;ctx.beginPath();ctx.moveTo(edge.a.x,edge.a.y);ctx.lineTo(edge.b.x,edge.b.y);ctx.stroke();
-    ctx.strokeStyle=dark?'#7d8390':'#92928b';ctx.lineWidth=2+8*Math.sqrt(clamp(edge.load/4000,0,1));
-    ctx.beginPath();ctx.moveTo(edge.a.x,edge.a.y);ctx.lineTo(edge.b.x,edge.b.y);ctx.stroke();
-    const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2+(edge.side<0?-15:20);
-    ctx.fillStyle=muted;ctx.font='11px '+getComputedStyle(document.body).fontFamily;ctx.textAlign='center';ctx.fillText(edge.label,mx,my);
+const closedZ=(Q,tau)=>clamp(9000-200*tau-Q,0,Q);
+
+/* 最优反应动力学。漂移不与 f_i 成正比，所以应当空置的路线能真正降到 0 */
+function relax(dt,st){
+  const S=st||M;
+  const idx=S.open?[0,1,2]:[0,1];
+  if(!S.open)S.f[2]=0;
+  const c=costs(S.f,S.tau);
+  const used=idx.filter(i=>S.f[i]>1e-9);
+  const base=used.length?used:idx;
+  let mean=0;for(const i of base)mean+=c[i];mean/=base.length;
+  const act=idx.filter(i=>S.f[i]>1e-9||c[i]<mean);
+  const eta=Math.min(70,700*dt);
+  for(const i of act)S.f[i]=Math.max(0,S.f[i]+eta*(mean-c[i]));
+  const s=S.f[0]+S.f[1]+S.f[2];
+  if(s>1e-9){const k=S.Q/s;S.f[0]*=k;S.f[1]*=k;S.f[2]*=k;}
+}
+
+/* ══════════ 车流抽样 ══════════ */
+const N_CARS=200,CARS=[];
+for(let i=0;i<N_CARS;i++)CARS.push({r:i%2,p:i/N_CARS,track:i===0});
+
+const NODE={S:[.075,.5],A:[.44,.17],B:[.44,.83],E:[.925,.5]};
+const RPTS=[["S","A","E"],["S","B","E"],["S","A","B","E"]];
+const RCOL=["#3556d8","#17745b","#f05a35"];
+function segTimes(r){
+  const xSA=M.f[0]+M.f[2],xBE=M.f[1]+M.f[2];
+  if(r===0)return[xSA/100,45];
+  if(r===1)return[45,xBE/100];
+  return[xSA/100,4,xBE/100];
+}
+
+/* ══════════ 绘制 ══════════ */
+const cv=$("net"),cx=cv.getContext("2d");
+let W=0,H=0,FONT="";
+function fit(){
+  const dpr=Math.min(2,devicePixelRatio||1),r=cv.getBoundingClientRect();
+  W=r.width;H=r.height;
+  const w=Math.round(W*dpr),h=Math.round(H*dpr);
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+  cx.setTransform(dpr,0,0,dpr,0,0);
+  if(!FONT)FONT=getComputedStyle(document.body).fontFamily;
+}
+const PX=p=>[34+NODE[p][0]*(W-68),24+NODE[p][1]*(H-62)];
+
+function lane(a,b,width,col,dash){
+  const p=PX(a),q=PX(b);
+  cx.strokeStyle=col;cx.lineWidth=width;cx.lineCap="round";
+  cx.setLineDash(dash||[]);
+  cx.beginPath();cx.moveTo(p[0],p[1]);cx.lineTo(q[0],q[1]);cx.stroke();
+  cx.setLineDash([]);
+}
+function tag(a,b,text,col,off){
+  const p=PX(a),q=PX(b);
+  const mx=(p[0]+q[0])/2,my=(p[1]+q[1])/2+(off||0);
+  cx.font="11px "+FONT;cx.textAlign="center";cx.textBaseline="middle";
+  const w=cx.measureText(text).width+10;
+  cx.fillStyle="rgba(251,251,248,.92)";cx.fillRect(mx-w/2,my-8,w,16);
+  cx.fillStyle=col;cx.fillText(text,mx,my);
+}
+function node(p,txt){
+  const q=PX(p);
+  cx.beginPath();cx.arc(q[0],q[1],15,0,7);cx.fillStyle="#0b0b0b";cx.fill();
+  cx.fillStyle="#fff";cx.font="600 12px "+FONT;
+  cx.textAlign="center";cx.textBaseline="middle";cx.fillText(txt,q[0],q[1]);
+}
+
+function drawNet(){
+  fit();
+  cx.clearRect(0,0,W,H);
+  const xSA=M.f[0]+M.f[2],xBE=M.f[1]+M.f[2];
+  const load=x=>clamp(x/4000,0,1.5);
+  const jam=v=>`rgb(${Math.round(205+43*v)},${Math.round(214-108*v)},${Math.round(219-152*v)})`;
+  lane("S","A",7+13*load(xSA),jam(clamp(load(xSA),0,1)));
+  lane("B","E",7+13*load(xBE),jam(clamp(load(xBE),0,1)));
+  lane("A","E",7,"#dbdbd4");
+  lane("S","B",7,"#dbdbd4");
+  if(M.open||M.fade>0.01){
+    cx.globalAlpha=M.open?1:M.fade;
+    lane("A","B",6,"#f05a35",[7,6]);
+    cx.globalAlpha=1;
   }
-  if(bridge){
-    ctx.strokeStyle=dark?'#5a342c':'#ffd0c3';ctx.lineWidth=14;ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
-    ctx.strokeStyle='#f05a35';ctx.lineWidth=2+8*Math.sqrt(clamp(shortcut/4000,0,1));ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
-    ctx.save();ctx.translate((A.x+B.x)/2,(A.y+B.y)/2);ctx.rotate(Math.atan2(B.y-A.y,B.x-A.x));
-    ctx.fillStyle='#f05a35';ctx.beginPath();ctx.moveTo(7,0);ctx.lineTo(-5,-4);ctx.lineTo(-5,4);ctx.closePath();ctx.fill();ctx.restore();
-    ctx.fillStyle='#f05a35';ctx.font='600 11px '+getComputedStyle(document.body).fontFamily;ctx.textAlign='left';ctx.fillText('0 分钟',A.x+14,(A.y+B.y)/2);
+  tag("S","A",`${Math.round(xSA)} 人 · ${fmt(xSA/100)} 分`,"#8a3b1c",-17);
+  tag("B","E",`${Math.round(xBE)} 人 · ${fmt(xBE/100)} 分`,"#8a3b1c",17);
+  tag("A","E","固定 45 分","#75756f",-16);
+  tag("S","B","固定 45 分","#75756f",16);
+  if(M.open){
+    const a=PX("A"),b=PX("B");
+    cx.font="11px "+FONT;cx.textAlign="left";cx.textBaseline="middle";
+    cx.fillStyle="#f05a35";
+    cx.fillText(M.tau>0?`连接 0 分 ＋ 成本 ${fmt(M.tau)}`:"连接 0 分钟",(a[0]+b[0])/2+12,(a[1]+b[1])/2);
   }
-  const routes=[
-    {flow:top,points:[S,A,T],color:'#5065ff'},
-    {flow:bottom,points:[S,B,T],color:'#17745b'},
-    {flow:shortcut,points:[S,A,B,T],color:'#f05a35'}
-  ];
-  for(const route of routes){
-    const count=Math.round(route.flow/400);
-    for(let i=0;i<count;i++){
-      const p=pointAlong(route.points,phase*.055+i/Math.max(1,count));
-      ctx.fillStyle=route.color;ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fill();
+  for(const car of CARS){
+    const pts=RPTS[car.r],T=segTimes(car.r);
+    let tot=0;for(const t of T)tot+=t;
+    let t=car.p*tot,k=0;
+    while(k<T.length-1&&t>T[k]){t-=T[k];k++;}
+    const u=T[k]>1e-6?clamp(t/T[k],0,1):0;
+    const p=PX(pts[k]),q=PX(pts[k+1]);
+    const x=p[0]+(q[0]-p[0])*u,y=p[1]+(q[1]-p[1])*u;
+    if(car.track&&M.spot){
+      cx.beginPath();cx.arc(x,y,9,0,7);cx.fillStyle="#f05a35";cx.fill();
+      cx.beginPath();cx.arc(x,y,3.4,0,7);cx.fillStyle="#fff";cx.fill();
+    }else{
+      cx.globalAlpha=.8;cx.beginPath();cx.arc(x,y,3.1,0,7);
+      cx.fillStyle=RCOL[car.r];cx.fill();cx.globalAlpha=1;
     }
   }
-  for(const [name,p] of [['起点',S],['A',A],['B',B],['终点',T]]){
-    ctx.fillStyle=ink;ctx.beginPath();ctx.arc(p.x,p.y,15,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=dark?'#0d0e11':'#fff';ctx.font='600 10px '+getComputedStyle(document.body).fontFamily;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(name,p.x,p.y);
+  node("S","起");node("A","A");node("B","B");node("E","终");
+  if(M.spot){
+    const z=M.f[2],old=65+z/200,cut=40+z/100;
+    const bw=190,bh=76,bx=W-bw-14,by=18;
+    cx.fillStyle="rgba(255,255,255,.96)";cx.strokeStyle="#d9d9d3";cx.lineWidth=1;
+    cx.beginPath();
+    if(cx.roundRect)cx.roundRect(bx,by,bw,bh,9);else cx.rect(bx,by,bw,bh);
+    cx.fill();cx.stroke();
+    cx.textAlign="left";cx.textBaseline="alphabetic";
+    cx.font="10.5px "+FONT;cx.fillStyle="#98988f";
+    cx.fillText("这一个司机的私人账本",bx+12,by+18);
+    cx.font="12px ui-monospace,monospace";
+    cx.fillStyle="#3556d8";cx.fillText(`留在旧路线　${old.toFixed(1)} 分`,bx+12,by+40);
+    cx.fillStyle="#f05a35";cx.fillText(`换去捷径　　${cut.toFixed(1)} 分`,bx+12,by+58);
+    cx.font="10.5px "+FONT;cx.textAlign="right";
+    cx.fillStyle=cut<old?"#c2410c":"#17745b";
+    cx.fillText(cut<old?`换 → 省 ${(old-cut).toFixed(1)} 分`:"不换",bx+bw-12,by+72);
   }
 }
 
-let phase=0,baseTop=3200,shortcut=0,baseAnimation=0,bridgeAnimation=0;
-const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let basePrediction='',bridgePrediction='';
-const baseCanvas=$('#baseCanvas'),bridgeCanvas=$('#bridgeCanvas');
-function baseState(){
-  const bottom=4000-baseTop,topTime=baseTop/100+45,bottomTime=bottom/100+45;
-  const average=(baseTop*topTime+bottom*bottomTime)/4000;
-  return {bottom,topTime,bottomTime,average};
+/* ══════════ 时间轨迹 ══════════ */
+const TR=[],trc=$("tr"),trx=trc.getContext("2d");
+function drawTrace(){
+  const dpr=Math.min(2,devicePixelRatio||1),r=trc.getBoundingClientRect();
+  const w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);
+  if(trc.width!==w||trc.height!==h){trc.width=w;trc.height=h;}
+  trx.setTransform(dpr,0,0,dpr,0,0);
+  const W2=r.width,H2=r.height;
+  trx.clearRect(0,0,W2,H2);
+  if(TR.length<2)return;
+  let lo=Math.min.apply(null,TR),hi=Math.max.apply(null,TR);
+  const pad=Math.max(1.6,(hi-lo)*.2);lo-=pad;hi+=pad;
+  const X=i=>i/Math.max(1,TR.length-1)*W2;
+  const Y=v=>H2-6-(v-lo)/(hi-lo)*(H2-14);
+  trx.font="9px ui-monospace,monospace";trx.textAlign="left";
+  for(const ref of [[65,"#c9c9c3","65"],[80,"#f0c3ae","80"]]){
+    if(ref[0]<lo||ref[0]>hi)continue;
+    trx.strokeStyle=ref[1];trx.lineWidth=1;trx.setLineDash([3,3]);
+    trx.beginPath();trx.moveTo(0,Y(ref[0]));trx.lineTo(W2,Y(ref[0]));trx.stroke();
+    trx.setLineDash([]);trx.fillStyle=ref[1];trx.fillText(ref[2],2,Y(ref[0])-2);
+  }
+  const g=trx.createLinearGradient(0,0,W2,0);
+  g.addColorStop(0,"#c3ccef");g.addColorStop(1,"#f05a35");
+  trx.strokeStyle=g;trx.lineWidth=2;trx.beginPath();
+  for(let i=0;i<TR.length;i++){const x=X(i),y=Y(TR[i]);i?trx.lineTo(x,y):trx.moveTo(x,y);}
+  trx.stroke();
+  trx.beginPath();trx.arc(X(TR.length-1),Y(TR[TR.length-1]),3.3,0,7);
+  trx.fillStyle="#f05a35";trx.fill();
 }
-function renderBase(){
-  const state=baseState();
-  $('#baseFlow').value=String(Math.round(baseTop));$('#baseFlowOutput').textContent=Math.round(baseTop);
-  $('#baseAverage').innerHTML=`${fmt(state.average)} <em>分钟</em>`;
-  $('#baseTopTime').textContent=`${fmt(state.topTime)} 分钟`;$('#baseBottomTime').textContent=`${fmt(state.bottomTime)} 分钟`;
-  drawNetwork(baseCanvas,{top:baseTop,bottom:state.bottom,phase});
+
+/* ══════════ HUD ══════════ */
+function hud(){
+  const c=costs(M.f,M.tau),avg=realAverage(M.f,M.Q,M.tau);
+  $("hAvg").innerHTML=`${avg.toFixed(2)} <em>分钟</em>`;
+  $("hUp").innerHTML=`${Math.round(M.f[0])} <em>· ${c[0].toFixed(1)} 分</em>`;
+  $("hDown").innerHTML=`${Math.round(M.f[1])} <em>· ${c[1].toFixed(1)} 分</em>`;
+  $("hCut").innerHTML=M.open?`${Math.round(M.f[2])} <em>· ${(c[2]-M.tau).toFixed(1)} 分</em>`:"—";
+  $("hAvg").parentElement.classList.toggle("hot",avg>65.05);
+  $("trNow").textContent=`此刻 ${avg.toFixed(2)} 分`;
 }
-function bridgeState(){
-  const outerEach=(4000-shortcut)/2,edgeLoad=outerEach+shortcut;
-  const outerTime=edgeLoad/100+45,shortcutTime=edgeLoad/50;
-  const average=((4000-shortcut)*outerTime+shortcut*shortcutTime)/4000;
-  return {outerEach,outerTime,shortcutTime,average};
+
+/* ══════════ 主循环 ══════════ */
+let last=performance.now(),acc=0;
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(M.hold===null)relax(dt);
+  if(M.open&&M.fade<1)M.fade=Math.min(1,M.fade+dt*2.4);
+  const simMin=dt*26;
+  const share=[M.f[0]/Math.max(1,M.Q),M.f[1]/Math.max(1,M.Q)];
+  for(const car of CARS){
+    const T=segTimes(car.r);let tot=0;for(const t of T)tot+=t;
+    car.p+=simMin/Math.max(1,tot);
+    if(car.p>=1){
+      car.p-=Math.floor(car.p);
+      const rnd=Math.random();
+      car.r=rnd<share[0]?0:rnd<share[0]+share[1]?1:(M.open?2:(rnd<.5?0:1));
+    }
+  }
+  acc+=dt;
+  if(acc>=.1){acc=0;TR.push(realAverage(M.f,M.Q,M.tau));
+    if(TR.length>240)TR.shift();drawTrace();}
+  drawNet();hud();
+  requestAnimationFrame(frame);
 }
-function renderBridge(){
-  const state=bridgeState();
-  $('#shortcutFlow').value=String(Math.round(shortcut));$('#shortcutOutput').textContent=Math.round(shortcut);
-  $('#bridgeAverage').innerHTML=`${fmt(state.average)} <em>分钟</em>`;
-  $('#outerTime').textContent=`${fmt(state.outerTime)} 分钟`;$('#shortcutTime').textContent=`${fmt(state.shortcutTime)} 分钟`;
-  drawNetwork(bridgeCanvas,{top:state.outerEach,bottom:state.outerEach,shortcut,bridge:true,phase});
+
+/* ══════════ 章节 ══════════ */
+const ctrl=$("ctrl"),acts=$("acts"),hint=$("hint");
+const KNOB={split:$("kSplit"),cut:$("kCut"),toll:$("kToll"),demand:$("kDemand")};
+const show=list=>{for(const k in KNOB)KNOB[k].hidden=list.indexOf(k)<0;};
+function setActs(defs){
+  acts.innerHTML="";
+  for(const d of defs){
+    const b=document.createElement("button");
+    b.type="button";b.textContent=d.t;if(d.key)b.className="key";
+    b.addEventListener("click",d.on);acts.append(b);
+  }
 }
-$('#baseFlow').addEventListener('input',event=>{cancelAnimationFrame(baseAnimation);baseTop=Number(event.target.value);renderBase();$('#baseNote').textContent=Math.abs(baseState().topTime-baseState().bottomTime)<.01?'两条路线一样快，没人能靠单独换路改善。':'较慢路线上的人仍有理由换路。'});
-document.querySelectorAll('[data-base-prediction]').forEach(button=>button.addEventListener('click',()=>{
-  basePrediction=button.dataset.basePrediction;
-  document.querySelectorAll('[data-base-prediction]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-  $('#baseRun').disabled=false;$('#baseNote').textContent='预测已记录。现在让选择逐步发生。';
-}));
-$('#baseRun').addEventListener('click',()=>{
-  cancelAnimationFrame(baseAnimation);$('#baseRun').disabled=true;$('#baseReceipt').classList.remove('show');
-  const start=baseTop,startTime=performance.now(),duration=reducedMotion?1:1900;
-  const tick=now=>{
-    const p=clamp((now-startTime)/duration,0,1),ease=1-Math.pow(1-p,3);
-    baseTop=start+(2000-start)*ease;phase+=.7;renderBase();
-    if(p<1){baseAnimation=requestAnimationFrame(tick);return}
-    baseTop=2000;renderBase();$('#baseRun').disabled=false;
-    const correct=basePrediction==='65';
-    $('#baseNote').textContent='均衡到达：2000 人走上路，2000 人走下路。';
-    $('#baseReceipt').textContent=`${correct?'预测命中。':'结果与你的预测不同。'} 两条路线都为 65 分钟；任何一个人换路都会把目标路线变得略慢。`;
-    $('#baseReceipt').classList.add('show');
-  };
-  baseAnimation=requestAnimationFrame(tick);
+const say=(t,live)=>{hint.className=live?"hint live":"hint";hint.textContent=t;};
+const resetTrace=()=>{TR.length=0;};
+
+function syncSplit(){const v=Math.round(M.f[0]);$("split").value=v;
+  $("oSplit").textContent=`${v} / ${Math.round(M.Q-v)}`;}
+function syncCut(){const v=Math.round(M.f[2]);$("cutFlow").value=v;
+  $("oCut").textContent=`${v} 人`;}
+function syncToll(){
+  $("oToll").textContent=`${fmt(M.tau)} 分钟`;
+  say(Math.abs(M.tau-22.5)<.26
+    ?"这就是最低点：500 人走捷径，真实平均车程 64.69 分钟。"
+    :M.tau>=25?"收得太多，捷径没人用了，网络退回 65 分钟。"
+    :M.tau<=5?"收得太少，所有人仍然涌进捷径。"
+    :"一部分人离开捷径，继续找曲线的最低点。");
+}
+function setQ(q){
+  $("demand").value=q;
+  const s=M.f[0]+M.f[1]+M.f[2];
+  M.Q=q;
+  if(s>0){const k=q/s;M.f=[M.f[0]*k,M.f[1]*k,M.f[2]*k];}
+  $("cutFlow").max=q;$("split").max=q;
+  syncDemand();resetTrace();
+}
+function syncDemand(){
+  $("oDemand").textContent=`${M.Q} 人`;
+  const without=45+M.Q/200,z=closedZ(M.Q,0);
+  const f12=(M.Q-z)/2,xs=(M.Q+z)/2;
+  const withL=z>0?(2*f12*(xs/100+45)+z*(2*xs/100))/M.Q:without;
+  const d=withL-without;
+  say(d>.05
+    ?`悖论区间：有连接 ${withL.toFixed(1)} 分，无连接 ${without.toFixed(1)} 分——新路让均衡慢了 ${d.toFixed(1)} 分钟。`
+    :Math.abs(d)<=.05?"边界点：有没有这条连接，均衡时间相同。"
+    :`这里新连接是有益的：${withL.toFixed(1)} 分 vs ${without.toFixed(1)} 分。`, d>.05);
+}
+
+let current=-1;
+const CH=[
+  {on(){M.open=false;M.fade=0;M.spot=false;M.tau=0;M.hold=null;
+    if(M.Q!==4000)setQ(4000);
+    M.f=[3400,600,0];resetTrace();show([]);
+    setActs([{t:"再打乱一次",on(){const a=400+Math.random()*3200;
+      M.f=[a,4000-a,0];M.hold=null;resetTrace();}}]);
+    say("我故意给了一个失衡的起点。没有人被指挥，它会自己走到 2000 / 2000。");}},
+
+  {on(){M.open=false;M.fade=0;M.spot=false;M.tau=0;M.hold=null;
+    if(M.Q!==4000)setQ(4000);
+    show(["split"]);syncSplit();
+    setActs([{t:"松手，让它自己走",key:true,on(){M.hold=null;
+      say("没有人被强制回去，它自己滑回 2000 / 2000。");}}]);
+    say("拖动滑块时你在强制分配；松手后司机重新自己选。");}},
+
+  {on(){M.spot=false;M.tau=0;M.hold=null;
+    if(M.Q!==4000)setQ(4000);
+    show([]);
+    setActs([{t:M.open?"关掉连接 A → B":"开放连接 A → B",key:true,on(){
+      M.open=!M.open;if(M.open)M.fade=0;else{M.f[2]=0;M.fade=0;}
+      resetTrace();CH[2].on();}}]);
+    say("盯住左上角那个平均通勤数字，和下面那条曲线。",M.open);}},
+
+  {on(){M.open=true;M.fade=1;M.tau=0;M.hold=null;M.spot=true;
+    if(M.Q!==4000)setQ(4000);
+    show([]);
+    setActs([{t:"换一个司机跟踪",on(){
+      for(const c of CARS)c.track=false;
+      CARS[Math.floor(Math.random()*CARS.length)].track=true;}}]);
+    say("右上角是这个司机此刻的两个选项。它从头到尾都指向同一边。");}},
+
+  {on(){M.open=true;M.fade=1;M.tau=0;M.spot=false;
+    if(M.Q!==4000)setQ(4000);
+    show(["cut"]);syncCut();
+    setActs([
+      {t:"跳到社会最优（500 人走捷径）",key:true,on(){
+        M.hold=2;M.f=[1750,1750,500];syncCut();resetTrace();
+        say("现在是 64.69 分钟，比修路前更好。但它由你按住，不是均衡。");}},
+      {t:"松手",on(){M.hold=null;
+        say("看曲线爬回 80。你没做错任何事，只是停止了强制。",true);}}
+    ]);
+    say("先按「跳到社会最优」，再按「松手」。");}},
+
+  {on(){M.open=true;M.fade=1;M.spot=false;M.hold=null;
+    if(M.Q!==4000)setQ(4000);
+    show(["toll"]);$("toll").value=M.tau;syncToll();
+    setActs([
+      {t:"跳到 τ = 22.5",key:true,on(){$("toll").value=22.5;M.tau=22.5;syncToll();resetTrace();}},
+      {t:"撤销收费",on(){$("toll").value=0;M.tau=0;syncToll();resetTrace();}}
+    ]);}},
+
+  {on(){M.open=true;M.fade=1;M.spot=false;M.hold=null;M.tau=0;$("toll").value=0;
+    show(["demand"]);syncDemand();
+    setActs([
+      {t:"Q = 2000 · 新路有益",on(){setQ(2000);}},
+      {t:"Q = 5500 · 悖论最深",key:true,on(){setQ(5500);}},
+      {t:"Q = 9500 · 新路闲置",on(){setQ(9500);}}
+    ]);}}
+];
+
+function activate(i){
+  if(i===current||i<0||i>=CH.length)return;
+  current=i;
+  document.querySelectorAll(".chapter").forEach((el,k)=>el.classList.toggle("on",k===i));
+  CH[i].on();
+}
+
+/* ── 滑块 ── */
+$("split").addEventListener("input",e=>{
+  const v=clamp(+e.target.value,0,M.Q);
+  M.hold=0;M.f=[v,M.Q-v,0];syncSplit();
+  say("被赶去的那一边正在变慢——上路和下路的用时数字分开了。");
 });
-
-$('#shortcutFlow').addEventListener('input',event=>{cancelAnimationFrame(bridgeAnimation);shortcut=Number(event.target.value);renderBridge();const state=bridgeState();$('#bridgeNote').textContent=shortcut<4000?`此刻捷径仍快 ${fmt(state.outerTime-state.shortcutTime)} 分钟，迁移还不会停。`:'捷径 80 分钟；改回旧路线会是 85 分钟。'});
-document.querySelectorAll('[data-bridge-prediction]').forEach(button=>button.addEventListener('click',()=>{
-  bridgePrediction=button.dataset.bridgePrediction;
-  document.querySelectorAll('[data-bridge-prediction]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-  $('#bridgeRun').disabled=false;$('#bridgeNote').textContent='预测已记录。注意捷径与旧路线共享的两段路。';
-}));
-$('#bridgeRun').addEventListener('click',()=>{
-  cancelAnimationFrame(bridgeAnimation);$('#bridgeRun').disabled=true;$('#bridgeReceipt').classList.remove('show');
-  const start=shortcut,startTime=performance.now(),duration=reducedMotion?1:2600;
-  const tick=now=>{
-    const p=clamp((now-startTime)/duration,0,1),ease=1-Math.pow(1-p,2.2);
-    shortcut=start+(4000-start)*ease;phase+=.7;renderBridge();
-    const state=bridgeState();$('#bridgeNote').textContent=p<1?`捷径仍比旧路线快 ${fmt(state.outerTime-state.shortcutTime)} 分钟。个人继续换路。`:'迁移停止：再也没有一个人能靠单独换路变快。';
-    if(p<1){bridgeAnimation=requestAnimationFrame(tick);return}
-    shortcut=4000;renderBridge();$('#bridgeRun').disabled=false;
-    const correct=bridgePrediction==='worse';
-    $('#bridgeReceipt').textContent=`${correct?'预测命中。':'系统反驳了你的预测。'} 新均衡是 4000 人全走捷径，每人 80 分钟，比修路前多 15 分钟。`;
-    $('#bridgeReceipt').classList.add('show');
-  };
-  bridgeAnimation=requestAnimationFrame(tick);
+$("cutFlow").addEventListener("input",e=>{
+  const v=clamp(+e.target.value,0,M.Q);
+  M.hold=2;M.f=[(M.Q-v)/2,(M.Q-v)/2,v];syncCut();
 });
-
-function tollEquilibrium(tau){
-  if(tau<=5)return{top:0,bottom:0,shortcut:4000,average:80};
-  if(tau>=25)return{top:2000,bottom:2000,shortcut:0,average:65};
-  const top=100*(tau-5),z=4000-2*top;
-  const edgeLoad=top+z,outerTime=edgeLoad/100+45,shortcutTime=edgeLoad/50;
-  return{top,bottom:top,shortcut:z,average:(2*top*outerTime+z*shortcutTime)/4000};
+$("toll").addEventListener("input",e=>{M.tau=+e.target.value;syncToll();});
+$("demand").addEventListener("input",e=>setQ(+e.target.value));
+/* 松开即交还给司机（只在"均衡的含义"一章自动放手） */
+for(const id of ["split"]){
+  const el=$(id);
+  for(const ev of ["pointerup","pointercancel","keyup","blur"])
+    el.addEventListener(ev,()=>{if(current===1)M.hold=null;});
 }
-function drawLineChart(canvas,series,{xMin,xMax,yMin,yMax,xValue,verticalBand}){
-  const {ctx,width:w,height:h}=canvasSize(canvas),pad={l:48,r:18,t:20,b:36};
-  const X=x=>pad.l+(x-xMin)/(xMax-xMin)*(w-pad.l-pad.r),Y=y=>h-pad.b-(y-yMin)/(yMax-yMin)*(h-pad.t-pad.b);
-  ctx.clearRect(0,0,w,h);
-  if(verticalBand){ctx.fillStyle=verticalBand.color;ctx.fillRect(X(verticalBand.from),pad.t,X(verticalBand.to)-X(verticalBand.from),h-pad.t-pad.b)}
-  ctx.strokeStyle='#deded8';ctx.lineWidth=1;ctx.fillStyle='#777771';ctx.font='10px '+getComputedStyle(document.body).fontFamily;ctx.textAlign='right';
-  for(let y=Math.ceil(yMin/5)*5;y<=yMax;y+=5){ctx.beginPath();ctx.moveTo(pad.l,Y(y));ctx.lineTo(w-pad.r,Y(y));ctx.stroke();ctx.fillText(y+'m',pad.l-7,Y(y)+3)}
-  for(const item of series){
-    ctx.strokeStyle=item.color;ctx.lineWidth=item.width||2.5;ctx.beginPath();
-    item.points.forEach((p,i)=>{const x=X(p.x),y=Y(p.y);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
+
+/* ── 滚动驱动 ── */
+const chapters=[].slice.call(document.querySelectorAll(".chapter"));
+if(window.IntersectionObserver){
+  const io=new IntersectionObserver(es=>{
+    let best=null;
+    for(const e of es)if(e.isIntersecting&&(!best||e.intersectionRatio>best.intersectionRatio))best=e;
+    if(best)activate(chapters.indexOf(best.target));
+  },{rootMargin:"-42% 0px -42% 0px",threshold:[0,.25,.6,1]});
+  for(const c of chapters)io.observe(c);
+}
+activate(0);
+addEventListener("resize",()=>{fit();drawTrace();},{passive:true});
+requestAnimationFrame(frame);
+
+/* ── 自检：动力学不动点必须等于闭式解 ── */
+(function(){
+  let worst=0;
+  for(const cs of [[4000,0],[4000,10],[4000,22.5],[4000,25],[5500,0],[3000,0],[9000,0],[2000,0]]){
+    const st={Q:cs[0],tau:cs[1],open:true,f:[cs[0]/3,cs[0]/3,cs[0]/3]};
+    for(let k=0;k<30000;k++)relax(1/60,st);
+    worst=Math.max(worst,Math.abs(st.f[2]-closedZ(cs[0],cs[1])));
   }
-  ctx.strokeStyle='#0b0b0b';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(X(xValue),pad.t);ctx.lineTo(X(xValue),h-pad.b);ctx.stroke();
-  for(const item of series){
-    const point=item.value(xValue);ctx.fillStyle=item.color;ctx.beginPath();ctx.arc(X(xValue),Y(point),4,0,Math.PI*2);ctx.fill();
-  }
-  ctx.fillStyle='#777771';ctx.textAlign='center';ctx.fillText(fmt(xValue),X(xValue),h-12);
-}
-function renderPolicy(){
-  const tau=Number($('#toll').value),eq=tollEquilibrium(tau);
-  $('#tollOutput').textContent=`${fmt(tau)} 分钟`;$('#policyAverage').innerHTML=`${eq.average.toFixed(2)} <em>分钟</em>`;
-  $('#policyTop').textContent=`${Math.round(eq.top)} 人`;$('#policyBottom').textContent=`${Math.round(eq.bottom)} 人`;$('#policyShortcut').textContent=`${Math.round(eq.shortcut)} 人`;
-  const verdict=$('#policyVerdict');verdict.classList.toggle('optimum',Math.abs(tau-22.5)<.01);
-  if(Math.abs(tau-22.5)<.01)verdict.textContent='社会最优点：1750 人走上路、1750 人走下路、500 人走捷径。三条路线的个人广义成本相同，真实平均车程最低。';
-  else if(tau<=5)verdict.textContent='成本太低，所有人仍涌入捷径；真实平均车程保持 80 分钟。';
-  else if(tau>=25)verdict.textContent='连接已没有人使用，网络退回原来的 65 分钟均衡。';
-  else verdict.textContent='一部分人离开捷径，均衡正在向社会最优靠近。继续寻找曲线最低点。';
-  const points=[];for(let x=0;x<=30;x+=.25)points.push({x,y:tollEquilibrium(x).average});
-  drawLineChart($('#tollChart'),[{color:'#f05a35',points,value:x=>tollEquilibrium(x).average}],{xMin:0,xMax:30,yMin:62,yMax:82,xValue:tau});
-}
-$('#toll').addEventListener('input',renderPolicy);
-
-function demandTimes(q){
-  const without=45+q/200;
-  let withLink;
-  if(q<=4500)withLink=q/50;
-  else if(q<9000)withLink=90;
-  else withLink=without;
-  return{without,withLink};
-}
-function renderDemand(){
-  const q=Number($('#demand').value),times=demandTimes(q);
-  $('#demandOutput').textContent=`${q} 人`;$('#withoutTime').textContent=`${fmt(times.without)} 分`;$('#withTime').textContent=`${fmt(times.withLink)} 分`;
-  const verdict=$('#boundaryVerdict'),delta=times.withLink-times.without;
-  verdict.classList.toggle('paradox',delta>1e-6);
-  if(delta>1e-6)verdict.textContent=`悖论区间：新连接让均衡慢 ${fmt(delta)} 分钟。当前需求位于 3000 与 9000 之间。`;
-  else if(Math.abs(delta)<1e-6)verdict.textContent='边界点：有无连接的均衡时间相同。';
-  else verdict.textContent=`新连接有帮助：均衡快 ${fmt(-delta)} 分钟。这里不能把“修路会更堵”当成普遍规律。`;
-  const no=[],yes=[];for(let x=1000;x<=10000;x+=50){const t=demandTimes(x);no.push({x,y:t.without});yes.push({x,y:t.withLink})}
-  drawLineChart($('#demandChart'),[
-    {color:'#0b0b0b',points:no,value:x=>demandTimes(x).without},
-    {color:'#f05a35',points:yes,value:x=>demandTimes(x).withLink}
-  ],{xMin:1000,xMax:10000,yMin:15,yMax:100,xValue:q,verticalBand:{from:3000,to:9000,color:'#fff0ea'}});
-}
-$('#demand').addEventListener('input',renderDemand);
-
-let resizeTimer;
-addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{renderBase();renderBridge();renderPolicy();renderDemand()},120)});
-const progressFill=$('#progressFill'),progressText=$('#progressText');
-function updateProgress(){
-  const max=document.documentElement.scrollHeight-innerHeight,value=max>0?clamp(scrollY/max,0,1):0;
-  progressFill.style.width=`${Math.round(value*100)}%`;
-  progressText.textContent=value<.2?'选择':value<.44?'捷径':value<.68?'激励':value<.86?'边界':'结论';
-}
-addEventListener('scroll',updateProgress,{passive:true});
-renderBase();renderBridge();renderPolicy();renderDemand();updateProgress();
+  window.__braessSelfCheck=worst;
+  if(worst>1)console.warn("[braess] 动力学与闭式解偏差过大：",worst.toFixed(2));
+})();
 </script>
 </body>
 </html>
