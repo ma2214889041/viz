@@ -482,6 +482,10 @@ function drawMap(){
   for(let i=0;i<=4;i++){const y=pad.t+ih*i/4;mctx.beginPath();mctx.moveTo(pad.l,y);mctx.lineTo(pad.l+iw,y);mctx.stroke()}
   mctx.fillStyle='#73736e';mctx.font='11px system-ui,sans-serif';mctx.textAlign='center';
   for(let i=0;i<=5;i++)mctx.fillText((.015+.01*i).toFixed(3),pad.l+iw*i/5,h-22);
+  // k 轴刻度：与 py() 同向（上大下小），否则读者无法读出花纹对应的 k
+  mctx.textAlign='right';
+  for(let i=0;i<=4;i++)mctx.fillText((.07-.005*i).toFixed(3),pad.l-8,pad.t+ih*i/4+4);
+  mctx.textAlign='center';
   mctx.save();mctx.translate(17,pad.t+ih/2);mctx.rotate(-Math.PI/2);mctx.fillText('清除率 k',0,0);mctx.restore();
   mctx.fillText('供给率 F',pad.l+iw/2,h-3);
   Object.entries(presets).forEach(([key,p])=>{
