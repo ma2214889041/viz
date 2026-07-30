@@ -10,36 +10,8 @@
     "run_worker_first": true,
     "not_found_handling": "404-page"
   },
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "MATCHMAKER",
-        "class_name": "Matchmaker"
-      },
-      {
-        "name": "LANGUAGE_ROOM",
-        "class_name": "LanguageRoom"
-      },
-      {
-        "name": "CONVENTION_AGGREGATE",
-        "class_name": "ConventionAggregate"
-      }
-    ]
-  },
-  "exports": {
-    "Matchmaker": {
-      "type": "durable-object",
-      "storage": "sqlite"
-    },
-    "LanguageRoom": {
-      "type": "durable-object",
-      "storage": "sqlite"
-    },
-    "ConventionAggregate": {
-      "type": "durable-object",
-      "storage": "sqlite"
-    }
-  },
+  // 语言游戏一文移除后，站点不再需要服务端共享状态：
+  // Worker 只给 HTML 导航加 no-store，没有 Durable Object，也没有 API。
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

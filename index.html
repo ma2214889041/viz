@@ -107,19 +107,6 @@ a{color:inherit}
 }
 .post:hover .post-arrow{background:var(--ink);border-color:var(--ink);color:#fff;transform:translate(3px,-3px)}
 
-.archive{
-  width:var(--page);margin:auto;padding:0 0 clamp(110px,12vw,180px);
-  display:grid;grid-template-columns:1fr 2fr;gap:40px;
-}
-.archive-label{font-size:14px;font-weight:550}
-.archive-copy{border-top:1px solid var(--line)}
-.archive-link{
-  display:grid;grid-template-columns:1fr auto;gap:24px;
-  padding:24px 0;border-bottom:1px solid var(--line);text-decoration:none;
-}
-.archive-link h3{font-size:23px;font-weight:520;letter-spacing:-.03em}
-.archive-link p{margin-top:7px;color:var(--muted);font-size:14px;line-height:1.55}
-
 .about{
   background:var(--soft);padding:clamp(90px,10vw,140px) 0;
 }
@@ -166,7 +153,7 @@ a{color:inherit}
   .post-copy h3{font-size:31px}
   .post-copy p{font-size:14px}
   .post-arrow{grid-column:2;grid-row:2}
-  .archive,.about-inner{grid-template-columns:1fr;gap:34px}
+  .about-inner{grid-template-columns:1fr;gap:34px}
   .about h2{font-size:40px}
   .footer-main{flex-direction:column}.footer-links{flex-wrap:wrap}
   .footer-bottom{flex-direction:column}
@@ -190,7 +177,6 @@ a{color:inherit}
     <a class="logo" href="./" aria-label="VIZ 首页"><span class="logo-mark" aria-hidden="true"></span>VIZ</a>
     <div class="nav-links" id="primary-links">
       <a href="#articles">文章</a>
-      <a href="methods/">方法</a>
       <a href="#about">关于</a>
     </div>
     <div class="nav-right">
@@ -211,7 +197,7 @@ a{color:inherit}
   <section class="posts" id="articles" aria-labelledby="articlesTitle">
     <div class="posts-head">
       <h2 id="articlesTitle">文章</h2>
-      <p>共 8 篇 · 最近更新于 2026 年 7 月</p>
+      <p>共 6 篇 · 最近更新于 2026 年 7 月</p>
     </div>
     <div class="post-list">
       <a class="post" href="optimization/">
@@ -219,14 +205,6 @@ a{color:inherit}
         <div class="post-copy">
           <h3>损失明明在下降，为什么训练却像卡住了？</h3>
           <p>把梯度下降旋转到曲率的特征方向，逐项观察快误差与慢误差，再用动量的精确递推和稳定性相图检验“重球”比喻。</p>
-        </div>
-        <span class="post-arrow" aria-hidden="true">↗</span>
-      </a>
-      <a class="post" href="language-game/">
-        <div class="post-meta"><strong>语言哲学 × 社会实验</strong><time datetime="2026-07-29">2026 年 7 月 29 日</time><br>约 12 分钟</div>
-        <div class="post-copy">
-          <h3>一个词，怎样在两个人之间获得意义？</h3>
-          <p>和另一位真实访问者共同发明三个词：轮流发送和解释，观察词义如何从反复使用中形成，而不是从词典里被宣布。</p>
         </div>
         <span class="post-arrow" aria-hidden="true">↗</span>
       </a>
@@ -254,14 +232,6 @@ a{color:inherit}
         </div>
         <span class="post-arrow" aria-hidden="true">↗</span>
       </a>
-      <a class="post" href="consciousness/">
-        <div class="post-meta"><strong>神经科学 × 科学哲学</strong><time datetime="2026-07-29">2026 年 7 月 29 日</time><br>约 10 分钟</div>
-        <div class="post-copy">
-          <h3>一场实验，能判决意识发生在哪里吗？</h3>
-          <p>两套理论、三种脑成像方法、五件证物。先按预注册规则判断每条证据，再看为什么没有任何一方被简单判赢。</p>
-        </div>
-        <span class="post-arrow" aria-hidden="true">↗</span>
-      </a>
       <a class="post" href="kakeya/">
         <div class="post-meta"><strong>数学</strong><time datetime="2026-07-29">2026 年 7 月 29 日</time><br>约 8 分钟</div>
         <div class="post-copy">
@@ -281,22 +251,13 @@ a{color:inherit}
     </div>
   </section>
 
-  <section class="archive" aria-labelledby="archiveTitle">
-    <div class="archive-label" id="archiveTitle">归档</div>
-    <div class="archive-copy">
-      <a class="archive-link" href="kakeya-boltzmann/">
-        <div><h3>一根针与一盒气体</h3><p>最初发布的双主题互动合集，保留两个演示之间的完整对照。</p></div>
-        <span aria-hidden="true">↗</span>
-      </a>
-    </div>
-  </section>
 
   <section class="about" id="about" aria-labelledby="aboutTitle">
     <div class="about-inner">
       <div class="about-label">关于 VIZ</div>
       <div>
         <h2 id="aboutTitle">文章负责解释，演示负责让你亲手验证。</h2>
-        <p>VIZ 不设置后台，也不发布占位内容。每次更新就是一篇完整的可视化文章，能够独立阅读、操作和分享。我们也公开<a href="methods/">可视化论证的方法</a>：每个互动都要说明读者做了什么、模型改变了什么，以及什么观测构成证据。</p>
+        <p>VIZ 不设置后台，也不发布占位内容。每次更新就是一篇完整的可视化文章，能够独立阅读、操作和分享。每个互动都要说明读者做了什么、模型改变了什么，以及什么观测构成证据。</p>
       </div>
     </div>
   </section>
@@ -309,7 +270,7 @@ a{color:inherit}
         <a class="logo" href="./"><span class="logo-mark" aria-hidden="true"></span>VIZ</a>
         <p>关于数学、科学与思想的交互式可视化文章。</p>
       </div>
-      <div class="footer-links"><a href="#articles">文章</a><a href="methods/">方法</a><a href="/feed.xml">RSS</a><a href="https://github.com/ma2214889041/viz" target="_blank" rel="noopener">GitHub ↗</a></div>
+      <div class="footer-links"><a href="#articles">文章</a><a href="/feed.xml">RSS</a><a href="https://github.com/ma2214889041/viz" target="_blank" rel="noopener">GitHub ↗</a></div>
     </div>
     <div class="footer-bottom"><span>VIZ</span><span>2026 · VISUAL ESSAYS</span></div>
   </div>

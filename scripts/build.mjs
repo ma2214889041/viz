@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "dist");
 const baseUrl = "https://viz.gopromp.com";
-const workDirs = ["optimization", "language-game", "gw150914", "reaction-diffusion", "braess", "consciousness", "kakeya", "boltzmann"];
+const workDirs = ["optimization", "gw150914", "reaction-diffusion", "braess", "kakeya", "boltzmann"];
 const fixedFiles = [
   "index.html",
   "404.html",
@@ -16,7 +16,7 @@ const fixedFiles = [
   "article-shell.js",
   "favicon.png"
 ];
-const extraDirs = ["kakeya-boltzmann", "methods"];
+const extraDirs = [];
 
 const escapeXml = (value) =>
   String(value)
@@ -64,9 +64,7 @@ await writeFile(join(out, "works.json"), `${JSON.stringify(works, null, 2)}\n`);
 
 const sitemapUrls = [
   { loc: `${baseUrl}/`, lastmod: works[0]?.date },
-  ...works.map(({ url, date }) => ({ loc: url, lastmod: date })),
-  { loc: `${baseUrl}/methods/`, lastmod: works[0]?.date },
-  { loc: `${baseUrl}/kakeya-boltzmann/`, lastmod: works[0]?.date }
+  ...works.map(({ url, date }) => ({ loc: url, lastmod: date }))
 ];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
