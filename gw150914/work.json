@@ -2,11 +2,11 @@
   "slug": "gw150914",
   "title": "宇宙的啁啾",
   "question": "两个黑洞合并，为什么能被听成一声鸟鸣？",
-  "description": "听 LIGO 公布的 GW150914 音频，改变啁啾质量，并把一个已知模板埋进可复现噪声，亲手完成一次匹配。",
-  "date": "2026-07-29",
+  "description": "一条向上加速的频率曲线，同时活在轨道动力学、LIGO 的真实数据和匹配滤波里。三种视角叠在同一个时间轴上。",
+  "date": "2026-07-30",
   "category": ["引力波", "声音"],
   "duration": "11 分钟",
-  "labs": 3,
-  "featured": true,
+  "chapters": 6,
+  "featured": false,
   "accent": "#5868ff"
 }
