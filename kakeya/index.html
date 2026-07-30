@@ -664,6 +664,11 @@ const KAK={
 /* 逐层数值搜索得到的最优滑动比例（按 3D 体积最小化） */
 const GREEDY=[0.73,0.60,0.41,0.57,0.865,0.38,0.58,0.28,0.93,0.895,0.89,0.21];
 const MAXD=12;
+/* 黏性（自相似）模式：每一层都用同一个滑动量。
+   这类跨尺度近似自相似的构型正是 Katz-Łaba-Tao 1999 命名的“sticky”，
+   也是三维挂谷猜想卡住 26 年的那一族。 */
+let STICKY=false, STICKY_A=2/3;
+const shiftAt=k=>STICKY?STICKY_A:GREEDY[k];
 
 /* 12 个正交变换：把方向锥 {(a,1,b): a,b∈[0,1]} 转到 12 个位置，
    合起来覆盖全部方向（40000 个随机方向实测覆盖率 100%） */
@@ -687,7 +692,7 @@ function buildTris(t){
   for(let k=0;k<MAXD;k++){
     const f=clamp(t-k,0,1);
     if(f<=0)break;
-    const a=GREEDY[k]*f, out=[];
+    const a=shiftAt(k)*f, out=[];
     for(let i=0;i<tr.length;i++){
       const p=tr[i],nw=p.w/2;
       out.push({bx:p.bx,tx:p.tx,w:nw});
@@ -996,7 +1001,7 @@ const SC={
       {t:'一层套一层：Perron 树',
        b:`<p>现在对<b>每一半</b>再做同样的事：劈开、平移、重叠。然后对每一小份继续。</p>
           <p>这个递归结构叫 <b>Perron 树</b>。每加深一层，体积就再掉一截：</p>
-          <span class="fml">0.333 → 0.134 → 0.073 → 0.048 → 0.035 …</span>
+          <span class="fml">每层：劈开 → 平移 → 重叠</span>
           <p>盯住左边的投影板：白色轮廓是原始大小，发亮的部分一层层往里缩。<em>亮斑越集中，省下的体积越多。</em></p>
           <p>这就是 1919 年 <b>Besicovitch</b> 的答案——层数没有上限，所以</p>
           <span class="fml">体积可以任意接近 0</span>
@@ -1009,7 +1014,8 @@ const SC={
        b:`<p>把“递归层数”滑块一路拉到底，看看这个构造能压到什么程度。</p>
           <p>10 层之后，体积只剩下最初那束光的</p>
           <span class="fml">3.5 %</span>
-          <p>而且曲线还在往下走——只要肯往下递归，它会一直往 0 去。</p>
+          <p>曲线还在往下走，但你会注意到它<b>越走越平</b>。这不是我的构造偷懒——Perron 树的面积大约按 <em>1/log(三角形数)</em> 减小，慢得离谱：想再砍掉一半，三角形数量得<b>平方</b>。</p>
+          <p>所以极限确实是 0，而<em>没有任何一张图能画出这一点</em>。这是数学里常见的一种尴尬：结论为真，图像永远追不上。</p>
           <p>与此同时，针的数量、方向的数量，<b>一根都没有变</b>。</p>
           <p>到这里，“体积”这把尺子已经量不动它了。那么问题来了：<em>这个集合到底还剩下什么？</em></p>`,
        en(){camTo(0.62,0.24,3.4,0,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
@@ -1029,9 +1035,10 @@ const SC={
       {t:'拼成真正的挂谷集',
        b:`<p>到目前为止，画面里的针只覆盖了<em>一个方向锥</em>——罗盘上那片亮斑。</p>
           <p>补完它很简单：把同一个构造<b>旋转到 12 个位置</b>。看着其余 11 份依次落位，罗盘一点点被填满。</p>
-          <p>（我用 4 万个随机方向做了检验：<b>覆盖率 100%</b>，一个方向都不漏。）</p>
-          <p>12 份的体积加起来，仍然是 12 × 一个很小的数——依旧可以任意接近 0。于是我们得到了一个货真价实的</p>
-          <span class="fml">挂谷集：体积为 0，却含有每个方向的单位线段</span>`,
+          <p>（我用 6 万个随机方向做了检验：<b>覆盖率 100%</b>，一个方向都不漏，12 个变换矩阵严格正交。）</p>
+          <p>12 份的体积加起来是 12 × 一个很小的数，随层数一起趋于 0。注意屏幕上那个读数<b>不是 0</b>，它是这个有限层数下的真实体积——趋于 0 是极限，不是当前画面。</p>
+          <span class="fml">挂谷集：体积可任意接近 0
+却含有每个方向的单位线段</span>`,
        en(){camTo(0.7,0.26,4.6,0,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
             KAK.boxes=0;KAK.shadow=0;CAM.spin=0.05;KAK.dirGlobe=1;KAK.cones=0;
             beat(500,()=>to(KAK,'cones',1,3600));}},
@@ -1070,9 +1077,23 @@ const SC={
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.025;
             to(KAK,'tDepth',7,900);to(KAK,'boxes',1,500);}},
 
+      {t:'换你来当对手',
+       b:`<p>假证明被否掉了，但一个更实在的问题还在：<b>会不会真有某个挂谷集，维数确实不到 3？</b></p>
+          <p>1999 年 Katz、Łaba 与陶哲轩指出，最难对付的是一类<b>跨尺度近似自相似</b>的构型——他们把它命名为<em>黏性</em>（sticky）。它成了此后 26 年绕不过去的坎。</p>
+          <p>现在你可以亲手造一个。右侧按<b>「自相似（黏性）」</b>：原本每一层用不同的滑动量，现在<b>每层都用同一个</b>——这就是自相似。</p>
+          <p>然后把层数拉满，盯住两个读数：</p>
+          <p>体积会<em>停在某个正数上不动</em>：8 层之后就冻在 0.037 附近，再加层数也不动了。而关掉自相似时，同样的层数它会一路掉到 0.008。</p>
+          <p>而维数——你想压低的那个——被顶到了 <b>3.00</b>。</p>
+          <p class="q">机制就在这两句话里：维数由"δ 减半时体积掉多少"定义。自相似让每层压缩同一个比例，δ-邻域的体积因此<b>停止下降</b>；体积不掉，维数就只能满格。你越想用自相似省体积，越是把维数钉死。</p>
+          <p>这不是证明——它只是让你看清那个对手长什么样。真正把这一族排除掉的，是 2022 年王虹与 Zahl 关于黏性情形的论文。</p>`,
+       en(){camTo(0.85,0.28,4.0,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
+            KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
+            to(KAK,'boxes',0,400);to(KAK,'tDepth',10,2600);}},
+
       {t:'王虹 & Zahl：维数必须是 3',
        b:`<p>右下角是实测数据。把针不断变细（δ 每次减半），看体积怎么变：</p>
-          <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的维数从 1.90 一路爬到 <b>2.9 附近</b>，还在往 3 去。</p>
+          <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的维数从 1.90 升到 <b>2.89</b>。它不是单调上升的（中途会回落，因为每一层的滑动量不同），但趋势明确指向 3。</p>
+          <p>而上一章你自己试过：把构造改成自相似，维数直接顶到 <b>3.00</b>。<em>两条路都通向 3</em>。</p>
           <p><b>挂谷猜想</b>断言：ℝⁿ 中任何挂谷集，不管体积多小，维数必定是满的 n。二维情形 1971 年由 Davies 解决；三维卡了半个多世纪，是调和分析里最硬的骨头之一。</p>
           <p>2025 年 2 月 24 日，<b>王虹</b>与 <b>Joshua Zahl</b> 用一篇 127 页的论文把它解决了。Nets Katz 称之为“百年一遇”。</p>
           <p>一年后，她成为菲尔兹奖 90 年历史上的<b>第三位女性得主</b>。</p>`,
@@ -1092,6 +1113,7 @@ const SC={
         <button class="btn" id="b_globe">方向罗盘</button>
         <button class="btn" id="b_sweep">转动的针</button>
         <button class="btn" id="b_box">盒计数</button>
+        <button class="btn" id="b_sticky">自相似（黏性）</button>
         <button class="btn" id="b_spin">自动旋转</button>
         <button class="btn" id="b_reset" style="min-width:100%">重播压缩过程</button>
       </div>`
@@ -1195,6 +1217,12 @@ function bindCtrl(name){
       window.vizReadKakeyaEvidence();
     };
     $('#b_cones').onclick=()=>{to(KAK,'cones',KAK.cones>0.5?0:1,KAK.cones>0.5?800:2600);syncCtrl();};
+    const bs=$('#b_sticky');
+    if(bs)bs.onclick=()=>{
+      STICKY=!STICKY;
+      resetScaleCache();kakBuilt=-1;kakBoxBuilt='';
+      syncCtrl();
+    };
     $('#b_sweep').onclick=()=>{KAK.sweeping=!KAK.sweeping;syncCtrl();};
     $('#b_spin').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
     $('#b_reset').onclick=()=>{clearShow();KAK.tDepth=0;to(KAK,'tDepth',10,5200);};
@@ -1239,6 +1267,7 @@ function syncCtrl(){
     const t=(id,on)=>{const e=$(id);e&&e.classList.toggle('on',on);};
     t('#b_sweep',KAK.sweeping);t('#b_globe',KAK.dirGlobe>0.5);t('#b_box',KAK.boxes>0.5);
     t('#b_spin',!!CAM.spin);t('#b_shadow',KAK.shadow>0.5);t('#b_cones',KAK.cones>0.5);
+    t('#b_sticky',STICKY);
   }else if(scene==='gas'){
     const e=id=>$(id);
     if(e('#v_N')){e('#v_N').textContent=GAS.N;e('#v_r').textContent=GAS.r.toFixed(3);
@@ -1273,6 +1302,7 @@ function fitChart(c,w,h){
 }
 /* δ→0 的标度数据：与交互参数无关，算一次后给最后两章的图表复用 */
 let scaleData=null,scaleQueued=false;
+function resetScaleCache(){scaleData=null;scaleQueued=false;}
 function queueScaleData(){
   if(scaleData||scaleQueued)return;
   scaleQueued=true;

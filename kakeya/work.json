@@ -2,11 +2,14 @@
   "slug": "kakeya",
   "title": "一根针",
   "question": "一根针最少能扫过多大地方？",
-  "description": "从挂谷转针问题出发，先留下预测，再通过递归压缩、盒计数与错误证明检验体积和维数。",
+  "description": "从一根针转一圈开始，看体积被压到几乎为零而方向一个不丢；再亲手扮演那个卡住数学界 26 年的对手，试着把维数压下来。",
   "date": "2026-07-29",
-  "category": ["数学", "几何"],
+  "category": [
+    "数学",
+    "几何"
+  ],
   "duration": "8 分钟",
-  "chapters": 11,
+  "chapters": 12,
   "featured": true,
   "accent": "#72d9ee"
 }
