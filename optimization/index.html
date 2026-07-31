@@ -261,7 +261,7 @@ function criticals(){
 const cv=$("land"),cx=cv.getContext("2d");
 const CAM={az:-.62,el:.52,dist:1,taz:-.62,tel:.52,tdist:1};
 let W=0,H=0,DPR=1,CENX=0,CENY=0;
-const GX=52, RX=2.7, RY=2.1;
+const GX=52, RX=2.45, RY=1.95;
 function fit(){
   DPR=Math.min(1.7,devicePixelRatio||1);
   const w=Math.round(innerWidth*DPR),h=Math.round(innerHeight*DPR);
@@ -274,8 +274,10 @@ function centerXY(){
   const st=$("story").getBoundingClientRect(),ct=$("ctrl").getBoundingClientRect();
   return[(st.right+ct.left)/2,innerHeight*.56];
 }
-const ZS=.62;                       /* 高度缩放 */
-const zOf=(x,y)=>-fAt(x,y)*ZS;      /* 屏幕上「低」= 损失小，所以取负 */
+/* 高度直接等于损失：损失大 → 画得高，谷底 = 最低点。
+   注意投影里 screen_y = CENY − sy 已经翻过一次符号，这里不能再翻。 */
+const ZS=.34;
+const zOf=(x,y)=>fAt(x,y)*ZS;
 function proj(x,y,z){
   const ca=Math.cos(CAM.az),sa=Math.sin(CAM.az);
   const ce=Math.cos(CAM.el),se=Math.sin(CAM.el);
@@ -287,10 +289,10 @@ function proj(x,y,z){
 }
 /* 地形配色：谷深 → 蓝，脊高 → 暖 */
 function terrainColor(f,shade){
-  const t=clamp((f+1.8)/4.2,0,1);
-  const r=Math.round((46+180*t*t)*shade);
-  const g=Math.round((70+96*t)*shade);
-  const b=Math.round((128-46*t)*shade);
+  const t=clamp((f+1.6)/6.2,0,1);          /* 0 = 谷底，1 = 高处 */
+  const r=Math.round((38+196*t*t)*shade);
+  const g=Math.round((66+104*t)*shade);
+  const b=Math.round((124-52*t)*shade);
   return`rgb(${r},${g},${b})`;
 }
 function drawLand(){
@@ -368,11 +370,31 @@ function drawBall(){
     }
   }
 }
+/* 高度含义指示器：明确「往哪边是优化方向」 */
+function drawCompass(){
+  const FONT=getComputedStyle(document.body).fontFamily;
+  const x=CENX+Math.min(W,H)*.30, y0=CENY-Math.min(W,H)*.13, y1=CENY+Math.min(W,H)*.13;
+  if(x>W-40*DPR)return;
+  const g=cx.createLinearGradient(0,y0,0,y1);
+  g.addColorStop(0,"rgba(232,150,96,.85)");
+  g.addColorStop(1,"rgba(70,110,190,.85)");
+  cx.strokeStyle=g;cx.lineWidth=3*DPR;cx.lineCap="round";
+  cx.beginPath();cx.moveTo(x,y0);cx.lineTo(x,y1);cx.stroke();
+  const a=8*DPR;
+  cx.beginPath();cx.moveTo(x,y1+2*DPR);
+  cx.lineTo(x-a*.6,y1-a);cx.lineTo(x+a*.6,y1-a);cx.closePath();
+  cx.fillStyle="rgba(70,110,190,.95)";cx.fill();
+  cx.font=`${11*DPR}px ${FONT}`;cx.textAlign="left";
+  cx.fillStyle="rgba(232,170,130,.95)";cx.textBaseline="top";
+  cx.fillText("损失高",x+9*DPR,y0);
+  cx.fillStyle="rgba(130,170,240,.95)";cx.textBaseline="bottom";
+  cx.fillText("损失低 · 优化方向",x+9*DPR,y1);
+}
 function render(){
   fit();
   const c=centerXY();CENX=c[0]*DPR;CENY=c[1]*DPR;
   cx.fillStyle="#080a0e";cx.fillRect(0,0,W,H);
-  drawLand();drawTraj();drawCriticals();drawBall();
+  drawLand();drawTraj();drawCriticals();drawBall();drawCompass();
 }
 
 /* ══════════ 高维计数：随机对称矩阵有多大概率正定 ══════════ */
@@ -454,7 +476,7 @@ const C_BOWL=`
     <input type="range" id="sK" min="-2" max="3" step="0.01"></div>
   <div class="btns">
     <button class="btn key wide" id="b_drop">从右上角放球</button>
-    <button class="btn wide" id="b_ridge">正好放在脊线上</button>
+    <button class="btn wide" id="b_ridge">重新放到脊线上</button>
   </div>`;
 const C_SADDLE=`
   <div class="knob"><div class="knob-head"><label for="sK">地形参数 κ</label><b id="vK"></b></div>
@@ -493,12 +515,12 @@ const CH=[
 
 {t:"把碗从中间顶起来",c:C_BOWL,chart:false,
  b:`<p>把 κ 拉过 0。碗的中间被顶起来，裂成<b>两个坑</b>，中间留下一道<b>脊</b>。</p>
-    <p>现在把球<em>正好放在脊线上</em>（右侧那个按钮）。沿脊线方向 y 是往下的，球会滚下来；可沿 x 方向它左右都是上坡，所以它<b>停在了脊的正中央</b>。</p>
+    <p>球已经<em>正好放在脊线上</em>了。沿脊线方向 y 是往下的，它会滚下来；可沿 x 方向左右都是上坡，于是它<b>停在了脊的正中央</b>。</p>
     <p>看左下角：<b>|∇f| 掉到了 0.0000</b>。按刚才那条规矩，这里应该是最低点。</p>
     <p>可它明明不是——两边的绿点都比它低。</p>
     <p class="q">这个点叫<b>鞍点</b>：一个方向向上，另一个方向向下，像马鞍。转动地形，从侧面看得最清楚。</p>`,
  en(){S.kappa=2;S.t=0;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=false;
-      resetBall(1.7,1.3);camTo(-.9,.34,1.12);}},
+      resetBall(0,1.35);camTo(-.9,.34,1.12);}},
 
 {t:"梯度分不出上坡和下坡",c:C_SADDLE,chart:false,
  b:`<p>梯度只告诉你「此处最陡的下降方向」。在鞍点它是零向量——<em>不是因为四周都更高，而是因为上坡和下坡恰好抵消</em>。</p>
