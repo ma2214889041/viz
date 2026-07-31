@@ -1,74 +1,92 @@
 import assert from "node:assert/strict";
 
 /**
- * 损失地形族的数值验证（与文章内实现逐项一致）：
- *   f(x,y) = x⁴/4 − κx²/2 + y²/2 + t·x
- *   ∇f     = (x³ − κx + t, y)
- *   H      = diag(3x² − κ, 1)
+ * 损失地形与临界点分类的数值验证（与文章内实现逐项一致）：
+ *
+ *   f(x,y) = A·sin(1.6x)·cos(1.4y) + 0.08(x² + y²)
+ *
+ * 一阶与二阶导数全部解析可写，因此每个临界点的类型都是算出来的。
  * 页面自检只做瞬时检查；需要抽样的高维统计放在这里。
  */
-const f = (x, y, k, t) => (x ** 4) / 4 - (k * x * x) / 2 + (y * y) / 2 + t * x;
-const gx = (x, k, t) => x ** 3 - k * x + t;
-const h1 = (x, k) => 3 * x * x - k;
+const LA = 1.6, LB = 1.4, LC = 0.16, RX = 4.0, RY = 3.2;
 
-function criticals(k, t) {
+const F = (x, y, A) => A * Math.sin(LA * x) * Math.cos(LB * y) + (LC * (x * x + y * y)) / 2;
+const G = (x, y, A) => [
+  A * LA * Math.cos(LA * x) * Math.cos(LB * y) + LC * x,
+  -A * LB * Math.sin(LA * x) * Math.sin(LB * y) + LC * y
+];
+const Hs = (x, y, A) => {
+  const sc = A * Math.sin(LA * x) * Math.cos(LB * y);
+  const cs = A * Math.cos(LA * x) * Math.sin(LB * y);
+  return [-LA * LA * sc + LC, -LA * LB * cs, -LB * LB * sc + LC];
+};
+const eig = (h) => {
+  const tr = h[0] + h[2], det = h[0] * h[2] - h[1] * h[1];
+  const d = Math.sqrt(Math.max(0, tr * tr - 4 * det));
+  return [(tr - d) / 2, (tr + d) / 2];
+};
+const kind = (e) => (e[0] > 1e-9 && e[1] > 1e-9 ? "min" : e[0] < -1e-9 && e[1] < -1e-9 ? "max" : "saddle");
+
+function criticals(A) {
   const out = [];
-  let prev = gx(-3, k, t);
-  for (let s = -3; s < 3; s += 0.002) {
-    const cur = gx(s + 0.002, k, t);
-    if (prev === 0 || prev * cur < 0) {
-      let a = s, b = s + 0.002;
-      for (let i = 0; i < 80; i += 1) {
-        const m = (a + b) / 2;
-        if (gx(a, k, t) * gx(m, k, t) <= 0) b = m; else a = m;
-      }
-      const x = (a + b) / 2;
-      if (!out.some((q) => Math.abs(q.x - x) < 1e-3))
-        out.push({ x, ev: [h1(x, k), 1], f: f(x, 0, k, t) });
+  for (let gx = -RX; gx <= RX; gx += 0.3) for (let gy = -RX; gy <= RX; gy += 0.3) {
+    let x = gx, y = gy, ok = false;
+    for (let it = 0; it < 50; it += 1) {
+      const h = Hs(x, y, A), det = h[0] * h[2] - h[1] * h[1];
+      if (Math.abs(det) < 1e-9) break;
+      const g = G(x, y, A);
+      const dx = (h[2] * g[0] - h[1] * g[1]) / det;
+      const dy = (-h[1] * g[0] + h[0] * g[1]) / det;
+      x -= dx; y -= dy;
+      if (Math.abs(x) > RX + 0.6 || Math.abs(y) > RX + 0.6) break;
+      if (Math.hypot(dx, dy) < 1e-12) { ok = true; break; }
     }
-    prev = cur;
+    if (!ok || Math.abs(x) > RX || Math.abs(y) > RY) continue;
+    const g = G(x, y, A);
+    if (Math.hypot(g[0], g[1]) > 1e-8) continue;
+    if (out.some((q) => Math.hypot(q.x - x, q.y - y) < 1e-3)) continue;
+    const e = eig(Hs(x, y, A));
+    out.push({ x, y, e, f: F(x, y, A), type: kind(e) });
   }
+  out.sort((p, q) => p.f - q.f);
   return out;
 }
 
-// 1) κ < 0：只有一个极小，两个特征值都为正
+// 1) A = 0 时地形退化成碗：唯一临界点，且是极小
 {
-  const cs = criticals(-1.5, 0);
-  assert.equal(cs.length, 1, "κ<0 时应只有一个临界点");
-  assert.ok(cs[0].ev[0] > 0 && cs[0].ev[1] > 0, "κ<0 的临界点应为极小");
+  const cs = criticals(0);
+  assert.equal(cs.length, 1, `A=0 应只有一个临界点，实得 ${cs.length}`);
+  assert.equal(cs[0].type, "min");
+  assert.ok(Math.hypot(cs[0].x, cs[0].y) < 1e-9, "碗底应在原点");
 }
 
-// 2) κ=2, t=0：三个临界点，极小在 ±√2，鞍点在 0 且特征值为 (−2, 1)
+// 2) A = 1：全部临界点收敛，且鞍点多于极小
+const cs1 = criticals(1);
+const n = (t) => cs1.filter((c) => c.type === t).length;
 {
-  const cs = criticals(2, 0);
-  assert.equal(cs.length, 3, "κ=2 应有 3 个临界点");
-  const saddles = cs.filter((c) => c.ev[0] < 0);
-  const minima = cs.filter((c) => c.ev[0] > 0);
-  assert.equal(saddles.length, 1, "应恰有一个鞍点");
-  assert.equal(minima.length, 2, "应恰有两个极小");
-  assert.ok(Math.abs(saddles[0].x) < 1e-6, "鞍点应在 x=0");
-  assert.ok(Math.abs(saddles[0].ev[0] + 2) < 1e-6, `鞍点 ∂²f/∂x² 应为 −κ = −2，实得 ${saddles[0].ev[0]}`);
-  assert.ok(saddles[0].ev[1] > 0, "鞍点另一个特征值应为正 —— 这正是「鞍」的定义");
-  for (const m of minima)
-    assert.ok(Math.abs(Math.abs(m.x) - Math.SQRT2) < 1e-5, `极小应在 ±√κ = ±√2，实得 ${m.x}`);
+  for (const c of cs1) {
+    const g = G(c.x, c.y, 1);
+    assert.ok(Math.hypot(g[0], g[1]) < 1e-7, `临界点残余梯度过大 ${Math.hypot(g[0], g[1])}`);
+  }
+  assert.ok(cs1.length > 20, `应有相当多的临界点，实得 ${cs1.length}`);
+  assert.ok(n("saddle") > n("min"), `鞍点应多于极小，实得 鞍点${n("saddle")} 极小${n("min")}`);
+  assert.ok(n("max") > 0, "应存在极大点");
 }
 
-// 3) 倾斜后两个极小深浅不同 → 局部最优与全局最优
-{
-  const cs = criticals(2, 0.35).filter((c) => c.ev[0] > 0).map((c) => c.f);
-  assert.equal(cs.length, 2);
-  assert.ok(Math.abs(cs[0] - cs[1]) > 0.5, `倾斜后两极小深度差应显著，实得 ${Math.abs(cs[0] - cs[1])}`);
+// 3) 分类必须与特征值符号严格一致
+for (const c of cs1) {
+  const e = eig(Hs(c.x, c.y, 1));
+  if (c.type === "min") assert.ok(e[0] > 0 && e[1] > 0);
+  if (c.type === "max") assert.ok(e[0] < 0 && e[1] < 0);
+  if (c.type === "saddle") assert.ok(e[0] * e[1] < 0, "鞍点两特征值必须异号");
 }
 
-// 4) 越靠近鞍点，逃离所需步数越多（梯度全程接近 0，却要等更久）
+// 4) 全局最优唯一且严格低于次优 —— 局部与全局才有意义
 {
-  const escape = (eps) => {
-    let x = eps, n = 0;
-    while (Math.abs(x) < 1.2 && n < 500000) { x -= 0.05 * gx(x, 2, 0); n += 1; }
-    return n;
-  };
-  const a = escape(1e-2), b = escape(1e-4), c = escape(1e-6);
-  assert.ok(a < b && b < c, `逃离步数应随初始偏离减小而增加，实得 ${a} ${b} ${c}`);
+  const mins = cs1.filter((c) => c.type === "min");
+  assert.ok(mins.length >= 2, "应有多个极小");
+  assert.ok(mins[1].f - mins[0].f > 1e-3,
+    `全局最优应严格低于次优，实得差 ${mins[1].f - mins[0].f}`);
 }
 
 // 5) 高维：随机对称矩阵「全部特征值为正」的比例随 d 崩塌
@@ -111,7 +129,7 @@ const rates = {};
 
 console.log(JSON.stringify({
   ok: true,
-  saddleEigen: [-2, 1],
-  minimaAt: "±√κ",
-  pdRates: Object.fromEntries(Object.entries(rates).map(([d, p]) => [d, +(100 * p).toFixed(3) + "%"]))
+  critical: { total: cs1.length, min: n("min"), saddle: n("saddle"), max: n("max") },
+  saddlePerMin: +(n("saddle") / n("min")).toFixed(2),
+  pdRates: Object.fromEntries(Object.entries(rates).map(([d, p]) => [d, `${(100 * p).toFixed(3)}%`]))
 }));

@@ -189,8 +189,8 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 <div id="hud">
   <div class="hcell g"><span>梯度大小 |∇f|</span><b id="mG">—</b></div>
   <div class="hcell"><span>当前损失 f</span><b id="mF">—</b></div>
-  <div class="hcell n"><span>曲率 ∂²f/∂x²</span><b id="mH1">—</b></div>
-  <div class="hcell p"><span>曲率 ∂²f/∂y²</span><b id="mH2">—</b></div>
+  <div class="hcell n"><span>特征值 λ₁</span><b id="mH1">—</b></div>
+  <div class="hcell p"><span>特征值 λ₂</span><b id="mH2">—</b></div>
 </div>
 
 <section class="panel" id="chart">
@@ -209,59 +209,92 @@ const $$=s=>[].slice.call(document.querySelectorAll(s));
 const clamp=(x,a,b)=>x<a?a:x>b?b:x;
 
 /* ══════════ 地形 ══════════
-   一个单参数族就够覆盖全部章节，而且所有临界点与特征值都能精确写出：
+   这不是一个碗，而是一片有几十个临界点的真实地形。一阶与二阶导数
+   全部解析可写，所以每个临界点的类型都能精确判定，不是看图猜的：
 
-     f(x,y) = x⁴/4 − κx²/2 + y²/2 + t·x
-     ∇f     = (x³ − κx + t,  y)
-     H      = diag(3x² − κ,  1)
+     f(x,y) = A·sin(ax)·cos(by) + c(x² + y²)/2
 
-   κ < 0：单个凸碗
-   κ > 0：原点成为鞍点（H = diag(−κ, 1)，一正一负），两侧各有一个极小
-   t ≠ 0：两个极小深浅不同 → 局部最优与全局最优
+   ∂f/∂x  =  A·a·cos(ax)cos(by) + cx
+   ∂f/∂y  = −A·b·sin(ax)sin(by) + cy
+   H = [ −A a² sin(ax)cos(by) + c ,  −A a b cos(ax)sin(by)
+         −A a b cos(ax)sin(by)   ,  −A b² sin(ax)cos(by) + c ]
+
+   A 控制地形有多崎岖：A → 0 时它退化成一个碗。
 */
-const S={kappa:-1.5,t:0,alpha:.06,mom:0,x:1.6,y:1.2,vx:0,vy:0,
-  running:false,traj:[],dim:1};
-const fAt=(x,y)=>x*x*x*x/4-S.kappa*x*x/2+y*y/2+S.t*x;
-const gAt=(x,y)=>[x*x*x-S.kappa*x+S.t, y];
-const hAt=x=>[3*x*x-S.kappa, 1];
+const LA=1.6, LB=1.4, LC=0.16;
+const S={amp:1,alpha:.05,x:2.6,y:2.2,vx:0,vy:0,running:false,traj:[],dim:1,
+  showLabels:true,showTypes:true,x0:2.6,y0:2.2};
+const fAt=(x,y)=>S.amp*Math.sin(LA*x)*Math.cos(LB*y)+LC*(x*x+y*y)/2;
+const gAt=(x,y)=>[
+  S.amp*LA*Math.cos(LA*x)*Math.cos(LB*y)+LC*x,
+ -S.amp*LB*Math.sin(LA*x)*Math.sin(LB*y)+LC*y];
+const hessAt=(x,y)=>{
+  const sc=S.amp*Math.sin(LA*x)*Math.cos(LB*y);
+  const cs=S.amp*Math.cos(LA*x)*Math.sin(LB*y);
+  return[-LA*LA*sc+LC, -LA*LB*cs, -LB*LB*sc+LC];   /* [fxx, fxy, fyy] */
+};
+/* 2×2 对称阵的特征值：闭式 */
+function eig(h){
+  const tr=h[0]+h[2], det=h[0]*h[2]-h[1]*h[1];
+  const d=Math.sqrt(Math.max(0,tr*tr-4*det));
+  return[(tr-d)/2,(tr+d)/2];
+}
+const classify=e=>e[0]>1e-9&&e[1]>1e-9?"min":(e[0]<-1e-9&&e[1]<-1e-9?"max":"saddle");
+
+/* 牛顿法从网格出发求全部临界点；类型由解析 Hessian 判定 */
+let CRIT=[],critKey="";
+function criticals(){
+  const key=S.amp.toFixed(3);
+  if(key===critKey)return CRIT;
+  const R=RX,out=[];
+  for(let gx=-R;gx<=R;gx+=.3)for(let gy=-R;gy<=R;gy+=.3){
+    let x=gx,y=gy,ok=false;
+    for(let it=0;it<50;it++){
+      const h=hessAt(x,y),det=h[0]*h[2]-h[1]*h[1];
+      if(Math.abs(det)<1e-9)break;
+      const g=gAt(x,y);
+      const dx=( h[2]*g[0]-h[1]*g[1])/det;
+      const dy=(-h[1]*g[0]+h[0]*g[1])/det;
+      x-=dx;y-=dy;
+      if(Math.abs(x)>R+.6||Math.abs(y)>R+.6)break;
+      if(Math.hypot(dx,dy)<1e-12){ok=true;break;}
+    }
+    if(!ok||Math.abs(x)>R||Math.abs(y)>RY)continue;
+    const g=gAt(x,y);
+    if(Math.hypot(g[0],g[1])>1e-8)continue;
+    if(out.some(q=>Math.hypot(q.x-x,q.y-y)<1e-3))continue;
+    const e=eig(hessAt(x,y));
+    out.push({x,y,e,f:fAt(x,y),type:classify(e)});
+  }
+  out.sort((p,q)=>p.f-q.f);
+  critKey=key;CRIT=out;
+  return out;
+}
+const critCount=t=>criticals().filter(c=>c.type===t).length;
 
 function resetBall(x,y){
   S.x=x;S.y=y;S.vx=0;S.vy=0;S.traj=[[x,y]];S.running=true;
 }
 function stepBall(){
   const g=gAt(S.x,S.y);
-  S.vx=S.mom*S.vx-S.alpha*g[0];
-  S.vy=S.mom*S.vy-S.alpha*g[1];
-  S.x=clamp(S.x+S.vx,-3.4,3.4);
-  S.y=clamp(S.y+S.vy,-2.8,2.8);
+  S.x=clamp(S.x-S.alpha*g[0],-RX,RX);
+  S.y=clamp(S.y-S.alpha*g[1],-RY,RY);
   S.traj.push([S.x,S.y]);
-  if(S.traj.length>900)S.traj.shift();
-  if(Math.hypot(g[0],g[1])<2e-4&&Math.hypot(S.vx,S.vy)<2e-4)S.running=false;
+  if(S.traj.length>1200)S.traj.shift();
+  if(Math.hypot(g[0],g[1])<1e-5)S.running=false;
 }
-/* 精确临界点：y=0，x³ − κx + t = 0 */
-function criticals(){
-  const out=[],k=S.kappa,t=S.t;
-  const g=x=>x*x*x-k*x+t;
-  let prev=g(-3);
-  for(let s=-3;s<3;s+=.002){
-    const cur=g(s+.002);
-    if(prev===0||prev*cur<0){
-      let a=s,b=s+.002;
-      for(let i=0;i<70;i++){const m=(a+b)/2;(g(a)*g(m)<=0)?b=m:a=m;}
-      const x=(a+b)/2;
-      if(!out.some(q=>Math.abs(q.x-x)<1e-3))
-        out.push({x,ev:hAt(x),f:fAt(x,0)});
-    }
-    prev=cur;
-  }
-  return out;
+/* 找离给定点最近的某类临界点 */
+function nearestOf(type,x,y){
+  const cs=criticals().filter(c=>c.type===type);
+  if(!cs.length)return null;
+  return cs.reduce((a,c)=>Math.hypot(c.x-x,c.y-y)<Math.hypot(a.x-x,a.y-y)?c:a);
 }
 
 /* ══════════ 三维地形渲染 ══════════ */
 const cv=$("land"),cx=cv.getContext("2d");
-const CAM={az:-.62,el:.52,dist:1,taz:-.62,tel:.52,tdist:1};
+const CAM={az:-.66,el:.34,dist:1,taz:-.66,tel:.34,tdist:1};
 let W=0,H=0,DPR=1,CENX=0,CENY=0;
-const GX=52, RX=2.45, RY=1.95;
+const GX=64, RX=4.0, RY=3.2;
 function fit(){
   DPR=Math.min(1.7,devicePixelRatio||1);
   const w=Math.round(innerWidth*DPR),h=Math.round(innerHeight*DPR);
@@ -276,13 +309,13 @@ function centerXY(){
 }
 /* 高度直接等于损失：损失大 → 画得高，谷底 = 最低点。
    注意投影里 screen_y = CENY − sy 已经翻过一次符号，这里不能再翻。 */
-const ZS=.34;
+const ZS=1.55;
 const zOf=(x,y)=>fAt(x,y)*ZS;
 function proj(x,y,z){
   const ca=Math.cos(CAM.az),sa=Math.sin(CAM.az);
   const ce=Math.cos(CAM.el),se=Math.sin(CAM.el);
   const X=x*ca-y*sa,Y=x*sa+y*ca;
-  const sc=Math.min(W,H)*.108*CAM.dist;
+  const sc=Math.min(W,H)*.072*CAM.dist;
   const sx=X,sy=Y*ce+z*se,depth=Y*se-z*ce;
   const pp=1/(1+depth*.04);
   return[CENX+sx*sc*pp, CENY-sy*sc*pp, depth];
@@ -321,18 +354,21 @@ function drawLand(){
   }
 }
 function drawCriticals(){
+  if(!S.showTypes)return;
   const cs=criticals();
   const FONT=getComputedStyle(document.body).fontFamily;
-  cx.font=`${11.5*DPR}px ${FONT}`;cx.textAlign="center";cx.textBaseline="bottom";
+  cx.font=`${10.5*DPR}px ${FONT}`;cx.textAlign="center";cx.textBaseline="bottom";
+  const col={min:"rgba(79,209,165,.95)",saddle:"rgba(255,138,92,.95)",max:"rgba(232,90,110,.95)"};
+  const best=cs[0];
   for(const c of cs){
-    const saddle=c.ev[0]<0||c.ev[1]<0;
-    const p=proj(c.x,0,zOf(c.x,0));
-    cx.beginPath();cx.arc(p[0],p[1],6*DPR,0,7);
-    cx.fillStyle=saddle?"rgba(255,138,92,.95)":"rgba(79,209,165,.95)";cx.fill();
-    cx.strokeStyle="rgba(0,0,0,.5)";cx.lineWidth=1.4*DPR;cx.stroke();
-    if(S.showLabels){
-      cx.fillStyle=saddle?"rgba(255,170,130,.98)":"rgba(140,235,205,.98)";
-      cx.fillText(saddle?"鞍点":"极小",p[0],p[1]-10*DPR);
+    const p=proj(c.x,c.y,zOf(c.x,c.y));
+    const r=(c===best?7:5)*DPR;
+    cx.beginPath();cx.arc(p[0],p[1],r,0,7);
+    cx.fillStyle=col[c.type];cx.fill();
+    cx.strokeStyle="rgba(0,0,0,.55)";cx.lineWidth=1.3*DPR;cx.stroke();
+    if(c===best&&S.showLabels){
+      cx.fillStyle="rgba(150,240,210,.98)";
+      cx.fillText("全局最优",p[0],p[1]-10*DPR);
     }
   }
 }
@@ -461,113 +497,110 @@ function drawPD(){
 
 /* ══════════ HUD ══════════ */
 function hud(){
-  const g=gAt(S.x,S.y),h=hAt(S.x);
+  const g=gAt(S.x,S.y),e=eig(hessAt(S.x,S.y));
   $("mG").textContent=Math.hypot(g[0],g[1]).toFixed(4);
   $("mF").textContent=fAt(S.x,S.y).toFixed(4);
-  $("mH1").textContent=h[0].toFixed(3);
-  $("mH2").textContent=h[1].toFixed(3);
-  $("mH1").parentElement.classList.toggle("n",h[0]<0);
-  $("mH1").parentElement.classList.toggle("p",h[0]>=0);
+  $("mH1").textContent=e[0].toFixed(3);
+  $("mH2").textContent=e[1].toFixed(3);
+  $("mH1").parentElement.className="hcell "+(e[0]<0?"n":"p");
+  $("mH2").parentElement.className="hcell "+(e[1]<0?"n":"p");
 }
 
 /* ══════════ 控件模板 ══════════ */
-const C_BOWL=`
-  <div class="knob"><div class="knob-head"><label for="sK">地形参数 κ</label><b id="vK"></b></div>
-    <input type="range" id="sK" min="-2" max="3" step="0.01"></div>
+const C_LAND=`
+  <div class="knob"><div class="knob-head"><label for="sA">地形起伏 A</label><b id="vA"></b></div>
+    <input type="range" id="sA" min="0" max="1.6" step="0.01"></div>
   <div class="btns">
-    <button class="btn key wide" id="b_drop">从右上角放球</button>
-    <button class="btn wide" id="b_ridge">重新放到脊线上</button>
+    <button class="btn key wide" id="b_drop">随机放一个球</button>
+    <button class="btn" id="b_flat">A = 0（碗）</button>
+    <button class="btn" id="b_rough">A = 1.3</button>
   </div>`;
-const C_SADDLE=`
-  <div class="knob"><div class="knob-head"><label for="sK">地形参数 κ</label><b id="vK"></b></div>
-    <input type="range" id="sK" min="0.2" max="3" step="0.01"></div>
-  <div class="knob"><div class="knob-head"><label for="sEps">起点偏离鞍点</label><b id="vEps"></b></div>
-    <input type="range" id="sEps" min="-6" max="-0.5" step="0.1"></div>
+const C_TYPE=`
+  <div class="knob"><div class="knob-head"><label for="sA">地形起伏 A</label><b id="vA"></b></div>
+    <input type="range" id="sA" min="0.2" max="1.6" step="0.01"></div>
   <div class="btns">
-    <button class="btn key wide" id="b_near">从这个偏离量放球</button>
-    <button class="btn wide" id="b_esc">显示逃离方向</button>
+    <button class="btn key wide" id="b_saddle">把球放到一个鞍点上</button>
+    <button class="btn wide" id="b_drop">随机放一个球</button>
+    <button class="btn wide" id="b_types">显示/隐藏临界点</button>
   </div>`;
-const C_TILT=`
-  <div class="knob"><div class="knob-head"><label for="sK">地形参数 κ</label><b id="vK"></b></div>
-    <input type="range" id="sK" min="0.5" max="3" step="0.01"></div>
-  <div class="knob"><div class="knob-head"><label for="sT">倾斜 t</label><b id="vT"></b></div>
-    <input type="range" id="sT" min="-0.6" max="0.6" step="0.005"></div>
-  <div class="knob"><div class="knob-head"><label for="sX">起点 x₀</label><b id="vX"></b></div>
-    <input type="range" id="sX" min="-2.4" max="2.4" step="0.01"></div>
-  <div class="btns"><button class="btn key wide" id="b_dropx">从这个起点放球</button></div>`;
 const C_DIM=`
   <div class="knob"><div class="knob-head"><label for="sD">维数 d</label><b id="vD"></b></div>
     <input type="range" id="sD" min="1" max="10" step="1"></div>
-  <div class="btns">
-    <button class="btn key wide" id="b_more">再抽 2 万个矩阵</button>
-  </div>`;
+  <div class="btns"><button class="btn key wide" id="b_more">再抽 2 万个矩阵</button></div>`;
+const C_BASIN=`
+  <div class="knob"><div class="knob-head"><label for="sX">起点 x₀</label><b id="vX"></b></div>
+    <input type="range" id="sX" min="-4.4" max="4.4" step="0.02"></div>
+  <div class="knob"><div class="knob-head"><label for="sY">起点 y₀</label><b id="vY"></b></div>
+    <input type="range" id="sY" min="-3.5" max="3.5" step="0.02"></div>
+  <div class="btns"><button class="btn key wide" id="b_dropxy">从这个起点放球</button></div>`;
 
 /* ══════════ 章节 ══════════ */
 const CH=[
-{t:"梯度为零，就到了最低点",c:C_BOWL,chart:false,
- b:`<p>这是一片<b>损失地形</b>：高度就是损失，球会顺着坡往下滚——每一步都按 <span style="font-family:var(--mono)">x ← x − α∇f</span> 真实执行。可以拖动旋转。</p>
-    <p>现在 κ &lt; 0，地形是一个规规矩矩的<b>碗</b>。放球，它滚到底就停了。</p>
-    <p>停下来的地方梯度为零，而且确实是最低点。绿点标出了它。</p>
-    <p><em>于是我们学到一条规矩：梯度为零 ⟺ 到达最优。</em></p>
-    <p class="q">地形用的是 f(x,y) = x⁴/4 − κx²/2 + y²/2 + t·x。κ 决定它是一个碗还是两个坑，t 决定两个坑谁更深。所有临界点与曲率都能精确写出，屏幕上的数字不是估的。</p>`,
- en(){S.kappa=-1.5;S.t=0;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=false;
-      resetBall(1.7,1.3);camTo(-.62,.52,1);}},
+{t:"一个变量时，导数为零就够了",c:C_LAND,chart:false,
+ b:`<p>先说清楚这篇在讲什么：<em>不是梯度下降怎么调参</em>。球滚下坡只是一个<b>探针</b>，用来把我们带到梯度为零的地方。真正的问题是——<b>到了之后，你怎么知道那是什么？</b></p>
+    <p>把「地形起伏 A」拖到 <b>0</b>：地形退化成一个碗，只有一个临界点。球滚到底，梯度为零，那确实是最低点。</p>
+    <p>一元微积分教给我们的规矩就是这条：<em>导数为零 ⟹ 极值</em>。在碗上它没问题。</p>
+    <p class="q">地形是 f = A·sin(1.6x)·cos(1.4y) + 0.08(x²+y²)。A 决定它有多崎岖；一阶与二阶导数全部解析可写，所以每个临界点的类型都是<b>算</b>出来的，不是看图猜的。</p>`,
+ en(){S.amp=0;S.showTypes=true;S.showLabels=true;
+      resetBall(3.2,2.4);camTo(-.66,.34,1);}},
 
-{t:"把碗从中间顶起来",c:C_BOWL,chart:false,
- b:`<p>把 κ 拉过 0。碗的中间被顶起来，裂成<b>两个坑</b>，中间留下一道<b>脊</b>。</p>
-    <p>球已经<em>正好放在脊线上</em>了。沿脊线方向 y 是往下的，它会滚下来；可沿 x 方向左右都是上坡，于是它<b>停在了脊的正中央</b>。</p>
-    <p>看左下角：<b>|∇f| 掉到了 0.0000</b>。按刚才那条规矩，这里应该是最低点。</p>
-    <p>可它明明不是——两边的绿点都比它低。</p>
-    <p class="q">这个点叫<b>鞍点</b>：一个方向向上，另一个方向向下，像马鞍。转动地形，从侧面看得最清楚。</p>`,
- en(){S.kappa=2;S.t=0;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=false;
-      resetBall(0,1.35);camTo(-.9,.34,1.12);}},
+{t:"两个变量，地形就不是碗了",c:C_LAND,chart:false,
+ b:`<p>把 A 拉起来。地形立刻不再是一个碗——它长出了山脊、盆地和一道道垭口。</p>
+    <p>这才是一般情况。真实模型的损失面比它还乱得多，只是画不出来。</p>
+    <p>多按几次<b>「随机放一个球」</b>。每次它都会停在某个梯度为零的地方，但<em>停的位置各不相同</em>。</p>
+    <p>屏幕上那些彩色圆点，就是这片地形<b>全部</b>的临界点——用牛顿法从网格逐个求出来的，每个点上 |∇f| &lt; 10⁻⁸。</p>
+    <p class="q">下一章我们来数一数：它们分别是些什么。</p>`,
+ en(){S.amp=1;S.showTypes=true;S.showLabels=true;
+      resetBall(3.2,2.4);camTo(-.72,.32,1);}},
 
-{t:"梯度分不出上坡和下坡",c:C_SADDLE,chart:false,
- b:`<p>梯度只告诉你「此处最陡的下降方向」。在鞍点它是零向量——<em>不是因为四周都更高，而是因为上坡和下坡恰好抵消</em>。</p>
-    <p>要区分它们，得看<b>二阶</b>信息：Hessian 的特征值。这个地形的 Hessian 是对角的，两个特征值直接读得出：</p>
-    <span class="fml">H = diag( 3x² − κ ,  1 )</span>
-    <p>看左下角那两个曲率数字。在鞍点处 <b>∂²f/∂x² = −κ &lt; 0</b>（橙色），而 ∂²f/∂y² = 1 &gt; 0。</p>
-    <span class="big">极小 ⟺ <b>所有</b>特征值 &gt; 0
-只要有一个为负，就是鞍点</span>
-    <p>右侧拖动「起点偏离鞍点」，把球放得离脊线越来越近，看它要多久才滑走。<b>偏离越小，卡得越久</b>——而梯度从头到尾都接近 0，它不会告诉你还要等多久。</p>`,
- en(){S.kappa=2;S.t=0;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=true;
-      S.eps=-3;resetBall(1e-3,1.1);camTo(-.95,.26,1.2);}},
+{t:"梯度为零的地方，有三种",c:C_TYPE,chart:false,
+ b:`<p>梯度为零只说明「此处没有下坡方向<em>可言</em>」，不说明四周更高。要分辨，得看<b>二阶</b>信息——Hessian 的两个特征值：</p>
+    <ul>
+      <li><span style="color:#4fd1a5">■</span> 两个都为正 → <b>极小</b></li>
+      <li><span style="color:#ff8a5c">■</span> 一正一负 → <b>鞍点</b></li>
+      <li><span style="color:#e85a6e">■</span> 两个都为负 → <b>极大</b></li>
+    </ul>
+    <p>按<b>「把球放到一个鞍点上」</b>。球停住，左下角 <b>|∇f| 变成 0</b>——可它周围明明有更低的地方。看那两个曲率：一正一负。</p>
+    <span class="big" id="countBig"></span>
+    <p><em>连在这片二维小地形上，鞍点都明显多于极小。</em>而这只是二维——真正的问题在维数上。</p>`,
+ en(){S.amp=1;S.showTypes=true;S.showLabels=true;
+      const sd=nearestOf("saddle",1,1);
+      if(sd)resetBall(sd.x,sd.y);
+      camTo(-.88,.28,1.08);}},
 
 {t:"维数越高，鞍点越是压倒性地多",c:C_DIM,chart:true,
- b:`<p>二维里鞍点只是个特例。可真实模型有几百万个参数——那里的情况完全不同。</p>
-    <p>在一个临界点，Hessian 是 d×d 的对称矩阵。要成为<b>极小</b>，它的 <b>d 个特征值必须全为正</b>。少一个都不行。</p>
-    <p>右下角是实时抽样：随机生成对称矩阵，数一数有多大比例是正定的。纵轴是对数。</p>
-    <p>拖动维数看它塌下去：</p>
+ b:`<p>刚才那个 2:1 不是巧合，而且随维数会迅速恶化。</p>
+    <p>在一个临界点上，Hessian 是 d×d 的对称矩阵。要成为<b>极小</b>，它的 <b>d 个特征值必须全为正</b>——少一个都不行。而符号是"各自独立"地取的，全中的机会随 d 迅速蒸发。</p>
+    <p>右下角是实时抽样：随机生成对称矩阵，数一数有多大比例正定。纵轴取对数。</p>
     <span class="big" id="pdBig"></span>
     <p><em>d ≥ 6 之后，抽十万个都碰不到一个。</em></p>
-    <p>所以在高维损失面上，"卡住了"绝大多数时候不是掉进了局部最优，而是<b>贴在某个鞍点附近</b>——那里梯度同样接近零，但只要找对方向就还能继续下降。</p>
-    <p class="q">这里抽的是元素独立同分布的随机对称矩阵，用于说明「全正」这件事随维数变得多稀有；真实损失面的 Hessian 不是这个分布，但结论方向一致，这也是 Dauphin 等人 2014 年那篇工作的出发点。</p>`,
- en(){S.kappa=2;S.t=0;S.mom=0;S.showLabels=true;S.showEscape=false;
-      resetBall(1e-3,1.1);camTo(-.8,.42,1);
+    <p>所以在高维损失面上，"损失不降了"绝大多数时候<b>不是</b>掉进了局部最优，而是贴在某个鞍点附近——那里梯度同样接近零，但只要找对方向就还能继续下降。</p>
+    <p class="q">这里抽的是元素独立同分布的随机对称矩阵，用来说明「全正」随维数变得多稀有。真实损失面的 Hessian 不服从这个分布，但方向一致——这也是 Dauphin 等人 2014 年那篇工作的出发点。</p>`,
+ en(){S.amp=1;S.showTypes=true;S.showLabels=false;
+      camTo(-.78,.36,.95);
       if(PD.n[1]<20000)samplePD(2000);}},
 
-{t:"局部最优，和全局最优",c:C_TILT,chart:false,
- b:`<p>现在给地形加一点<b>倾斜</b> t，两个坑就不一样深了。</p>
-    <p>绿点仍然都是极小——它们的两个特征值都为正，梯度也都为零。但其中只有一个是<b>全局</b>最优，另一个只是<b>局部</b>最优。</p>
-    <p>而梯度下降<em>分不出这两者</em>。它只往下滚，滚进哪个坑，完全取决于起点在脊的哪一侧。</p>
-    <p>拖动「起点 x₀」，越过脊线的那一刻，球的归宿会突然换一边——<b>起点差一点点，结局差一整个坑</b>。</p>
-    <p class="q">脊线（鞍点所在的位置）就是两个吸引域的分界。这也是为什么不同随机初始化会收敛到不同的解。</p>`,
- en(){S.kappa=2;S.t=.35;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=false;
-      S.x0=1.2;resetBall(1.2,1.1);camTo(-.7,.44,1.05);}},
+{t:"就算真是极小，也未必是最低的",c:C_BASIN,chart:false,
+ b:`<p>剩下那些绿点全都是<b>货真价实的极小</b>：梯度为零，两个特征值都为正。可它们深浅不一。</p>
+    <p>只有一个是<b>全局最优</b>（标出来的那个）。其余都只是<b>局部最优</b>。</p>
+    <p>而梯度下降<em>分不出这两者</em>——它只往下滚，滚进哪个盆地，完全取决于起点落在哪一块。</p>
+    <p>拖动起点，反复放球。你会发现某些位置只差一点点，球的归宿却完全不同——<b>盆地的边界就是那些鞍点连成的分水岭</b>。</p>
+    <p class="q">这也是为什么同一个模型、同一份数据，换一个随机初始化就会收敛到不同的解。</p>`,
+ en(){S.amp=1;S.showTypes=true;S.showLabels=true;
+      S.x0=2.6;S.y0=2.2;resetBall(2.6,2.2);camTo(-.68,.36,1);}},
 
-{t:"所以「收敛了」是什么意思",c:C_TILT,chart:false,
+{t:"所以「收敛了」是什么意思",c:C_BASIN,chart:false,
  b:`<p>把这几件事放在一起：</p>
     <ul>
-      <li>梯度为零<b>不等于</b>最优——鞍点的梯度也是零</li>
+      <li>梯度为零<b>不等于</b>最优——鞍点和极大的梯度也是零</li>
       <li>要区分它们需要二阶信息：<b>所有</b>特征值必须为正</li>
       <li>维数越高，"全正"越稀有，鞍点越占压倒多数</li>
-      <li>就算真的是极小，它也可能只是<b>局部</b>的，而这取决于你从哪儿出发</li>
+      <li>就算真是极小，也可能只是局部的，而这取决于你从哪儿出发</li>
     </ul>
-    <p>所以"损失不降了"这句话，至少对应三种完全不同的处境：<em>到了全局最优、到了某个局部最优、或者只是贴在一个鞍点旁边慢慢挪</em>。</p>
+    <p>所以"损失不降了"这一句话，至少对应三种完全不同的处境：<em>到了全局最优、到了某个局部最优、或者只是贴在一个鞍点旁边慢慢挪</em>。</p>
     <p>它们在梯度上长得一模一样。</p>
-    <p class="q">本文的地形是精心挑的解析例子，所有临界点与特征值都能写成闭式；真实神经网络的损失面无法这样刻画，这里只说明「梯度为零」这一判据本身为什么不够。参考：Dauphin et al., <i>Identifying and attacking the saddle point problem in high-dimensional non-convex optimization</i> (NeurIPS 2014)。</p>`,
- en(){S.kappa=2;S.t=.35;S.mom=0;S.showLabels=true;S.showEscape=false;
-      camTo(-.55,.6,.95);}}
+    <p class="q">本文的地形是解析选例，所有一阶二阶量都能闭式写出，临界点由牛顿法求到 |∇f| &lt; 10⁻⁸ 并按 Hessian 特征值判定类型。真实神经网络的损失面无法这样刻画，这里只说明「梯度为零」这一判据本身为什么不够。参考：Dauphin et al., <i>Identifying and attacking the saddle point problem in high-dimensional non-convex optimization</i> (NeurIPS 2014)。</p>`,
+ en(){S.amp=1;S.showTypes=true;S.showLabels=true;camTo(-.6,.4,.92);}}
 ];
 
 /* ══════════ 章节机制 ══════════ */
@@ -587,52 +620,76 @@ function gotoStep(i){
   syncCtrl();
 }
 function bindCtrl(){
-  const sk=$("sK");
-  if(sk)sk.oninput=()=>{S.kappa=+sk.value;S.traj=[[S.x,S.y]];syncCtrl();};
-  const st=$("sT");
-  if(st)st.oninput=()=>{S.t=+st.value;S.traj=[[S.x,S.y]];syncCtrl();};
-  const se=$("sEps");
-  if(se)se.oninput=()=>{S.eps=+se.value;syncCtrl();};
-  const sx=$("sX");
-  if(sx)sx.oninput=()=>{S.x0=+sx.value;resetBall(S.x0,1.1);syncCtrl();};
+  const sa=$("sA");
+  if(sa)sa.oninput=()=>{S.amp=+sa.value;S.traj=[[S.x,S.y]];syncCtrl();};
   const sd=$("sD");
   if(sd)sd.oninput=()=>{S.dim=+sd.value;syncCtrl();};
-  const bd=$("b_drop");if(bd)bd.onclick=()=>resetBall(1.7,1.3);
-  const br=$("b_ridge");if(br)br.onclick=()=>resetBall(0,1.3);
-  const bn=$("b_near");if(bn)bn.onclick=()=>resetBall(Math.pow(10,S.eps),1.1);
-  const be=$("b_esc");if(be)be.onclick=()=>{S.showEscape=!S.showEscape;syncCtrl();};
-  const bx=$("b_dropx");if(bx)bx.onclick=()=>resetBall(S.x0,1.1);
-  const bm=$("b_more");if(bm)bm.onclick=()=>{samplePD(2000);syncCtrl();};
+  const sx=$("sX");
+  if(sx)sx.oninput=()=>{S.x0=+sx.value;resetBall(S.x0,S.y0);syncCtrl();};
+  const sy=$("sY");
+  if(sy)sy.oninput=()=>{S.y0=+sy.value;resetBall(S.x0,S.y0);syncCtrl();};
+  const bd=$("b_drop");
+  if(bd)bd.onclick=()=>resetBall((Math.random()*2-1)*RX*.85,(Math.random()*2-1)*RY*.85);
+  const bf=$("b_flat");
+  if(bf)bf.onclick=()=>{S.amp=0;resetBall(3.2,2.4);syncCtrl();};
+  const br=$("b_rough");
+  if(br)br.onclick=()=>{S.amp=1.3;resetBall(3.2,2.4);syncCtrl();};
+  const bs=$("b_saddle");
+  if(bs)bs.onclick=()=>{
+    const cs=criticals().filter(c=>c.type==="saddle");
+    if(!cs.length)return;
+    const c=cs[Math.floor(Math.random()*cs.length)];
+    resetBall(c.x,c.y);
+  };
+  const bt=$("b_types");
+  if(bt)bt.onclick=()=>{S.showTypes=!S.showTypes;syncCtrl();};
+  const bm=$("b_more");
+  if(bm)bm.onclick=()=>{samplePD(2000);syncCtrl();};
+  const bx=$("b_dropxy");
+  if(bx)bx.onclick=()=>resetBall(S.x0,S.y0);
 }
 function say(h,c){const e=$("verdict");e.innerHTML=h;e.className=c||"";}
 function syncCtrl(){
-  const sk=$("sK");if(sk){sk.value=S.kappa;if($("vK"))$("vK").textContent=S.kappa.toFixed(2);}
-  const st=$("sT");if(st){st.value=S.t;if($("vT"))$("vT").textContent=S.t.toFixed(3);}
-  const se=$("sEps");if(se){se.value=S.eps;if($("vEps"))$("vEps").textContent="10^"+S.eps.toFixed(1);}
-  const sx=$("sX");if(sx){sx.value=S.x0;if($("vX"))$("vX").textContent=(S.x0||0).toFixed(2);}
+  const sa=$("sA");if(sa){sa.value=S.amp;if($("vA"))$("vA").textContent=S.amp.toFixed(2);}
   const sd=$("sD");if(sd){sd.value=S.dim;if($("vD"))$("vD").textContent=S.dim;}
-  const be=$("b_esc");if(be)be.classList.toggle("on",!!S.showEscape);
-  const big=$("pdBig");
-  if(big){
+  const sx=$("sX");if(sx){sx.value=S.x0;if($("vX"))$("vX").textContent=S.x0.toFixed(2);}
+  const sy=$("sY");if(sy){sy.value=S.y0;if($("vY"))$("vY").textContent=S.y0.toFixed(2);}
+  const bt=$("b_types");if(bt)bt.classList.toggle("on",!!S.showTypes);
+  const cb=$("countBig");
+  if(cb){
+    const mn=critCount("min"),sd2=critCount("saddle"),mx=critCount("max");
+    cb.innerHTML=`这片地形共 ${mn+sd2+mx} 个临界点<br>`+
+      `<span style="color:#4fd1a5">极小 ${mn}</span>　`+
+      `<span style="color:#ff8a5c">鞍点 ${sd2}</span>　`+
+      `<span style="color:#e85a6e">极大 ${mx}</span>`;
+  }
+  const pb=$("pdBig");
+  if(pb){
     const p=PD.n[S.dim]?PD.c[S.dim]/PD.n[S.dim]:0;
-    big.innerHTML=p>0
-      ? `d = ${S.dim}：${(100*p).toFixed(p<0.01?4:2)} %　是极小`
+    pb.innerHTML=p>0
+      ? `d = ${S.dim}：${(100*p).toFixed(p<.01?4:2)} % 是极小`
       : `d = ${S.dim}：抽了 ${PD.n[S.dim].toLocaleString("zh-CN")} 个<br>一个正定的都没有`;
   }
   hud();
-  const h=hAt(S.x),g=Math.hypot.apply(null,gAt(S.x,S.y));
-  if(si<=0){
-    say(S.kappa<0?"κ &lt; 0：地形是一个碗，只有一个极小。":"κ 已经过 0，碗中间被顶起来了。",
-        S.kappa<0?"min":"saddle");
-  }else if(g<2e-3&&h[0]<0){
-    say(`<b>停住了，但这不是最低点。</b>|∇f| = ${g.toFixed(5)}，而 ∂²f/∂x² = ${h[0].toFixed(3)} &lt; 0——沿 x 方向还能继续下降。`,"saddle");
-  }else if(g<2e-3){
-    say(`<b>到达极小。</b>两个曲率都为正（${h[0].toFixed(2)}, ${h[1].toFixed(2)}），f = ${fAt(S.x,S.y).toFixed(4)}。`,"min");
+  const g=gAt(S.x,S.y),gn=Math.hypot(g[0],g[1]),e=eig(hessAt(S.x,S.y));
+  if(gn>1e-3){
+    say(`滚动中：|∇f| = ${gn.toFixed(4)}，f = ${fAt(S.x,S.y).toFixed(4)}。`,"");
   }else{
-    say(`滚动中：|∇f| = ${g.toFixed(4)}，f = ${fAt(S.x,S.y).toFixed(4)}。`,"");
+    const t=classify(e);
+    if(t==="saddle")
+      say(`<b>停住了，但这不是最低点。</b>|∇f| = ${gn.toFixed(6)}，特征值 (${e[0].toFixed(2)}, ${e[1].toFixed(2)})——<b>一正一负</b>，沿负的那个方向还能继续下降。`,"saddle");
+    else if(t==="max")
+      say(`<b>停在了极大点。</b>特征值 (${e[0].toFixed(2)}, ${e[1].toFixed(2)}) 都为负，四周全是下坡。`,"saddle");
+    else{
+      const cs=criticals(),best=cs[0],here=fAt(S.x,S.y);
+      const isBest=best&&Math.abs(here-best.f)<1e-6;
+      say(isBest
+        ?`<b>到达全局最优。</b>特征值 (${e[0].toFixed(2)}, ${e[1].toFixed(2)}) 都为正，f = ${here.toFixed(4)}，是全场最低。`
+        :`<b>到达一个局部最优。</b>特征值都为正，f = ${here.toFixed(4)}；但全局最优是 ${best.f.toFixed(4)}，还差 ${(here-best.f).toFixed(4)}。`,
+        "min");
+    }
   }
 }
-
 /* ══════════ 相机 ══════════ */
 function camTo(az,el,d){CAM.taz=az;CAM.tel=el;CAM.tdist=d;}
 let drag=null;
@@ -684,27 +741,22 @@ setTimeout(()=>{$("loader").classList.add("hide");
 
 /* ══════════ 自检 ══════════ */
 window.__optCheck=(()=>{
-  const sv={k:S.kappa,t:S.t};
-  const out={};
-  /* 1) κ=2, t=0：临界点应为 ±√2 与 0，特征值 (4,1)(−2,1)(4,1) */
-  S.kappa=2;S.t=0;
+  const sv=S.amp;S.amp=1;critKey="";
   const cs=criticals();
-  out.临界点数=cs.length;
-  out.鞍点特征值=cs.filter(c=>c.ev[0]<0).map(c=>+c.ev[0].toFixed(6));
-  out.极小位置误差=Math.max(...cs.filter(c=>c.ev[0]>0)
-    .map(c=>Math.abs(Math.abs(c.x)-Math.SQRT2)));
-  /* 2) 倾斜后两个极小深浅不同 */
-  S.t=.35;
-  const cs2=criticals().filter(c=>c.ev[0]>0).map(c=>c.f);
-  out.倾斜后两极小之差=+(Math.abs(cs2[0]-cs2[1])).toFixed(4);
-  S.kappa=sv.k;S.t=sv.t;
+  const n=t=>cs.filter(c=>c.type===t).length;
+  let maxG=0;
+  for(const c of cs){const g=gAt(c.x,c.y);maxG=Math.max(maxG,Math.hypot(g[0],g[1]));}
+  const out={临界点:cs.length,极小:n("min"),鞍点:n("saddle"),极大:n("max"),
+    最大残余梯度:maxG,鞍点比极小:+(n("saddle")/Math.max(1,n("min"))).toFixed(2)};
+  S.amp=0;critKey="";
+  out.A为0时临界点=criticals().length;
+  S.amp=sv;critKey="";
   return out;
 })();
 (()=>{const c=window.__optCheck;
-  if(c.临界点数!==3)console.warn("[opt] κ=2 应有 3 个临界点，实得",c.临界点数);
-  if(Math.abs(c.鞍点特征值[0]+2)>1e-4)console.warn("[opt] 鞍点特征值应为 −2",c.鞍点特征值);
-  if(c.极小位置误差>1e-4)console.warn("[opt] 极小应在 ±√2",c.极小位置误差);
-  if(c.倾斜后两极小之差<.5)console.warn("[opt] 倾斜后两极小深度差过小",c.倾斜后两极小之差);})();
+  if(c.最大残余梯度>1e-7)console.warn("[opt] 临界点求解未收敛",c.最大残余梯度);
+  if(c.鞍点<=c.极小)console.warn("[opt] 鞍点应多于极小",c);
+  if(c.A为0时临界点!==1)console.warn("[opt] A=0 时应只有一个临界点",c.A为0时临界点);})();
 </script>
 </body>
 </html>
