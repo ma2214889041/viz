@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:publication": "node tests/publication-audit.mjs",
     "test:optimization": "node tests/optimization-model.mjs",
-    "deploy": "npm run build && npm run typecheck && npm run test:optimization && npm run test:publication && wrangler deploy"
+    "deploy": "npm run build && npm run typecheck && npm run test:optimization && npm run test:reaction && npm run test:publication && wrangler deploy",
+    "test:reaction": "node tests/reaction-diffusion-model.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260729.1",
