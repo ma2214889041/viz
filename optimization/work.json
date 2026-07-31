@@ -1,12 +1,12 @@
 {
   "slug": "optimization",
-  "title": "曲率的两只时钟",
-  "question": "损失一直在降，为什么训练像卡住了？",
-  "description": "把梯度旋转到曲率自己的坐标系：同一次更新，有些误差几步就没了，有些要几百步。就算把步长调到理论最优，每步也只能收缩 (κ−1)/(κ+1)。",
+  "title": "梯度为零的地方",
+  "question": "梯度为零，就是到了最低点吗？",
+  "description": "鞍点的梯度也是零。要区分它和极小，得看所有特征值是否为正——而维数越高，「全正」越稀有：10 万个随机 6×6 对称矩阵里一个都没有。",
   "date": "2026-07-30",
   "category": ["优化", "机器学习"],
   "duration": "10 分钟",
   "chapters": 6,
-  "featured": false,
-  "accent": "#5a8cff"
+  "featured": true,
+  "accent": "#ff8a5c"
 }

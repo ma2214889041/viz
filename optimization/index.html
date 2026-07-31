@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0c10">
-<title>损失一直在降，为什么训练像卡住了？— VIZ</title>
-<meta name="description" content="把损失地形铺满屏幕：同一次梯度更新，有些误差几步就没了，有些要几百步。就算把步长调到理论最优，每步也只能收缩 (κ−1)/(κ+1)。优化器没卡住，它已经在最好状态了。">
+<meta name="theme-color" content="#080a0e">
+<title>梯度为零，就是到了最低点吗？— VIZ</title>
+<meta name="description" content="梯度为零不等于最优。鞍点在一个方向向上、另一个方向向下；而维数越高，鞍点越是压倒性地多——10 万个随机 6×6 对称矩阵里，正定的一个都没有。">
 <link rel="canonical" href="https://viz.gopromp.com/optimization/">
 <link rel="icon" href="../favicon.png" type="image/png">
-<meta property="og:title" content="损失一直在降，为什么训练像卡住了？">
-<meta property="og:description" content="把步长调到理论最优，每步仍只收缩 0.98。慢不是没调好，是这个几何的上限。">
+<meta property="og:title" content="梯度为零，就是到了最低点吗？">
+<meta property="og:description" content="10 万个随机 6×6 对称矩阵，正定的一个都没有。高维里几乎全是鞍点。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://viz.gopromp.com/optimization/">
 <style>
 :root{
-  --bg:#0a0c10; --ink:#f2f4f8; --dim:#98a0b2; --dim2:#5b6376;
-  --line:rgba(255,255,255,.10); --panel:rgba(15,18,24,.86);
-  --slow:#5a8cff; --fast:#ff8a5c; --mom:#4fd1a5; --hot:#ffd166;
+  --bg:#080a0e; --ink:#f2f4f8; --dim:#98a0b2; --dim2:#5b6376;
+  --line:rgba(255,255,255,.10); --panel:rgba(14,17,23,.87);
+  --up:#ff8a5c; --down:#5a8cff; --ball:#ffd166; --ok:#4fd1a5;
   --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,sans-serif;
   --serif:"Songti SC","Noto Serif SC",Georgia,serif;
   --mono:"SFMono-Regular",ui-monospace,Menlo,monospace;
@@ -27,18 +27,19 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 button,input{font:inherit;color:inherit}
 a{color:inherit}
-:where(a,button,input):focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+:where(a,button,input):focus-visible{outline:2px solid var(--ball);outline-offset:2px}
 
-#surf{position:fixed;inset:0;width:100%;height:100%;display:block;
-  touch-action:none;z-index:0}
+#land{position:fixed;inset:0;width:100%;height:100%;display:block;
+  touch-action:none;cursor:grab;z-index:0}
+#land:active{cursor:grabbing}
 #vig{position:fixed;inset:0;z-index:1;pointer-events:none;
-  background:radial-gradient(130% 95% at 50% 42%,transparent 42%,rgba(4,6,9,.6) 100%)}
+  background:radial-gradient(135% 100% at 50% 40%,transparent 40%,rgba(3,4,7,.62) 100%)}
 
 #top{position:fixed;top:0;left:0;right:0;height:54px;z-index:20;display:flex;
   align-items:center;gap:16px;padding:0 18px;pointer-events:none}
 #brand{pointer-events:auto;display:inline-flex;align-items:center;gap:9px;
   text-decoration:none;font-size:17px;font-weight:650;letter-spacing:-.04em}
-#brand i{width:8px;height:8px;border-radius:50%;background:var(--slow);box-shadow:6px 0 0 var(--fast)}
+#brand i{width:8px;height:8px;border-radius:50%;background:var(--down);box-shadow:6px 0 0 var(--up)}
 #where{font-size:12px;color:var(--dim2)}
 #back{margin-left:auto;pointer-events:auto;font-size:12.5px;color:var(--dim);
   text-decoration:none;padding:8px 10px;border-radius:8px}
@@ -47,7 +48,7 @@ a{color:inherit}
 .panel{position:fixed;z-index:20;background:var(--panel);backdrop-filter:blur(18px);
   border:1px solid var(--line);border-radius:16px}
 
-#story{left:18px;top:70px;width:min(390px,calc(100vw - 36px));
+#story{left:18px;top:70px;width:min(392px,calc(100vw - 36px));
   max-height:calc(100vh - 106px);padding:22px 22px 16px;display:flex;flex-direction:column}
 #stepno{font-family:var(--mono);font-size:11px;color:var(--dim2);letter-spacing:.08em}
 #sttitle{margin-top:9px;font-family:var(--serif);font-size:26px;font-weight:600;
@@ -59,13 +60,13 @@ a{color:inherit}
 #stbody p{margin-bottom:11px;line-height:1.82}
 #stbody p.q{color:var(--dim);font-size:13px}
 #stbody b{color:var(--ink);font-weight:600}
-#stbody em{font-style:normal;color:var(--hot)}
+#stbody em{font-style:normal;color:var(--ball)}
 #stbody .fml{display:block;margin:13px 0;padding:11px 13px;background:rgba(255,255,255,.05);
-  border-left:2px solid var(--slow);border-radius:0 8px 8px 0;
+  border-left:2px solid var(--down);border-radius:0 8px 8px 0;
   font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre-wrap;color:#dde3ee}
-#stbody .big{display:block;margin:14px 0;padding:14px;border-radius:11px;
-  background:rgba(90,140,255,.12);border:1px solid rgba(90,140,255,.28);
-  font-family:var(--mono);font-size:17px;text-align:center;color:#cfe0ff}
+#stbody .big{display:block;margin:14px 0;padding:15px;border-radius:11px;
+  background:rgba(255,138,92,.13);border:1px solid rgba(255,138,92,.3);
+  font-family:var(--mono);font-size:16px;text-align:center;color:#ffcdb6;line-height:1.7}
 #stbody ul{margin:10px 0 10px 17px;display:grid;gap:6px}
 #nav{margin-top:14px;padding-top:13px;border-top:1px solid var(--line);
   display:flex;align-items:center;gap:9px}
@@ -73,19 +74,19 @@ a{color:inherit}
 #dots i{flex:1 1 0;min-width:6px;max-width:26px;height:3px;border-radius:2px;
   background:rgba(255,255,255,.15);cursor:pointer;transition:.3s}
 #dots i:hover{background:rgba(255,255,255,.34)}
-#dots i.on{background:var(--slow)}
+#dots i.on{background:var(--up)}
 .navb{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);
   background:rgba(255,255,255,.04);cursor:pointer;display:grid;place-items:center;
   font-size:14px;transition:.18s}
 .navb:hover:not(:disabled){background:rgba(255,255,255,.12)}
 .navb:disabled{opacity:.28;cursor:default}
 
-#ctrl{right:18px;top:70px;width:min(306px,calc(100vw - 36px));padding:16px}
+#ctrl{right:18px;top:70px;width:min(308px,calc(100vw - 36px));padding:16px}
 #ctrl h4{font-size:10.5px;letter-spacing:.14em;color:var(--dim2);margin-bottom:12px}
 .knob{margin-bottom:13px}
 .knob-head{display:flex;justify-content:space-between;align-items:baseline;
   font-size:12px;margin-bottom:5px}
-.knob-head b{font-family:var(--mono);font-size:12px;color:var(--hot);font-weight:500;
+.knob-head b{font-family:var(--mono);font-size:12px;color:var(--ball);font-weight:500;
   font-variant-numeric:tabular-nums;background:rgba(255,209,102,.1);padding:1px 7px;border-radius:5px}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:none;cursor:grab}
 input[type=range]:active{cursor:grabbing}
@@ -98,15 +99,15 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 .btn{padding:8px 9px;border:1px solid var(--line);border-radius:9px;
   background:rgba(255,255,255,.04);font-size:11.5px;cursor:pointer;transition:.16s;text-align:center}
 .btn:hover{background:rgba(255,255,255,.12)}
-.btn.on{background:var(--slow);border-color:var(--slow);color:#0a0c10;font-weight:600}
+.btn.on{background:var(--up);border-color:var(--up);color:#080a0e;font-weight:600}
 .btn.wide{grid-column:1/-1}
-.btn.key{background:var(--ink);color:#0a0c10;border-color:var(--ink);font-weight:600}
+.btn.key{background:var(--ink);color:#080a0e;border-color:var(--ink);font-weight:600}
 .btn.key:hover{background:#fff}
 .sep{height:1px;background:var(--line);margin:13px 0}
 #verdict{margin-top:11px;font-size:12px;line-height:1.62;padding:10px 11px;border-radius:9px;
-  background:rgba(255,255,255,.05);color:var(--dim);min-height:3.6em}
-#verdict.warn{background:rgba(255,138,92,.14);color:#ffcbb4}
-#verdict.good{background:rgba(79,209,165,.13);color:#b6ead8}
+  background:rgba(255,255,255,.05);color:var(--dim);min-height:3.8em}
+#verdict.saddle{background:rgba(255,138,92,.15);color:#ffcdb6}
+#verdict.min{background:rgba(79,209,165,.13);color:#b6ead8}
 #verdict b{color:var(--ink)}
 
 #hud{position:fixed;left:18px;bottom:16px;z-index:20;display:flex;
@@ -117,13 +118,13 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 .hcell span{display:block;font-size:9.5px;color:var(--dim2);letter-spacing:.03em}
 .hcell b{display:block;margin-top:3px;font-family:var(--mono);font-size:17px;font-weight:500;
   letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.hcell.slow b{color:var(--slow)} .hcell.fast b{color:var(--fast)}
+.hcell.g b{color:var(--ball)} .hcell.n b{color:var(--up)} .hcell.p b{color:var(--ok)}
 
-#chart{position:fixed;right:18px;bottom:16px;z-index:20;width:min(306px,calc(100vw - 36px));
+#chart{position:fixed;right:18px;bottom:16px;z-index:20;width:min(308px,calc(100vw - 36px));
   padding:12px 14px 10px;display:none}
 #chart.show{display:block}
 #chart h5{font-size:10.5px;letter-spacing:.12em;color:var(--dim2);margin-bottom:8px}
-#cv2{display:block;width:100%;height:112px}
+#cv2{display:block;width:100%;height:122px}
 #chart .cap{margin-top:6px;font-size:10.5px;color:var(--dim2);line-height:1.5}
 
 #hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:15;
@@ -146,7 +147,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   #switch{position:fixed;top:58px;right:10px;z-index:25;display:flex;gap:5px}
   #switch button{padding:5px 11px;font-size:11px;border-radius:20px;
     border:1px solid var(--line);background:var(--panel);cursor:pointer}
-  #switch button.on{background:var(--slow);color:#0a0c10;border-color:var(--slow)}
+  #switch button.on{background:var(--up);color:#080a0e;border-color:var(--up)}
 }
 @media(min-width:901px){#switch{display:none}}
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
@@ -154,7 +155,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 </head>
 <body>
 
-<canvas id="surf" aria-label="损失等高线与优化轨迹"></canvas>
+<canvas id="land" aria-label="损失地形与优化轨迹"></canvas>
 <div id="vig"></div>
 
 <div id="top">
@@ -186,20 +187,20 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 </section>
 
 <div id="hud">
-  <div class="hcell"><span>条件数 κ</span><b id="mK">—</b></div>
-  <div class="hcell slow"><span>平坦方向 · 每步剩</span><b id="mSlow">—</b></div>
-  <div class="hcell fast"><span>陡峭方向 · 每步剩</span><b id="mFast">—</b></div>
-  <div class="hcell"><span>降到 1% 需要</span><b id="mSteps">—</b></div>
+  <div class="hcell g"><span>梯度大小 |∇f|</span><b id="mG">—</b></div>
+  <div class="hcell"><span>当前损失 f</span><b id="mF">—</b></div>
+  <div class="hcell n"><span>曲率 ∂²f/∂x²</span><b id="mH1">—</b></div>
+  <div class="hcell p"><span>曲率 ∂²f/∂y²</span><b id="mH2">—</b></div>
 </div>
 
 <section class="panel" id="chart">
-  <h5>两个方向的误差 · 纵轴 log₁₀</h5>
+  <h5 id="chTitle">随机对称矩阵中「全部特征值为正」的比例</h5>
   <canvas id="cv2"></canvas>
   <div class="cap" id="chCap"></div>
 </section>
 
-<div id="hint">滚轮缩放 · ← → 翻章</div>
-<div id="loader"><div>正在铺开损失地形…</div></div>
+<div id="hint">拖动旋转地形 · 滚轮缩放 · ← → 翻章</div>
+<div id="loader"><div>正在生成损失地形…</div></div>
 
 <script>
 "use strict";
@@ -207,331 +208,348 @@ const $=id=>document.getElementById(id);
 const $$=s=>[].slice.call(document.querySelectorAll(s));
 const clamp=(x,a,b)=>x<a?a:x>b?b:x;
 
-/* ══════════ 模型 ══════════
-   f(x) = ½(λ₁x₁² + λ₂x₂²)，λ₁ = 1，λ₂ = κ。
-   坐标已旋转到 A 的特征方向，两个方向互不耦合，各自是一维递推。
-     梯度下降    x⁽ᵏ⁺¹⁾ = (1 − αλ)x⁽ᵏ⁾
-     Heavy-ball  x⁽ᵏ⁺¹⁾ = (1 + β − αλ)x⁽ᵏ⁾ − βx⁽ᵏ⁻¹⁾
-                 特征方程 r² − (1 + β − αλ)r + β = 0
+/* ══════════ 地形 ══════════
+   一个单参数族就够覆盖全部章节，而且所有临界点与特征值都能精确写出：
+
+     f(x,y) = x⁴/4 − κx²/2 + y²/2 + t·x
+     ∇f     = (x³ − κx + t,  y)
+     H      = diag(3x² − κ,  1)
+
+   κ < 0：单个凸碗
+   κ > 0：原点成为鞍点（H = diag(−κ, 1)，一正一负），两侧各有一个极小
+   t ≠ 0：两个极小深浅不同 → 局部最优与全局最优
 */
-const S={kappa:100,s:1,beta:0,mom:false,k:0,autoStep:true,x0:[3,1.35]};
-const alpha=()=>S.s/S.kappa;                 /* s = αλ₂ 归一化步长 */
-const gdOptS=()=>2*S.kappa/(1+S.kappa);      /* α*=2/(λ₁+λ₂) → s*=2κ/(1+κ) */
-const gdOptRho=()=>(S.kappa-1)/(S.kappa+1);
-const hbOptAlpha=()=>4/Math.pow(1+Math.sqrt(S.kappa),2);
-const hbOptBeta=()=>Math.pow((Math.sqrt(S.kappa)-1)/(Math.sqrt(S.kappa)+1),2);
-const hbOptRho=()=>(Math.sqrt(S.kappa)-1)/(Math.sqrt(S.kappa)+1);
+const S={kappa:-1.5,t:0,alpha:.06,mom:0,x:1.6,y:1.2,vx:0,vy:0,
+  running:false,traj:[],dim:1};
+const fAt=(x,y)=>x*x*x*x/4-S.kappa*x*x/2+y*y/2+S.t*x;
+const gAt=(x,y)=>[x*x*x-S.kappa*x+S.t, y];
+const hAt=x=>[3*x*x-S.kappa, 1];
 
-function rootsFor(t,beta){
-  const sum=1+beta-t, disc=sum*sum-4*beta;
-  if(disc>=0){
-    const r=Math.sqrt(disc),r1=(sum+r)/2,r2=(sum-r)/2;
-    return{radius:Math.max(Math.abs(r1),Math.abs(r2)),complex:false};
-  }
-  return{radius:Math.sqrt(beta),complex:true};
+function resetBall(x,y){
+  S.x=x;S.y=y;S.vx=0;S.vy=0;S.traj=[[x,y]];S.running=true;
 }
-function rateFor(l){
-  const t=alpha()*l;
-  return S.mom?rootsFor(t,S.beta).radius:Math.abs(1-t);
+function stepBall(){
+  const g=gAt(S.x,S.y);
+  S.vx=S.mom*S.vx-S.alpha*g[0];
+  S.vy=S.mom*S.vy-S.alpha*g[1];
+  S.x=clamp(S.x+S.vx,-3.4,3.4);
+  S.y=clamp(S.y+S.vy,-2.8,2.8);
+  S.traj.push([S.x,S.y]);
+  if(S.traj.length>900)S.traj.shift();
+  if(Math.hypot(g[0],g[1])<2e-4&&Math.hypot(S.vx,S.vy)<2e-4)S.running=false;
 }
-const worstRate=()=>Math.max(rateFor(1),rateFor(S.kappa));
-function stepsTo(target){
-  const r=worstRate();
-  return r>=1?Infinity:Math.ceil(Math.log(target)/Math.log(r));
-}
-
-let traj=[];
-function buildTraj(n){
-  const L=[1,S.kappa],a=alpha();
-  let x=[S.x0[0],S.x0[1]],xp=[S.x0[0],S.x0[1]];
-  traj=[[x[0],x[1]]];
-  for(let k=0;k<n;k++){
-    const nx=[0,0];
-    for(let i=0;i<2;i++)
-      nx[i]=S.mom?(1+S.beta-a*L[i])*x[i]-S.beta*xp[i]:(1-a*L[i])*x[i];
-    xp=x;x=nx;
-    if(!isFinite(x[0])||!isFinite(x[1])||Math.abs(x[0])>1e5||Math.abs(x[1])>1e5){
-      traj.push([clamp(x[0],-1e5,1e5),clamp(x[1],-1e5,1e5)]);break;
+/* 精确临界点：y=0，x³ − κx + t = 0 */
+function criticals(){
+  const out=[],k=S.kappa,t=S.t;
+  const g=x=>x*x*x-k*x+t;
+  let prev=g(-3);
+  for(let s=-3;s<3;s+=.002){
+    const cur=g(s+.002);
+    if(prev===0||prev*cur<0){
+      let a=s,b=s+.002;
+      for(let i=0;i<70;i++){const m=(a+b)/2;(g(a)*g(m)<=0)?b=m:a=m;}
+      const x=(a+b)/2;
+      if(!out.some(q=>Math.abs(q.x-x)<1e-3))
+        out.push({x,ev:hAt(x),f:fAt(x,0)});
     }
-    traj.push([x[0],x[1]]);
+    prev=cur;
   }
+  return out;
 }
-const lossAt=(a,b)=>.5*(a*a+S.kappa*b*b);
-const loss0=()=>lossAt(S.x0[0],S.x0[1]);
 
-/* ══════════ 渲染：全屏等高线平面 ══════════
-   这里刻意不用三维曲面。高度承载的信息与等高线完全重复，
-   还会遮挡轨迹；而本文的核心论点——「梯度指向谷壁，不指向谷底」
-   ——只有在平面上画出梯度向量才看得清楚。 */
-const cv=$("surf"),cx=cv.getContext("2d");
-const CAM={dist:1,tdist:1};
-let W=0,H=0,DPR=1,VX=0,VY=0;
+/* ══════════ 三维地形渲染 ══════════ */
+const cv=$("land"),cx=cv.getContext("2d");
+const CAM={az:-.62,el:.52,dist:1,taz:-.62,tel:.52,tdist:1};
+let W=0,H=0,DPR=1,CENX=0,CENY=0;
+const GX=52, RX=2.7, RY=2.1;
 function fit(){
-  DPR=Math.min(2,devicePixelRatio||1);
+  DPR=Math.min(1.7,devicePixelRatio||1);
   const w=Math.round(innerWidth*DPR),h=Math.round(innerHeight*DPR);
   if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
   W=w;H=h;cx.setTransform(1,0,0,1,0,0);
 }
-/* 视野：x₁ 固定，x₂ 由轨迹覆盖范围决定 */
-/* 视野由「过起点的那条等高线」决定，保证它完整可见：
-   f₀ = ½(x₁² + κx₂²)，半轴 √(2f₀) 与 √(2f₀/κ)。 */
-function extent(){
-  const f0=loss0()||1;
-  let ex=Math.sqrt(2*f0)*1.18, ey=Math.max(Math.sqrt(2*f0/S.kappa),0.35)*1.5;
-  /* 动量会让轨迹在陡峭方向过冲，视野要把它一起装下 */
-  for(const t of traj){
-    const a=Math.abs(t[0]),b=Math.abs(t[1]);
-    if(a<1e4&&a*1.12>ex)ex=a*1.12;
-    if(b<1e4&&b*1.18>ey)ey=b*1.18;
-  }
-  return[ex,ey];
+/* 视野中心避开两侧面板 */
+function centerXY(){
+  if(innerWidth<901)return[innerWidth/2,innerHeight*.70];
+  const st=$("story").getBoundingClientRect(),ct=$("ctrl").getBoundingClientRect();
+  return[(st.right+ct.left)/2,innerHeight*.56];
 }
-const ry=()=>extent()[1];
-/* 视野中心避开讲解面板与控制面板，与挂谷篇同一套做法 */
-function freeCenter(){
-  const st=$("story").getBoundingClientRect(), ct=$("ctrl").getBoundingClientRect();
-  const narrow=innerWidth<901;
-  if(narrow)return[innerWidth/2, innerHeight*0.68];
-  const l=st.right+16, r=ct.left-16;
-  return[(l+r)/2, innerHeight*0.55];
+const ZS=.62;                       /* 高度缩放 */
+const zOf=(x,y)=>-fAt(x,y)*ZS;      /* 屏幕上「低」= 损失小，所以取负 */
+function proj(x,y,z){
+  const ca=Math.cos(CAM.az),sa=Math.sin(CAM.az);
+  const ce=Math.cos(CAM.el),se=Math.sin(CAM.el);
+  const X=x*ca-y*sa,Y=x*sa+y*ca;
+  const sc=Math.min(W,H)*.108*CAM.dist;
+  const sx=X,sy=Y*ce+z*se,depth=Y*se-z*ce;
+  const pp=1/(1+depth*.04);
+  return[CENX+sx*sc*pp, CENY-sy*sc*pp, depth];
 }
-function setView(){
-  const e=extent(), RXe=e[0], RY=e[1];
-  const c=freeCenter();
-  const availW=(innerWidth<901?innerWidth*0.94:Math.max(240,$("ctrl").getBoundingClientRect().left-$("story").getBoundingClientRect().right-40))*DPR;
-  const availH=(innerWidth<901?innerHeight*0.44:innerHeight*0.80)*DPR;
-  const sc=Math.min(availW/(2*RXe), availH/(2*RY))*CAM.dist;
-  VX=sc;VY=sc;CENX=c[0]*DPR;CENY=c[1]*DPR;
-  return RY;
+/* 地形配色：谷深 → 蓝，脊高 → 暖 */
+function terrainColor(f,shade){
+  const t=clamp((f+1.8)/4.2,0,1);
+  const r=Math.round((46+180*t*t)*shade);
+  const g=Math.round((70+96*t)*shade);
+  const b=Math.round((128-46*t)*shade);
+  return`rgb(${r},${g},${b})`;
 }
-let CENX=0,CENY=0;
-const PX=x=>CENX+x*VX;
-const PY=y=>CENY-y*VY;
-
-function drawField(){
-  const RY=setView();
-  cx.fillStyle="#0a0c10";cx.fillRect(0,0,W,H);
-  /* 填充式等高带：越靠谷底越暗 */
-  const f0=loss0()||1;
-  const bands=13;
-  for(let c=bands;c>=1;c--){
-    const fv=f0*Math.pow(c/bands,1.6)*1.35;
-    const ax=Math.sqrt(2*fv), by=Math.sqrt(2*fv/S.kappa);
-    const t=c/bands;
-    cx.fillStyle=`rgb(${Math.round(12+58*t)},${Math.round(15+72*t)},${Math.round(22+112*t)})`;
-    cx.beginPath();
-    cx.ellipse(PX(0),PY(0),ax*VX,by*VY,0,0,Math.PI*2);
-    cx.fill();
+function drawLand(){
+  const bx=i=>-RX+2*RX*i/GX, by=j=>-RY+2*RY*j/GX;
+  const sa=Math.sin(CAM.az),ca=Math.cos(CAM.az),se=Math.sin(CAM.el);
+  const cells=[];
+  for(let j=0;j<GX;j++)for(let i=0;i<GX;i++){
+    const x=bx(i+.5),y=by(j+.5);
+    cells.push([i,j,(x*sa+y*ca)*se-zOf(x,y)*Math.cos(CAM.el)]);
   }
-  /* 等高线 */
-  cx.lineWidth=DPR;
-  for(let c=1;c<=bands;c++){
-    const fv=f0*Math.pow(c/bands,1.6)*1.35;
-    const ax=Math.sqrt(2*fv), by=Math.sqrt(2*fv/S.kappa);
-    cx.strokeStyle="rgba(180,205,255,.16)";
-    cx.beginPath();cx.ellipse(PX(0),PY(0),ax*VX,by*VY,0,0,Math.PI*2);cx.stroke();
+  cells.sort((p,q)=>q[2]-p[2]);
+  const LX=.42,LY=-.34,LZ=.84;      /* 光照方向 */
+  for(const c of cells){
+    const i=c[0],j=c[1];
+    const x0=bx(i),x1=bx(i+1),y0=by(j),y1=by(j+1);
+    const z00=zOf(x0,y0),z10=zOf(x1,y0),z01=zOf(x0,y1),z11=zOf(x1,y1);
+    const p00=proj(x0,y0,z00),p10=proj(x1,y0,z10),p11=proj(x1,y1,z11),p01=proj(x0,y1,z01);
+    const ax=x1-x0,az=z10-z00,cy2=y1-y0,cz2=z01-z00;
+    let nx=-az*cy2,ny=-ax*cz2,nz=ax*cy2;
+    const nl=Math.hypot(nx,ny,nz)||1;nx/=nl;ny/=nl;nz/=nl;
+    const lam=clamp(nx*LX+ny*LY+nz*LZ,0,1);
+    const shade=.34+.66*lam;
+    cx.fillStyle=terrainColor(fAt((x0+x1)/2,(y0+y1)/2),shade);
+    cx.beginPath();cx.moveTo(p00[0],p00[1]);cx.lineTo(p10[0],p10[1]);
+    cx.lineTo(p11[0],p11[1]);cx.lineTo(p01[0],p01[1]);cx.closePath();cx.fill();
   }
-  /* 两条特征轴 */
-  cx.lineWidth=1.6*DPR;
-  cx.strokeStyle="rgba(90,140,255,.7)";
-  const RXe=extent()[0];
-  cx.beginPath();cx.moveTo(PX(-RXe),PY(0));cx.lineTo(PX(RXe),PY(0));cx.stroke();
-  cx.strokeStyle="rgba(255,138,92,.7)";
-  cx.beginPath();cx.moveTo(PX(0),PY(-RY));cx.lineTo(PX(0),PY(RY));cx.stroke();
+}
+function drawCriticals(){
+  const cs=criticals();
   const FONT=getComputedStyle(document.body).fontFamily;
-  cx.font=`${12*DPR}px ${FONT}`;cx.textBaseline="middle";
-  cx.fillStyle="rgba(90,140,255,.95)";cx.textAlign="right";
-  cx.fillText("平坦方向 λ₁ = 1  →",PX(RXe)-10*DPR,PY(0)-14*DPR);
-  cx.fillStyle="rgba(255,138,92,.95)";cx.textAlign="center";
-  cx.fillText("陡峭方向 λ₂ = κ",PX(0),PY(RY)-14*DPR);
-  /* 谷底 */
-  cx.beginPath();cx.arc(PX(0),PY(0),4*DPR,0,7);
-  cx.fillStyle="rgba(255,255,255,.85)";cx.fill();
-}
-function arrow(x0,y0,x1,y1,col,wid){
-  cx.strokeStyle=col;cx.lineWidth=wid;
-  cx.beginPath();cx.moveTo(x0,y0);cx.lineTo(x1,y1);cx.stroke();
-  const a=Math.atan2(y1-y0,x1-x0),L=8*DPR;
-  cx.beginPath();cx.moveTo(x1,y1);
-  cx.lineTo(x1-L*Math.cos(a-.4),y1-L*Math.sin(a-.4));
-  cx.lineTo(x1-L*Math.cos(a+.4),y1-L*Math.sin(a+.4));
-  cx.closePath();cx.fillStyle=col;cx.fill();
+  cx.font=`${11.5*DPR}px ${FONT}`;cx.textAlign="center";cx.textBaseline="bottom";
+  for(const c of cs){
+    const saddle=c.ev[0]<0||c.ev[1]<0;
+    const p=proj(c.x,0,zOf(c.x,0));
+    cx.beginPath();cx.arc(p[0],p[1],6*DPR,0,7);
+    cx.fillStyle=saddle?"rgba(255,138,92,.95)":"rgba(79,209,165,.95)";cx.fill();
+    cx.strokeStyle="rgba(0,0,0,.5)";cx.lineWidth=1.4*DPR;cx.stroke();
+    if(S.showLabels){
+      cx.fillStyle=saddle?"rgba(255,170,130,.98)":"rgba(140,235,205,.98)";
+      cx.fillText(saddle?"鞍点":"极小",p[0],p[1]-10*DPR);
+    }
+  }
 }
 function drawTraj(){
-  if(traj.length<2)return;
-  const n=Math.min(traj.length-1,S.k);
-  cx.lineWidth=2.4*DPR;
-  cx.strokeStyle=S.mom?"rgba(79,209,165,.95)":"rgba(255,209,102,.95)";
+  if(S.traj.length<2)return;
+  cx.lineWidth=2.4*DPR;cx.strokeStyle="rgba(255,209,102,.9)";
   cx.beginPath();
-  for(let i=0;i<=n;i++){
-    const t=traj[i];i?cx.lineTo(PX(t[0]),PY(t[1])):cx.moveTo(PX(t[0]),PY(t[1]));
+  for(let i=0;i<S.traj.length;i++){
+    const t=S.traj[i],p=proj(t[0],t[1],zOf(t[0],t[1])+.03);
+    i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);
   }
   cx.stroke();
-  for(let i=0;i<=n;i++){
-    if(i!==n&&i%2)continue;
-    const t=traj[i];
-    cx.beginPath();cx.arc(PX(t[0]),PY(t[1]),(i===n?5.5:2)*DPR,0,7);
-    cx.fillStyle=i===n?"#fff":(S.mom?"rgba(79,209,165,.8)":"rgba(255,209,102,.7)");
-    cx.fill();
-  }
-  /* 当前点的梯度：∇f = (λ₁x₁, λ₂x₂)。这一箭头是本文的核心论点 */
-  const t=traj[n];
-  const gx=t[0], gy=S.kappa*t[1];
-  const gl=Math.hypot(gx,gy)||1;
-  const L=Math.min(W,H)*0.15;
-  const x0=PX(t[0]),y0=PY(t[1]);
-  arrow(x0,y0,x0-gx/gl*L,y0+gy/gl*L,"rgba(255,110,110,.95)",2.6*DPR);
-  const FONT=getComputedStyle(document.body).fontFamily;
-  cx.font=`${11.5*DPR}px ${FONT}`;cx.textAlign="left";cx.textBaseline="middle";
-  cx.fillStyle="rgba(255,140,140,.95)";
-  cx.fillText("−∇f",x0-gx/gl*L+11*DPR,y0+gy/gl*L+9*DPR);
-  cx.font=`${12*DPR}px ${FONT}`;
-  cx.fillStyle="rgba(255,255,255,.92)";cx.textBaseline="bottom";
-  cx.textAlign="right";cx.fillText(`第 ${n} 步`,x0-12*DPR,y0-10*DPR);
 }
-function render(){fit();drawField();drawTraj();}
+function drawBall(){
+  const p=proj(S.x,S.y,zOf(S.x,S.y)+.055);
+  const g=cx.createRadialGradient(p[0]-2*DPR,p[1]-2*DPR,1,p[0],p[1],8*DPR);
+  g.addColorStop(0,"#fff8e0");g.addColorStop(1,"#ffc233");
+  cx.beginPath();cx.arc(p[0],p[1],8*DPR,0,7);cx.fillStyle=g;cx.fill();
+  cx.strokeStyle="rgba(0,0,0,.45)";cx.lineWidth=1.4*DPR;cx.stroke();
+  /* 负曲率方向：鞍点处指出「往哪儿才是下坡」 */
+  if(S.showEscape){
+    const h=hAt(S.x);
+    if(h[0]<0){
+      const L=Math.min(W,H)*.1;
+      for(const s of [1,-1]){
+        const q=proj(S.x+s*.9,S.y,zOf(S.x+s*.9,S.y)+.05);
+        cx.strokeStyle="rgba(255,138,92,.9)";cx.lineWidth=2.4*DPR;
+        cx.beginPath();cx.moveTo(p[0],p[1]);cx.lineTo(q[0],q[1]);cx.stroke();
+        const a=Math.atan2(q[1]-p[1],q[0]-p[0]),AL=9*DPR;
+        cx.beginPath();cx.moveTo(q[0],q[1]);
+        cx.lineTo(q[0]-AL*Math.cos(a-.4),q[1]-AL*Math.sin(a-.4));
+        cx.lineTo(q[0]-AL*Math.cos(a+.4),q[1]-AL*Math.sin(a+.4));
+        cx.closePath();cx.fillStyle="rgba(255,138,92,.9)";cx.fill();
+      }
+    }
+  }
+}
+function render(){
+  fit();
+  const c=centerXY();CENX=c[0]*DPR;CENY=c[1]*DPR;
+  cx.fillStyle="#080a0e";cx.fillRect(0,0,W,H);
+  drawLand();drawTraj();drawCriticals();drawBall();
+}
 
-/* ══════════ 侧图 ══════════ */
+/* ══════════ 高维计数：随机对称矩阵有多大概率正定 ══════════ */
+const PD={n:new Array(11).fill(0),c:new Array(11).fill(0)};
+function randSym(d){
+  const A=[];
+  for(let i=0;i<d;i++)A.push(new Float64Array(d));
+  for(let i=0;i<d;i++)for(let j=i;j<d;j++){
+    let u=0,v=0;
+    while(!u)u=Math.random();
+    while(!v)v=Math.random();
+    A[i][j]=A[j][i]=Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)/Math.sqrt(d);
+  }
+  return A;
+}
+function isPD(A){
+  const d=A.length,L=A.map(r=>Float64Array.from(r));
+  for(let i=0;i<d;i++)for(let j=0;j<=i;j++){
+    let s=L[i][j];
+    for(let k=0;k<j;k++)s-=L[i][k]*L[j][k];
+    if(i===j){if(s<=0)return false;L[i][i]=Math.sqrt(s);}
+    else L[i][j]=s/L[j][j];
+  }
+  return true;
+}
+function samplePD(batch){
+  for(let d=1;d<=10;d++)
+    for(let k=0;k<batch;k++){PD.n[d]++;if(isPD(randSym(d)))PD.c[d]++;}
+}
 const c2=$("cv2"),x2=c2.getContext("2d");
-function drawChart(){
+function drawPD(){
   const r=c2.getBoundingClientRect();
   const w=Math.round(r.width*DPR),h=Math.round(r.height*DPR);
   if(!w||!h)return;
   if(c2.width!==w||c2.height!==h){c2.width=w;c2.height=h;}
   x2.setTransform(1,0,0,1,0,0);x2.clearRect(0,0,w,h);
-  const pad={l:32*DPR,r:8*DPR,t:8*DPR,b:14*DPR};
+  const pad={l:34*DPR,r:8*DPR,t:8*DPR,b:18*DPR};
   const iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
-  const NS=Math.min(traj.length-1,200),lo=-6,hi=0;
-  const X=i=>pad.l+i/Math.max(1,NS)*iw;
-  const Y=v=>pad.t+(hi-clamp(v,lo,hi))/(hi-lo)*ih;
+  const lo=-6;                                   /* log10 下限 */
+  const Y=v=>pad.t+(0-clamp(v,lo,0))/(0-lo)*ih;
   x2.strokeStyle="rgba(255,255,255,.08)";x2.lineWidth=DPR;
   x2.font=`${9*DPR}px ui-monospace,monospace`;x2.textAlign="right";x2.textBaseline="middle";
-  for(let g=lo;g<=hi;g+=2){
+  for(let g=0;g>=lo;g-=2){
     x2.beginPath();x2.moveTo(pad.l,Y(g));x2.lineTo(w-pad.r,Y(g));x2.stroke();
-    x2.fillStyle="rgba(255,255,255,.32)";x2.fillText("1e"+g,pad.l-4*DPR,Y(g));
+    x2.fillStyle="rgba(255,255,255,.3)";
+    x2.fillText(g===0?"100%":"1e"+g,pad.l-4*DPR,Y(g));
   }
-  const L0=loss0();
-  const series=[["#5a8cff",i=>.5*traj[i][0]*traj[i][0]],
-                ["#ff8a5c",i=>.5*S.kappa*traj[i][1]*traj[i][1]]];
-  for(const s of series){
-    x2.strokeStyle=s[0];x2.lineWidth=1.8*DPR;x2.beginPath();
-    for(let i=0;i<=NS;i++){
-      const val=Math.log10(Math.max(1e-14,s[1](i)/L0));
-      const px=X(i),py=Y(val);i?x2.lineTo(px,py):x2.moveTo(px,py);
+  const bw=iw/10;
+  for(let d=1;d<=10;d++){
+    const p=PD.n[d]?PD.c[d]/PD.n[d]:0;
+    const v=p>0?Math.log10(p):lo;
+    const x=pad.l+(d-1)*bw+bw*.18,bwid=bw*.64;
+    const y=Y(v),hh=Math.max(1,pad.t+ih-y);
+    x2.fillStyle=d===S.dim?"rgba(255,138,92,.95)":"rgba(90,140,255,.55)";
+    x2.fillRect(x,y,bwid,hh);
+    if(p===0){
+      x2.fillStyle="rgba(255,138,92,.9)";x2.textAlign="center";
+      x2.fillText("0",x+bwid/2,pad.t+ih-6*DPR);
     }
-    x2.stroke();
+    x2.fillStyle="rgba(255,255,255,.42)";x2.textAlign="center";x2.textBaseline="top";
+    x2.fillText(String(d),x+bwid/2,pad.t+ih+3*DPR);
   }
-  const kk=Math.min(S.k,NS);
-  x2.strokeStyle="rgba(255,255,255,.42)";x2.lineWidth=DPR;x2.setLineDash([3*DPR,3*DPR]);
-  x2.beginPath();x2.moveTo(X(kk),pad.t);x2.lineTo(X(kk),h-pad.b);x2.stroke();x2.setLineDash([]);
 }
 
 /* ══════════ HUD ══════════ */
 function hud(){
-  $("mK").textContent=S.kappa.toFixed(0);
-  $("mSlow").textContent=rateFor(1).toFixed(4);
-  $("mFast").textContent=rateFor(S.kappa).toFixed(4);
-  const st=stepsTo(.01);
-  $("mSteps").textContent=isFinite(st)?st+" 步":"不收敛";
+  const g=gAt(S.x,S.y),h=hAt(S.x);
+  $("mG").textContent=Math.hypot(g[0],g[1]).toFixed(4);
+  $("mF").textContent=fAt(S.x,S.y).toFixed(4);
+  $("mH1").textContent=h[0].toFixed(3);
+  $("mH2").textContent=h[1].toFixed(3);
+  $("mH1").parentElement.classList.toggle("n",h[0]<0);
+  $("mH1").parentElement.classList.toggle("p",h[0]>=0);
 }
 
 /* ══════════ 控件模板 ══════════ */
-const C_KAPPA=`
-  <div class="knob"><div class="knob-head"><label for="sKappa">条件数 κ = λ₂/λ₁</label><b id="vKappa"></b></div>
-    <input type="range" id="sKappa" min="1" max="300" step="1"></div>
+const C_BOWL=`
+  <div class="knob"><div class="knob-head"><label for="sK">地形参数 κ</label><b id="vK"></b></div>
+    <input type="range" id="sK" min="-2" max="3" step="0.01"></div>
   <div class="btns">
-    <button class="btn" data-kappa="1">κ = 1</button>
-    <button class="btn" data-kappa="10">κ = 10</button>
-    <button class="btn" data-kappa="100">κ = 100</button>
-    <button class="btn" data-kappa="300">κ = 300</button>
-  </div>
-  <div class="sep"></div>
-  <div class="btns"><button class="btn wide" id="b_play">▶ 从头跑一遍</button></div>`;
-const C_STEP=`
-  <div class="knob"><div class="knob-head"><label for="sKappa">条件数 κ</label><b id="vKappa"></b></div>
-    <input type="range" id="sKappa" min="2" max="300" step="1"></div>
-  <div class="knob"><div class="knob-head"><label for="sStep">归一化步长 s = αλ₂</label><b id="vStep"></b></div>
-    <input type="range" id="sStep" min="0.02" max="2.4" step="0.005"></div>
-  <div class="btns">
-    <button class="btn key wide" id="b_opt">跳到理论最优步长</button>
-    <button class="btn wide" id="b_play">▶ 从头跑一遍</button>
+    <button class="btn key wide" id="b_drop">从右上角放球</button>
+    <button class="btn wide" id="b_ridge">正好放在脊线上</button>
   </div>`;
-const C_MOM=`
-  <div class="knob"><div class="knob-head"><label for="sKappa">条件数 κ</label><b id="vKappa"></b></div>
-    <input type="range" id="sKappa" min="2" max="300" step="1"></div>
-  <div class="knob"><div class="knob-head"><label for="sStep">归一化步长 s</label><b id="vStep"></b></div>
-    <input type="range" id="sStep" min="0.02" max="4" step="0.005"></div>
-  <div class="knob"><div class="knob-head"><label for="sBeta">动量 β</label><b id="vBeta"></b></div>
-    <input type="range" id="sBeta" min="0" max="0.98" step="0.005"></div>
+const C_SADDLE=`
+  <div class="knob"><div class="knob-head"><label for="sK">地形参数 κ</label><b id="vK"></b></div>
+    <input type="range" id="sK" min="0.2" max="3" step="0.01"></div>
+  <div class="knob"><div class="knob-head"><label for="sEps">起点偏离鞍点</label><b id="vEps"></b></div>
+    <input type="range" id="sEps" min="-6" max="-0.5" step="0.1"></div>
   <div class="btns">
-    <button class="btn key" id="b_hbopt">最优动量</button>
-    <button class="btn" id="b_gdopt">最优梯度下降</button>
-    <button class="btn wide" id="b_play">▶ 从头跑一遍</button>
+    <button class="btn key wide" id="b_near">从这个偏离量放球</button>
+    <button class="btn wide" id="b_esc">显示逃离方向</button>
+  </div>`;
+const C_TILT=`
+  <div class="knob"><div class="knob-head"><label for="sK">地形参数 κ</label><b id="vK"></b></div>
+    <input type="range" id="sK" min="0.5" max="3" step="0.01"></div>
+  <div class="knob"><div class="knob-head"><label for="sT">倾斜 t</label><b id="vT"></b></div>
+    <input type="range" id="sT" min="-0.6" max="0.6" step="0.005"></div>
+  <div class="knob"><div class="knob-head"><label for="sX">起点 x₀</label><b id="vX"></b></div>
+    <input type="range" id="sX" min="-2.4" max="2.4" step="0.01"></div>
+  <div class="btns"><button class="btn key wide" id="b_dropx">从这个起点放球</button></div>`;
+const C_DIM=`
+  <div class="knob"><div class="knob-head"><label for="sD">维数 d</label><b id="vD"></b></div>
+    <input type="range" id="sD" min="1" max="10" step="1"></div>
+  <div class="btns">
+    <button class="btn key wide" id="b_more">再抽 2 万个矩阵</button>
   </div>`;
 
 /* ══════════ 章节 ══════════ */
 const CH=[
-{t:"一个完美的碗",c:C_KAPPA,chart:false,
- b:`<p>屏幕上是<b>损失的等高线</b>：每一圈是一个等损失面，越往里损失越低，正中央白点是最优解。红色箭头是当前位置的 −∇f，也就是这一步真正要走的方向。</p>
-    <p>现在 κ = 1，两个方向弯得一样快——等高线是一圈圈<em>正圆</em>，箭头笔直指向圆心。</p>
-    <p>按「从头跑一遍」。梯度下降<em>笔直</em>滑到谷底，几步就到。</p>
-    <p class="q">在最优点附近，很多光滑损失都能用二次型近似。把坐标旋转到矩阵 A 的特征方向后，曲面不再耦合：f(x) = ½(λ₁x₁² + λ₂x₂²)。蓝、橙两条轴就是这两个特征方向。</p>`,
- en(){S.kappa=1;S.mom=false;S.beta=0;S.autoStep=true;S.s=gdOptS();
-      camTo(-.7,.78,1);}},
+{t:"梯度为零，就到了最低点",c:C_BOWL,chart:false,
+ b:`<p>这是一片<b>损失地形</b>：高度就是损失，球会顺着坡往下滚——每一步都按 <span style="font-family:var(--mono)">x ← x − α∇f</span> 真实执行。可以拖动旋转。</p>
+    <p>现在 κ &lt; 0，地形是一个规规矩矩的<b>碗</b>。放球，它滚到底就停了。</p>
+    <p>停下来的地方梯度为零，而且确实是最低点。绿点标出了它。</p>
+    <p><em>于是我们学到一条规矩：梯度为零 ⟺ 到达最优。</em></p>
+    <p class="q">地形用的是 f(x,y) = x⁴/4 − κx²/2 + y²/2 + t·x。κ 决定它是一个碗还是两个坑，t 决定两个坑谁更深。所有临界点与曲率都能精确写出，屏幕上的数字不是估的。</p>`,
+ en(){S.kappa=-1.5;S.t=0;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=false;
+      resetBall(1.7,1.3);camTo(-.62,.52,1);}},
 
-{t:"把碗压扁",c:C_KAPPA,chart:false,
- b:`<p>把 κ 拉大。等高线从正圆被拉成<b>狭长的椭圆</b>：沿橙色方向陡、沿蓝色方向几乎平坦——这就是一条峡谷。</p>
-    <p>再跑一次。轨迹不再笔直：它先<em>横着弹几下</em>，再沿谷底慢慢爬。</p>
-    <p>原因就画在屏幕上：红色箭头<em>永远垂直于等高线</em>，而峡谷里的等高线几乎是平行长条——于是它几乎横穿峡谷，<b>指向谷壁，而不是谷底</b>。谷底就在正前方，梯度偏偏不朝那儿指。</p>
-    <p class="q">κ 不是"看起来有多瘦"这种修辞，它就是 λ₂/λ₁，两个特征值的比。</p>`,
- en(){if(S.kappa<8||S.kappa>60)S.kappa=20;S.mom=false;S.beta=0;S.autoStep=true;S.s=gdOptS();}},
+{t:"把碗从中间顶起来",c:C_BOWL,chart:false,
+ b:`<p>把 κ 拉过 0。碗的中间被顶起来，裂成<b>两个坑</b>，中间留下一道<b>脊</b>。</p>
+    <p>现在把球<em>正好放在脊线上</em>（右侧那个按钮）。沿脊线方向 y 是往下的，球会滚下来；可沿 x 方向它左右都是上坡，所以它<b>停在了脊的正中央</b>。</p>
+    <p>看左下角：<b>|∇f| 掉到了 0.0000</b>。按刚才那条规矩，这里应该是最低点。</p>
+    <p>可它明明不是——两边的绿点都比它低。</p>
+    <p class="q">这个点叫<b>鞍点</b>：一个方向向上，另一个方向向下，像马鞍。转动地形，从侧面看得最清楚。</p>`,
+ en(){S.kappa=2;S.t=0;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=false;
+      resetBall(1.7,1.3);camTo(-.9,.34,1.12);}},
 
-{t:"两只时钟",c:C_STEP,chart:true,
- b:`<p>把同一次更新拆到两个特征方向上，它们互不干扰，各自是一个几何数列：</p>
-    <span class="fml">xᵢ⁽ᵏ⁾ = (1 − αλᵢ)ᵏ · xᵢ⁽⁰⁾</span>
-    <p>同一个步长，对两个方向给出<b>完全不同</b>的收缩倍数。右下角两条曲线就是这两份误差。</p>
-    <p>拖动步长看它们此消彼长：想让平坦方向快些，就得把步长调大；可步长一大，陡峭方向就开始来回跨过谷底。</p>
-    <p><em>"先快后慢"不是优化器突然变差了。</em>是陡峭方向的误差先被清完，剩下平坦方向按它自己的速度慢慢磨。</p>`,
- en(){if(S.kappa<8)S.kappa=100;S.mom=false;S.beta=0;S.autoStep=false;
-      camTo(-.6,.68,1.05);}},
+{t:"梯度分不出上坡和下坡",c:C_SADDLE,chart:false,
+ b:`<p>梯度只告诉你「此处最陡的下降方向」。在鞍点它是零向量——<em>不是因为四周都更高，而是因为上坡和下坡恰好抵消</em>。</p>
+    <p>要区分它们，得看<b>二阶</b>信息：Hessian 的特征值。这个地形的 Hessian 是对角的，两个特征值直接读得出：</p>
+    <span class="fml">H = diag( 3x² − κ ,  1 )</span>
+    <p>看左下角那两个曲率数字。在鞍点处 <b>∂²f/∂x² = −κ &lt; 0</b>（橙色），而 ∂²f/∂y² = 1 &gt; 0。</p>
+    <span class="big">极小 ⟺ <b>所有</b>特征值 &gt; 0
+只要有一个为负，就是鞍点</span>
+    <p>右侧拖动「起点偏离鞍点」，把球放得离脊线越来越近，看它要多久才滑走。<b>偏离越小，卡得越久</b>——而梯度从头到尾都接近 0，它不会告诉你还要等多久。</p>`,
+ en(){S.kappa=2;S.t=0;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=true;
+      S.eps=-3;resetBall(1e-3,1.1);camTo(-.95,.26,1.2);}},
 
-{t:"调到最优，还是这么慢",c:C_STEP,chart:true,
- b:`<p>那把步长调到<b>最好</b>呢？让两个方向的收缩率恰好相等，就得到梯度下降的最优固定步长：</p>
-    <span class="fml">α* = 2/(λ₁+λ₂)</span>
-    <p>按右侧按钮跳过去。此时一个方向从正面缓慢靠近，另一个跨过谷底来回振荡（轨迹明显来回穿越橙色轴），但两者<b>衰减一样快</b>。这已经是任何固定步长的极限。</p>
-    <p>而这个极限是：</p>
-    <span class="big" id="rhoBig"></span>
-    <p>κ = 100 时 ρ* = <b>0.9802</b>。每步只把误差乘 0.98——听着还行，可你要连乘<em>几百次</em>它才真正变小。</p>
-    <p>优化器没有卡住，也没调错。<b>它已经处在这个几何下的最好状态，而最好状态就是这么慢。</b>这就是条件数的算法含义。</p>`,
- en(){if(S.kappa<8)S.kappa=100;S.mom=false;S.beta=0;S.autoStep=false;S.s=gdOptS();
-      camTo(-.55,.72,1.05);}},
+{t:"维数越高，鞍点越是压倒性地多",c:C_DIM,chart:true,
+ b:`<p>二维里鞍点只是个特例。可真实模型有几百万个参数——那里的情况完全不同。</p>
+    <p>在一个临界点，Hessian 是 d×d 的对称矩阵。要成为<b>极小</b>，它的 <b>d 个特征值必须全为正</b>。少一个都不行。</p>
+    <p>右下角是实时抽样：随机生成对称矩阵，数一数有多大比例是正定的。纵轴是对数。</p>
+    <p>拖动维数看它塌下去：</p>
+    <span class="big" id="pdBig"></span>
+    <p><em>d ≥ 6 之后，抽十万个都碰不到一个。</em></p>
+    <p>所以在高维损失面上，"卡住了"绝大多数时候不是掉进了局部最优，而是<b>贴在某个鞍点附近</b>——那里梯度同样接近零，但只要找对方向就还能继续下降。</p>
+    <p class="q">这里抽的是元素独立同分布的随机对称矩阵，用于说明「全正」这件事随维数变得多稀有；真实损失面的 Hessian 不是这个分布，但结论方向一致，这也是 Dauphin 等人 2014 年那篇工作的出发点。</p>`,
+ en(){S.kappa=2;S.t=0;S.mom=0;S.showLabels=true;S.showEscape=false;
+      resetBall(1e-3,1.1);camTo(-.8,.42,1);
+      if(PD.n[1]<20000)samplePD(2000);}},
 
-{t:"给它一点记忆",c:C_MOM,chart:true,
- b:`<p>固定步长的上限是 (κ−1)/(κ+1)。想突破，就得让更新<b>记住上一步</b>：</p>
-    <span class="fml">zₖ₊₁ = βzₖ + ∇f(wₖ)
-wₖ₊₁ = wₖ − αzₖ₊₁</span>
-    <p>消去 z，每个方向不再是一阶数列，而是<b>依赖前两步</b>的二阶递推，特征方程 r² − (1+β−αλ)r + β = 0。两根可以是实数，也可以是一对共轭复根——后者正对应<em>衰减中的振荡</em>。</p>
-    <p>按「最优动量」。轨迹从横向弹跳变成<em>绕着谷底盘旋</em>，损失甚至不再单调下降，但它到得<b>快得多</b>。</p>
-    <span class="big" id="rhoBig"></span>
-    <p>κ = 100：0.9802 → <b>0.8182</b>。κ 变成了 √κ。加速来自二阶递推的特征根，不是因为"步子更大胆"。</p>`,
- en(){if(S.kappa<8)S.kappa=100;S.mom=true;S.autoStep=false;
-      S.s=hbOptAlpha()*S.kappa;S.beta=hbOptBeta();
-      camTo(-.62,.7,1.05);}},
+{t:"局部最优，和全局最优",c:C_TILT,chart:false,
+ b:`<p>现在给地形加一点<b>倾斜</b> t，两个坑就不一样深了。</p>
+    <p>绿点仍然都是极小——它们的两个特征值都为正，梯度也都为零。但其中只有一个是<b>全局</b>最优，另一个只是<b>局部</b>最优。</p>
+    <p>而梯度下降<em>分不出这两者</em>。它只往下滚，滚进哪个坑，完全取决于起点在脊的哪一侧。</p>
+    <p>拖动「起点 x₀」，越过脊线的那一刻，球的归宿会突然换一边——<b>起点差一点点，结局差一整个坑</b>。</p>
+    <p class="q">脊线（鞍点所在的位置）就是两个吸引域的分界。这也是为什么不同随机初始化会收敛到不同的解。</p>`,
+ en(){S.kappa=2;S.t=.35;S.mom=0;S.alpha=.06;S.showLabels=true;S.showEscape=false;
+      S.x0=1.2;resetBall(1.2,1.1);camTo(-.7,.44,1.05);}},
 
-{t:"越界之后",c:C_MOM,chart:true,
- b:`<p>记忆不是白拿的。把步长继续拉大，会越过一条边界：</p>
-    <span class="fml">s = αλ₂ &lt; 2(1 + β)</span>
-    <p>越过它，某个方向的特征根模长 ≥ 1，误差不再衰减，而是被记忆<b>逐步放大</b>——轨迹会一圈圈甩向外面。</p>
-    <p>把 β 调大，这条边界会向右移：动量越大，能容忍的步长越大。这也是为什么"调大动量"和"调大学习率"常常要一起做。</p>
-    <p class="q">曲面上的轨迹逐步执行真实更新；收缩率、最优参数与这条边界来自同一组特征根公式，并由独立数值测试在 κ ∈ {1.1, 2, 10, 100, 1000} 上覆盖验证。</p>
-    <p class="q">路线取自 Gabriel Goh 的 <i>Why Momentum Really Works</i>（Distill, 2017），问题、图形与交互重新设计。结论精确属于固定正定二次型；非凸网络、随机梯度噪声与自适应优化器需另行分析。</p>`,
- en(){if(S.kappa<8)S.kappa=100;S.mom=true;S.autoStep=false;
-      camTo(-.68,.6,.95);}}
+{t:"所以「收敛了」是什么意思",c:C_TILT,chart:false,
+ b:`<p>把这几件事放在一起：</p>
+    <ul>
+      <li>梯度为零<b>不等于</b>最优——鞍点的梯度也是零</li>
+      <li>要区分它们需要二阶信息：<b>所有</b>特征值必须为正</li>
+      <li>维数越高，"全正"越稀有，鞍点越占压倒多数</li>
+      <li>就算真的是极小，它也可能只是<b>局部</b>的，而这取决于你从哪儿出发</li>
+    </ul>
+    <p>所以"损失不降了"这句话，至少对应三种完全不同的处境：<em>到了全局最优、到了某个局部最优、或者只是贴在一个鞍点旁边慢慢挪</em>。</p>
+    <p>它们在梯度上长得一模一样。</p>
+    <p class="q">本文的地形是精心挑的解析例子，所有临界点与特征值都能写成闭式；真实神经网络的损失面无法这样刻画，这里只说明「梯度为零」这一判据本身为什么不够。参考：Dauphin et al., <i>Identifying and attacking the saddle point problem in high-dimensional non-convex optimization</i> (NeurIPS 2014)。</p>`,
+ en(){S.kappa=2;S.t=.35;S.mom=0;S.showLabels=true;S.showEscape=false;
+      camTo(-.55,.6,.95);}}
 ];
 
 /* ══════════ 章节机制 ══════════ */
-let si=-1,playing=false,acc=0;
-function restart(){buildTraj(240);S.k=0;playing=true;}
+let si=-1;
 function gotoStep(i){
   i=clamp(i,0,CH.length-1);
   const ch=CH[i],changed=(si<0)||(CH[si].c!==ch.c);
@@ -544,67 +562,79 @@ function gotoStep(i){
   if(changed){$("ctrlbody").innerHTML=ch.c;bindCtrl();}
   ch.en();
   $("chart").classList.toggle("show",!!ch.chart);
-  restart();syncCtrl();
+  syncCtrl();
 }
 function bindCtrl(){
-  const sk=$("sKappa");
-  if(sk){
-    sk.oninput=()=>{S.kappa=+sk.value;if(S.autoStep)S.s=gdOptS();restart();syncCtrl();};
-    $$("[data-kappa]").forEach(b=>b.onclick=()=>{
-      S.kappa=+b.dataset.kappa;if(S.autoStep)S.s=gdOptS();restart();syncCtrl();});
-  }
-  const ss=$("sStep");if(ss)ss.oninput=()=>{S.s=+ss.value;S.autoStep=false;restart();syncCtrl();};
-  const sb=$("sBeta");if(sb)sb.oninput=()=>{S.beta=+sb.value;restart();syncCtrl();};
-  const bo=$("b_opt");if(bo)bo.onclick=()=>{S.s=gdOptS();S.autoStep=false;restart();syncCtrl();};
-  const bh=$("b_hbopt");if(bh)bh.onclick=()=>{
-    S.mom=true;S.s=hbOptAlpha()*S.kappa;S.beta=hbOptBeta();restart();syncCtrl();};
-  const bg=$("b_gdopt");if(bg)bg.onclick=()=>{
-    S.mom=false;S.beta=0;S.s=gdOptS();restart();syncCtrl();};
-  const bp=$("b_play");if(bp)bp.onclick=()=>{S.k=0;playing=true;};
+  const sk=$("sK");
+  if(sk)sk.oninput=()=>{S.kappa=+sk.value;S.traj=[[S.x,S.y]];syncCtrl();};
+  const st=$("sT");
+  if(st)st.oninput=()=>{S.t=+st.value;S.traj=[[S.x,S.y]];syncCtrl();};
+  const se=$("sEps");
+  if(se)se.oninput=()=>{S.eps=+se.value;syncCtrl();};
+  const sx=$("sX");
+  if(sx)sx.oninput=()=>{S.x0=+sx.value;resetBall(S.x0,1.1);syncCtrl();};
+  const sd=$("sD");
+  if(sd)sd.oninput=()=>{S.dim=+sd.value;syncCtrl();};
+  const bd=$("b_drop");if(bd)bd.onclick=()=>resetBall(1.7,1.3);
+  const br=$("b_ridge");if(br)br.onclick=()=>resetBall(0,1.3);
+  const bn=$("b_near");if(bn)bn.onclick=()=>resetBall(Math.pow(10,S.eps),1.1);
+  const be=$("b_esc");if(be)be.onclick=()=>{S.showEscape=!S.showEscape;syncCtrl();};
+  const bx=$("b_dropx");if(bx)bx.onclick=()=>resetBall(S.x0,1.1);
+  const bm=$("b_more");if(bm)bm.onclick=()=>{samplePD(2000);syncCtrl();};
 }
-function say(html,cls){const e=$("verdict");e.innerHTML=html;e.className=cls||"";}
+function say(h,c){const e=$("verdict");e.innerHTML=h;e.className=c||"";}
 function syncCtrl(){
-  const sk=$("sKappa");if(sk)sk.value=S.kappa;
-  if($("vKappa"))$("vKappa").textContent=S.kappa.toFixed(0);
-  const ss=$("sStep");if(ss){ss.value=S.s;if($("vStep"))$("vStep").textContent=S.s.toFixed(3);}
-  const sb=$("sBeta");if(sb){sb.value=S.beta;if($("vBeta"))$("vBeta").textContent=S.beta.toFixed(3);}
-  $$("[data-kappa]").forEach(b=>b.classList.toggle("on",+b.dataset.kappa===S.kappa));
+  const sk=$("sK");if(sk){sk.value=S.kappa;if($("vK"))$("vK").textContent=S.kappa.toFixed(2);}
+  const st=$("sT");if(st){st.value=S.t;if($("vT"))$("vT").textContent=S.t.toFixed(3);}
+  const se=$("sEps");if(se){se.value=S.eps;if($("vEps"))$("vEps").textContent="10^"+S.eps.toFixed(1);}
+  const sx=$("sX");if(sx){sx.value=S.x0;if($("vX"))$("vX").textContent=(S.x0||0).toFixed(2);}
+  const sd=$("sD");if(sd){sd.value=S.dim;if($("vD"))$("vD").textContent=S.dim;}
+  const be=$("b_esc");if(be)be.classList.toggle("on",!!S.showEscape);
+  const big=$("pdBig");
+  if(big){
+    const p=PD.n[S.dim]?PD.c[S.dim]/PD.n[S.dim]:0;
+    big.innerHTML=p>0
+      ? `d = ${S.dim}：${(100*p).toFixed(p<0.01?4:2)} %　是极小`
+      : `d = ${S.dim}：抽了 ${PD.n[S.dim].toLocaleString("zh-CN")} 个<br>一个正定的都没有`;
+  }
   hud();
-  const rho=worstRate(),st=stepsTo(.01);
-  const big=$("rhoBig");
-  if(big)big.textContent=S.mom
-    ? `ρ = ${rho.toFixed(4)}　最优 (√κ−1)/(√κ+1) = ${hbOptRho().toFixed(4)}`
-    : `ρ = ${rho.toFixed(4)}　最优 (κ−1)/(κ+1) = ${gdOptRho().toFixed(4)}`;
-  if(si<=1){
-    say(S.kappa<=1.01
-      ? "κ = 1：两个方向曲率相同，一步到位。"
-      : `κ = ${S.kappa.toFixed(0)}：陡峭方向比平坦方向弯 ${S.kappa.toFixed(0)} 倍。`,
-      S.kappa<=1.01?"good":"");
-  }else if(rho>=1){
-    say(`<b>发散。</b>最坏特征根模长 ${rho.toFixed(3)} ≥ 1${S.mom?`，已越过边界 s &lt; 2(1+β) = ${(2*(1+S.beta)).toFixed(2)}`:""}。误差会被逐步放大。`,"warn");
-  }else if(S.mom){
-    say(`最坏收缩率 ${rho.toFixed(4)}，降到 1% 需 ${st} 步。最优动量可到 ${hbOptRho().toFixed(4)}。`,"good");
-  }else if(Math.abs(S.s-gdOptS())<.02){
-    say(`<b>已是最优固定步长。</b>两个方向收缩率都等于 ${gdOptRho().toFixed(4)}，降到 1% 仍需 ${st} 步——这就是上限。`,"good");
+  const h=hAt(S.x),g=Math.hypot.apply(null,gAt(S.x,S.y));
+  if(si<=0){
+    say(S.kappa<0?"κ &lt; 0：地形是一个碗，只有一个极小。":"κ 已经过 0，碗中间被顶起来了。",
+        S.kappa<0?"min":"saddle");
+  }else if(g<2e-3&&h[0]<0){
+    say(`<b>停住了，但这不是最低点。</b>|∇f| = ${g.toFixed(5)}，而 ∂²f/∂x² = ${h[0].toFixed(3)} &lt; 0——沿 x 方向还能继续下降。`,"saddle");
+  }else if(g<2e-3){
+    say(`<b>到达极小。</b>两个曲率都为正（${h[0].toFixed(2)}, ${h[1].toFixed(2)}），f = ${fAt(S.x,S.y).toFixed(4)}。`,"min");
   }else{
-    say(`最坏收缩率 ${rho.toFixed(4)}，降到 1% 需 ${isFinite(st)?st+" 步":"不收敛"}。理论最优是 ${gdOptRho().toFixed(4)}。`,"");
+    say(`滚动中：|∇f| = ${g.toFixed(4)}，f = ${fAt(S.x,S.y).toFixed(4)}。`,"");
   }
 }
 
-/* ══════════ 缩放 ══════════ */
-function camTo(){}
+/* ══════════ 相机 ══════════ */
+function camTo(az,el,d){CAM.taz=az;CAM.tel=el;CAM.tdist=d;}
+let drag=null;
+cv.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY};
+  try{cv.setPointerCapture(e.pointerId);}catch(err){}});
+cv.addEventListener("pointermove",e=>{
+  if(!drag)return;
+  CAM.taz+=(e.clientX-drag.x)*.006;
+  CAM.tel=clamp(CAM.tel-(e.clientY-drag.y)*.005,.08,1.3);
+  drag={x:e.clientX,y:e.clientY};
+});
+addEventListener("pointerup",()=>{drag=null;});
 cv.addEventListener("wheel",e=>{e.preventDefault();
-  CAM.tdist=clamp(CAM.tdist*(e.deltaY>0?.93:1.07),.45,3);},{passive:false});
+  CAM.tdist=clamp(CAM.tdist*(e.deltaY>0?.93:1.07),.5,2.2);},{passive:false});
 
 /* ══════════ 主循环 ══════════ */
+let tick=0;
 function frame(){
+  CAM.az+=(CAM.taz-CAM.az)*.12;
+  CAM.el+=(CAM.tel-CAM.el)*.12;
   CAM.dist+=(CAM.tdist-CAM.dist)*.12;
-  if(playing&&++acc%3===0){
-    S.k++;
-    if(S.k>=Math.min(traj.length-1,60))playing=false;
-  }
+  if(S.running)for(let k=0;k<2;k++)stepBall();
   render();
-  if($("chart").classList.contains("show"))drawChart();
+  if(++tick%10===0){syncCtrl();if($("chart").classList.contains("show"))drawPD();}
   requestAnimationFrame(frame);
 }
 
@@ -620,40 +650,39 @@ $$("#switch button").forEach(b=>b.onclick=()=>{
 });
 
 /* ══════════ 启动 ══════════ */
+S.eps=-3;S.x0=1.2;
 $("dots").innerHTML=CH.map(()=>"<i></i>").join("");
 $$("#dots i").forEach((d,k)=>d.onclick=()=>gotoStep(k));
 document.body.className="pm-story";
-$("chCap").textContent="蓝 = 平坦方向的误差，橙 = 陡峭方向的误差。虚线是当前步。";
+$("chCap").textContent="横轴为维数 d，纵轴对数。橙色是当前选中的维数。";
 gotoStep(0);
 requestAnimationFrame(frame);
 setTimeout(()=>{$("loader").classList.add("hide");
   setTimeout(()=>$("loader").style.display="none",600);},240);
 
-/* ══════════ 自检：逐步执行必须等于闭式解 ══════════ */
+/* ══════════ 自检 ══════════ */
 window.__optCheck=(()=>{
-  const save={k:S.kappa,s:S.s,b:S.beta,m:S.mom};
-  let gdErr=0,rhoErr=0,hbErr=0;
-  for(const kap of [1.1,2,10,100,1000]){
-    S.kappa=kap;S.mom=false;S.beta=0;S.s=gdOptS();
-    buildTraj(40);
-    const a=alpha();
-    gdErr=Math.max(gdErr,
-      Math.abs(traj[25][0]-Math.pow(1-a*1,25)*S.x0[0]),
-      Math.abs(traj[25][1]-Math.pow(1-a*kap,25)*S.x0[1]));
-    rhoErr=Math.max(rhoErr,
-      Math.abs(Math.max(Math.abs(1-a),Math.abs(1-a*kap))-gdOptRho()));
-    S.mom=true;S.s=hbOptAlpha()*kap;S.beta=hbOptBeta();
-    hbErr=Math.max(hbErr,Math.abs(Math.max(rateFor(1),rateFor(kap))-hbOptRho()));
-  }
-  S.kappa=save.k;S.s=save.s;S.beta=save.b;S.mom=save.m;buildTraj(240);
-  return{逐步与闭式最大差:gdErr,最优收缩率误差:rhoErr,动量最坏模长误差:hbErr};
+  const sv={k:S.kappa,t:S.t};
+  const out={};
+  /* 1) κ=2, t=0：临界点应为 ±√2 与 0，特征值 (4,1)(−2,1)(4,1) */
+  S.kappa=2;S.t=0;
+  const cs=criticals();
+  out.临界点数=cs.length;
+  out.鞍点特征值=cs.filter(c=>c.ev[0]<0).map(c=>+c.ev[0].toFixed(6));
+  out.极小位置误差=Math.max(...cs.filter(c=>c.ev[0]>0)
+    .map(c=>Math.abs(Math.abs(c.x)-Math.SQRT2)));
+  /* 2) 倾斜后两个极小深浅不同 */
+  S.t=.35;
+  const cs2=criticals().filter(c=>c.ev[0]>0).map(c=>c.f);
+  out.倾斜后两极小之差=+(Math.abs(cs2[0]-cs2[1])).toFixed(4);
+  S.kappa=sv.k;S.t=sv.t;
+  return out;
 })();
 (()=>{const c=window.__optCheck;
-  if(c.逐步与闭式最大差>1e-9)console.warn("[opt] 逐步执行与闭式解不符",c);
-  if(c.最优收缩率误差>1e-9)console.warn("[opt] 最优收缩率不符",c);
-  /* 最优动量参数下判别式恰为 0（双重根），sqrt(disc) 在 ±ε 之间翻分支，
-     误差量级自然是 √eps ≈ 1.5e-8，不是实现错误。 */
-  if(c.动量最坏模长误差>1e-6)console.warn("[opt] 动量最坏模长不符",c);})();
+  if(c.临界点数!==3)console.warn("[opt] κ=2 应有 3 个临界点，实得",c.临界点数);
+  if(Math.abs(c.鞍点特征值[0]+2)>1e-4)console.warn("[opt] 鞍点特征值应为 −2",c.鞍点特征值);
+  if(c.极小位置误差>1e-4)console.warn("[opt] 极小应在 ±√2",c.极小位置误差);
+  if(c.倾斜后两极小之差<.5)console.warn("[opt] 倾斜后两极小深度差过小",c.倾斜后两极小之差);})();
 </script>
 </body>
 </html>
