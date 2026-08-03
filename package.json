@@ -10,8 +10,11 @@
     "typecheck": "tsc --noEmit",
     "test:publication": "node tests/publication-audit.mjs",
     "test:optimization": "node tests/optimization-model.mjs",
-    "deploy": "npm run build && npm run typecheck && npm run test:optimization && npm run test:reaction && npm run test:publication && wrangler deploy",
-    "test:reaction": "node tests/reaction-diffusion-model.mjs"
+    "deploy": "npm run build && npm run typecheck && npm test && wrangler deploy",
+    "test:reaction": "node tests/reaction-diffusion-model.mjs",
+    "test:boltzmann": "node tests/boltzmann-model.mjs",
+    "test:syntax": "node tests/page-syntax.mjs",
+    "test": "npm run test:syntax && npm run test:boltzmann && npm run test:optimization && npm run test:reaction && npm run test:publication"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260729.1",

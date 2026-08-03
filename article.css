@@ -536,28 +536,62 @@ body.home .srcs a:hover{color:#0a0a0a}
   }
 
   body:not(.home) #right{display:none!important}
+  /* 手机上讲解视图只留当前章节真正要看的读数（由各篇标 .m-keep 决定），
+     其余的都在「图表」那一档里完整列出。用显式标记而不是 nth-child：
+     各篇的读数条目数和顺序不一样，按位置藏会藏错东西。 */
   body:not(.home) #hud{
     top:104px;
-    max-width:184px;
+    max-width:calc(100% - 132px);
+    gap:16px;
   }
-  body:not(.home) #hud .stat:nth-child(n+3){display:none}
+  body:not(.home) #hud .stat:not(.m-keep){display:none}
   body:not(.home) #story{
-    max-height:42vh;
+    max-height:46vh;
+    bottom:calc(10px + env(safe-area-inset-bottom));
+  }
+  @supports(height:100dvh){
+    body:not(.home) #story{max-height:46dvh}
+  }
+  /* 正文滚动到一半时给个可以继续滚的提示，别让人以为文章到此为止 */
+  body:not(.home) #story .body{
+    -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 26px),transparent);
+    mask-image:linear-gradient(180deg,#000 calc(100% - 26px),transparent);
   }
   body.proof-active:not(.home) #story,
   body.counterfactual-active:not(.home) #story{
     width:auto;
   }
+  /* 反事实实验台本身就有两张图和一段结论，46vh 装不下 */
+  body.counterfactual-active:not(.home) #story{max-height:62vh}
+  @supports(height:100dvh){
+    body.counterfactual-active:not(.home) #story{max-height:62dvh}
+  }
+  /* 展开键：长章节可以把讲解面板拉到接近满屏（display 在下面的媒体块里打开） */
+  /* 展开后讲解面板会顶到读数下面 —— 读数比正文低一级，先让位 */
+  body.story-expanded:not(.home) #hud{display:none!important}
+  body.story-expanded:not(.home) #story,
+  body.story-expanded.counterfactual-active:not(.home) #story{
+    max-height:calc(100vh - 116px);
+  }
+  @supports(height:100dvh){
+    body.story-expanded:not(.home) #story,
+    body.story-expanded.counterfactual-active:not(.home) #story{
+      max-height:calc(100dvh - 116px);
+    }
+  }
   .cf-grid{grid-template-columns:1fr}
   .cf-grid canvas{height:68px}
+
   body.mobile-controls #story,
+  body.mobile-charts #story{display:none!important}
   body.mobile-controls #hud{display:none!important}
-  body.mobile-controls #right{
+  body.mobile-controls #right,
+  body.mobile-charts #right{
     display:flex!important;
     left:10px;
     right:10px;
     top:104px;
-    bottom:10px;
+    bottom:calc(10px + env(safe-area-inset-bottom));
     width:auto;
     max-height:none;
     overflow-y:auto;
@@ -565,16 +599,92 @@ body.home .srcs a:hover{color:#0a0a0a}
   body.mobile-controls #ctrl{
     overflow-y:auto;
   }
+  /* 图表档：读数横铺在顶上，图表接在下面，一屏读完 */
+  body.mobile-charts #hud{
+    display:flex!important;
+    top:104px;
+    left:10px;
+    right:10px;
+    bottom:auto;
+    max-width:none;
+    flex-wrap:wrap;
+    gap:14px 20px;
+  }
+  body.mobile-charts #hud .stat{display:block!important}
+  body.mobile-charts #right{
+    top:calc(112px + var(--hudH,84px));
+  }
+  body.mobile-charts #ctrl{display:none}
+  body.mobile-charts #charts{
+    flex:none;
+    order:0;
+  }
+  body.mobile-charts #charts canvas.chart{height:auto}
+  body.mobile-charts .charts-empty{display:block}
+  body.mobile-charts #charts.show ~ .charts-empty{display:none}
 }
 
-@media(max-width:520px){
-          }
+/* 展开键只在手机上有意义：电脑上讲解面板本来就是整条侧栏 */
+#storyExpand{
+  position:absolute;
+  top:12px;
+  right:12px;
+  display:none;
+  padding:5px 10px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(255,255,255,.07);
+  color:#cfd6e4;
+  font:500 10.5px/1 var(--sans);
+  cursor:pointer;
+}
+#storyExpand:hover{background:rgba(255,255,255,.14)}
+
+/* 正文里的「打开图表」按钮 —— 电脑上图表就在右边，不需要它 */
+.open-charts{
+  display:none;
+  width:100%;
+  margin:12px 0 14px;
+  padding:11px 13px;
+  border:1px solid rgba(255,196,87,.42);
+  border-radius:10px;
+  background:rgba(255,196,87,.1);
+  color:#ffd866;
+  font:600 12px/1.4 var(--sans);
+  text-align:left;
+  cursor:pointer;
+}
+.charts-empty{
+  display:none;
+  margin:0;
+  padding:16px;
+  border:1px dashed rgba(255,255,255,.14);
+  border-radius:4px;
+  color:#8f9aae;
+  font:400 12px/1.75 var(--sans);
+}
+#charts.flash{
+  animation:chartsFlash 1.1s ease-out 2;
+}
+@keyframes chartsFlash{
+  0%,100%{box-shadow:0 18px 40px -22px rgba(0,0,0,.9)}
+  40%{box-shadow:0 0 0 2px rgba(255,196,87,.75),0 18px 40px -22px rgba(0,0,0,.9)}
+}
+
+@media(max-width:900px){
+  .open-charts{display:block}
+  #storyExpand{display:block}
+  /* 标题别钻到展开键底下 */
+  body:not(.home) #story h2{padding-right:52px}
+}
 
 @media(max-width:430px){
   body.home #home h1{font-size:clamp(41px,12vw,52px)}
   body.home #nav button{padding:7px 8px}
   body:not(.home) #nav button{padding:6px 8px;font-size:11px}
-  body:not(.home) #story{max-height:40vh}
+  body:not(.home) #mobilePanels button{padding:7px 10px}
+  body:not(.home) #hud{gap:12px}
+  body:not(.home) #hud .stat{min-width:48px}
 }
 
 @media(prefers-reduced-motion:reduce){

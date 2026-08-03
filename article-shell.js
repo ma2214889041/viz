@@ -290,12 +290,52 @@
     bindStoryInteractives();
   }
 
+  /* 手机上讲解面板只有 ~46vh，长章节要在一个小窗口里滚一千多像素。
+     给它一个展开键，读的时候可以把面板拉到接近满屏。 */
+  if (story) {
+    const expand = document.createElement("button");
+    expand.type = "button";
+    expand.id = "storyExpand";
+    expand.setAttribute("aria-expanded", "false");
+    expand.setAttribute("aria-label", "展开讲解面板");
+    expand.textContent = "展开";
+    story.appendChild(expand);
+    expand.addEventListener("click", () => {
+      const on = body.classList.toggle("story-expanded");
+      expand.textContent = on ? "收起" : "展开";
+      expand.setAttribute("aria-expanded", String(on));
+      expand.setAttribute("aria-label", on ? "收起讲解面板" : "展开讲解面板");
+    });
+    /* 换章时收回去，免得下一章明明很短却顶满屏幕 */
+    if (storyBody) {
+      new MutationObserver(() => {
+        if (!body.classList.contains("story-expanded")) return;
+        body.classList.remove("story-expanded");
+        expand.textContent = "展开";
+        expand.setAttribute("aria-expanded", "false");
+      }).observe(storyBody, { childList: true });
+    }
+  }
+
   if (top) {
+    /* 手机上右栏整列被藏起来，图表也跟着消失了 —— 而第 3 章讲的就是那张直方图。
+       所以移动端面板从两档改成三档，图表有自己的一档。 */
+    const charts = document.getElementById("charts");
+    const rightColumn = document.getElementById("right");
+
+    if (charts && rightColumn) {
+      const empty = document.createElement("p");
+      empty.className = "charts-empty";
+      empty.textContent = "速率分布与 H 曲线从第 3 章开始出现。先往下读一章，再回来看这里。";
+      rightColumn.appendChild(empty);
+    }
+
     const panelSwitch = document.createElement("div");
     panelSwitch.id = "mobilePanels";
     panelSwitch.setAttribute("aria-label", "移动端互动面板");
     panelSwitch.innerHTML = `
       <button type="button" data-mobile-panel="story" class="on" aria-pressed="true">讲解</button>
+      ${charts ? '<button type="button" data-mobile-panel="charts" aria-pressed="false">图表</button>' : ""}
       <button type="button" data-mobile-panel="controls" aria-pressed="false">参数</button>
     `;
     top.insertAdjacentElement("afterend", panelSwitch);
@@ -303,6 +343,7 @@
     const panelButtons = [...panelSwitch.querySelectorAll("button")];
     const setPanel = (name) => {
       body.classList.toggle("mobile-controls", name === "controls");
+      body.classList.toggle("mobile-charts", name === "charts");
       panelButtons.forEach((button) => {
         const active = button.dataset.mobilePanel === name;
         button.classList.toggle("on", active);
@@ -317,9 +358,26 @@
       button.addEventListener("click", () => setPanel("story"));
     });
     addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && body.classList.contains("mobile-controls")) {
+      if (event.key !== "Escape") return;
+      if (body.classList.contains("mobile-controls") || body.classList.contains("mobile-charts")) {
         setPanel("story");
       }
+    });
+
+    /* 正文里的「打开图表」按钮：手机上直接跳到图表那一档，
+       电脑上本来就看得见，所以按钮只闪一下右栏。 */
+    document.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-open-charts]");
+      if (!trigger) return;
+      event.preventDefault();
+      if (matchMedia("(max-width:900px)").matches) {
+        setPanel("charts");
+        return;
+      }
+      if (!charts) return;
+      charts.classList.remove("flash");
+      void charts.offsetWidth;
+      charts.classList.add("flash");
     });
   }
 })();
