@@ -168,6 +168,11 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
 #charts{position:relative;right:auto;bottom:auto;padding:12px 14px 10px;display:none;margin-top:auto}
 #charts.show{display:block}
 canvas.chart{display:block;border-radius:8px}
+.liveeq{font-family:var(--mono);font-size:11.5px;line-height:1.9;color:var(--dim);
+  padding:9px 10px;margin-bottom:10px;border:1px solid var(--line);border-radius:2px;
+  background:rgba(0,0,0,.26)}
+.liveeq b{color:var(--ink);font-weight:600}
+.liveeq .lb{font-size:9.5px;letter-spacing:.14em;color:var(--dim2);display:block;margin-bottom:4px}
 .chartcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim2);margin:8px 0 4px;text-transform:uppercase}
 
 /* 提示 */
@@ -308,6 +313,7 @@ canvas.chart{display:block;border-radius:8px}
     <div id="ctrlbody"></div>
   </aside>
   <aside id="charts" class="panel">
+    <div class="liveeq" id="liveK"></div>
     <div class="chartcap" id="cap1"></div>
     <canvas class="chart" id="ch1" width="520" height="300"></canvas>
     <div class="chartcap" id="cap2"></div>
@@ -1328,7 +1334,21 @@ window.vizReadKakeyaEvidence=()=>{
     scene:'kakeya',kind:'kakeya-dimension',dimension
   }}));
 };
+function updateLiveK(){
+  const el=document.getElementById('liveK');
+  if(!el)return;
+  const pts=getScaleData();
+  const i=pts.length-1;
+  const D=3-Math.log2(pts[i-1][1]/pts[i][1]);
+  el.innerHTML=
+    `<span class="lb">盒计数 · 最细一档实测</span>`+
+    `N(<span class="k-delta">δ</span>) ≈ <span class="k-delta">δ</span><sup>−<span class="k-dim">D</span></sup>，`+
+    `<span class="k-delta">δ</span> = <b>${pts[i][0].toExponential(1)}</b><br>`+
+    `<span class="k-vol">V</span> = <b>${pts[i][1].toFixed(4)}</b>　`+
+    `<span class="k-dim">D</span> = <b class="k-dim">${D.toFixed(2)}</b>`;
+}
 function drawScale(){
+  updateLiveK();
   const W=248,H=132,x=fitChart(c1,W,H);
   const pts=getScaleData();
   const lx=pts.map(p=>Math.log2(p[0])),ly=pts.map(p=>Math.log2(p[1]));

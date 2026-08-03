@@ -179,6 +179,12 @@ canvas.chart{display:block;border-radius:3px;width:100%;
 .chartcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--amber);
   margin:10px 0 5px;text-transform:uppercase}
 .chartcap:first-child{margin-top:0}
+/* 活公式：当前温度直接代进麦氏分布，符号与曲线同色 */
+.liveeq{font-family:var(--mono);font-size:11.5px;line-height:1.9;color:var(--dim);
+  padding:9px 10px;margin-bottom:11px;border:1px solid var(--line);border-radius:3px;
+  background:rgba(0,0,0,.28)}
+.liveeq b{color:var(--ink);font-weight:600}
+.liveeq .lb{font-size:9.5px;letter-spacing:.14em;color:var(--dim2);display:block;margin-bottom:4px}
 /* 公式里的符号与曲线共用颜色 */
 .v-hot{color:#fc6255;font-weight:650}
 .v-cold{color:#58c4dd;font-weight:650}
@@ -324,6 +330,7 @@ canvas.chart{display:block;border-radius:3px;width:100%;
     <div id="ctrlbody"></div>
   </aside>
   <aside id="charts" class="panel">
+    <div class="liveeq" id="liveMB"></div>
     <div class="chartcap" id="cap1"></div>
     <canvas class="chart" id="ch1" width="520" height="300"></canvas>
     <div class="chartcap" id="cap2"></div>
@@ -1127,6 +1134,17 @@ function fitChart(c,w,h){
   c.style.width=w+'px';c.style.height=h+'px';
   const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return x;
 }
+function updateLiveMB(){
+  const el=document.getElementById('liveMB');
+  if(!el)return;
+  const T=(GAS.vrms*GAS.vrms)/3||0;
+  const a=Math.sqrt(T)||1;
+  el.innerHTML=
+    `<span class="lb">麦克斯韦–玻尔兹曼 · 当前实测</span>`+
+    `f(<span class="v-amber">v</span>) ∝ <span class="v-amber">v</span>² · e<sup>−<span class="v-amber">v</span>²/(2·<b>${T.toFixed(3)}</b>)</sup><br>`+
+    `<span class="lb" style="display:inline;margin:0">T = ⟨v²⟩/3 =</span> <b>${T.toFixed(4)}</b>　`+
+    `<span class="lb" style="display:inline;margin:0">最概然速率</span> <b>${(a*Math.SQRT2).toFixed(3)}</b>`;
+}
 function drawMB(){
   const W=248,H=132,x=fitChart(c1,W,H);
   const NB=GAS.NB,h=GAS.hist,N=GAS.N,bw=GAS.binw||1;
@@ -1154,6 +1172,7 @@ function drawMB(){
   for(let i=0;i<=120;i++){const v=i/120*GAS.top;const p=cur[i];
     i?x.lineTo(X(v),Y(p)):x.moveTo(X(v),Y(p));}
   x.stroke();
+  updateLiveMB();
   x.fillStyle='rgba(255,181,71,.95)';x.font='9px ui-monospace,monospace';
   x.fillText('麦克斯韦–玻尔兹曼',W-104,16);
   x.fillStyle='rgba(152,162,189,.75)';

@@ -142,6 +142,15 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radiu
 #cv2{display:block;width:100%;height:122px}
 #chart .cap{margin-top:6px;font-size:10.5px;color:var(--dim);line-height:1.5}
 
+/* 贴在画面上的活公式：数值随球实时代入，颜色与地图标记一致 */
+#live{position:fixed;z-index:16;pointer-events:none;
+  font-family:var(--mono);font-size:12px;line-height:1.85;
+  background:rgba(233,229,219,.94);color:var(--ink);
+  border:1px solid var(--rule);border-radius:3px;padding:9px 11px;
+  box-shadow:0 8px 22px -10px rgba(0,0,0,.6);white-space:nowrap;
+  transform:translate(-50%,0);opacity:0;transition:opacity .25s}
+#live.show{opacity:1}
+#live .lb{color:var(--dim);font-size:10.5px;letter-spacing:.08em}
 #hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:15;
   font-size:11px;color:var(--dim2);pointer-events:none;white-space:nowrap;letter-spacing:.04em}
 
@@ -214,6 +223,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radiu
   <div class="cap" id="chCap"></div>
 </section>
 
+<div id="live" aria-live="off"></div>
 <div id="hint">拖动旋转地形 · 滚轮缩放 · ← → 翻章</div>
 <div id="loader"><div>正在生成损失地形…</div></div>
 
@@ -441,11 +451,26 @@ function drawCompass(){
   cx.fillStyle="#6fc0a0";cx.textBaseline="bottom";
   cx.fillText("损失低 · 优化方向",x+9*DPR,y1);
 }
+function updateLive(){
+  const el=$("live");
+  if(!el)return;
+  if(si===3){el.classList.remove("show");return;}   /* 高维那章不显示 */
+  const g=gAt(S.x,S.y),gn=Math.hypot(g[0],g[1]),e=eig(hessAt(S.x,S.y));
+  const ev=v=>`<span class="${v<0?"t-sad":"t-min"}">${v>=0?"+":"−"}${Math.abs(v).toFixed(2)}</span>`;
+  el.innerHTML=
+    `<span class="lb">此刻</span>　f = ${fAt(S.x,S.y).toFixed(3)}<br>`+
+    `|∇f| = ${gn.toFixed(4)}<br>`+
+    `<span class="lb">H 的特征值</span>　λ₁ = ${ev(e[0])}　λ₂ = ${ev(e[1])}`;
+  const p=proj(S.x,S.y,zOf(S.x,S.y));
+  el.style.left=(p[0]/DPR)+"px";
+  el.style.top=(p[1]/DPR+18)+"px";
+  el.classList.add("show");
+}
 function render(){
   fit();
   const c=centerXY();CENX=c[0]*DPR;CENY=c[1]*DPR;
   cx.fillStyle="#080a0e";cx.fillRect(0,0,W,H);
-  drawLand();drawTraj();drawCriticals();drawBall();drawCompass();
+  drawLand();drawTraj();drawCriticals();drawBall();drawCompass();updateLive();
 }
 
 /* ══════════ 高维计数：随机对称矩阵有多大概率正定 ══════════ */

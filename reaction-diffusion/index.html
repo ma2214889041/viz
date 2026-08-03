@@ -125,10 +125,24 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .hcell.v b{color:var(--v)} .hcell.u b{color:var(--u)}
 
-#inspect{position:fixed;right:18px;bottom:16px;z-index:20;width:min(304px,calc(100vw - 36px));
+#inspect{position:fixed;right:18px;bottom:16px;z-index:20;width:min(352px,calc(100vw - 36px));
   padding:14px;display:none}
 #inspect.show{display:block}
 #inspect h5{font-size:10.5px;letter-spacing:.12em;color:var(--dim2);margin-bottom:10px}
+.eqhead{font-size:11px;color:var(--dim);margin-bottom:9px;padding-bottom:8px;
+  border-bottom:1px solid var(--line);font-family:var(--mono)}
+.eqtitle{font-family:var(--mono);font-size:11.5px;color:var(--ink);margin-bottom:6px;letter-spacing:.02em}
+.eqrow{display:grid;grid-template-columns:64px 1fr 66px 66px;gap:7px;align-items:center;
+  font-size:10.5px;margin-bottom:3px}
+.eqrow code{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.eqrow em{font-style:normal;color:var(--dim2);font-size:9.5px}
+.eqrow .n-pos{font-family:var(--mono);color:#ff9a5c;text-align:right;font-size:10.5px}
+.eqrow .n-neg{font-family:var(--mono);color:#5aa2ff;text-align:right;font-size:10.5px}
+.minibar{height:4px;background:rgba(255,255,255,.07);border-radius:2px;position:relative}
+.minibar i.mini{position:absolute;top:0;bottom:0;border-radius:2px;background:#ff9a5c}
+.minibar i.mini.neg{background:#5aa2ff}
+.eqsum{margin-top:4px;padding-top:5px;border-top:1px solid var(--line)}
+.eqsum .eqrow code,.eqsum .eqrow em{color:var(--ink)}
 .trow{display:grid;grid-template-columns:74px 1fr 62px;gap:8px;align-items:center;
   margin-bottom:5px;font-size:11px}
 .trow span{color:var(--dim)}
@@ -362,22 +376,36 @@ function drawInspect(){
   if(tool!=="inspect"){$("inspect").classList.remove("show");return;}
   $("inspect").classList.add("show");
   const t=termData(selected.x,selected.y);
-  const row=(label,val)=>{
-    const w=Math.min(50,Math.abs(val)/.16*50);
-    return `<div class="trow"><span>${label}</span>
-      <div class="tbar"><i class="${val<0?"neg":""}" style="${val<0?`right:50%;width:${w}%`:`left:50%;width:${w}%`}"></i></div>
-      <b>${(val>=0?"+":"")+val.toFixed(5)}</b></div>`;
+  /* 不再显示抽象的条形表，而是把方程本身写出来，
+     每一项当场填入这一格的真实数值，并按物质着色。
+     符号 → 数值 → 画面颜色，三者在同一行上对齐。 */
+  const num=v=>{
+    const sign=v>=0?"+":"−";
+    const cls=v>=0?"n-pos":"n-neg";
+    return `<span class="${cls}">${sign}${Math.abs(v).toFixed(5)}</span>`;
   };
+  const bar=v=>{
+    const w=Math.min(46,Math.abs(v)/.16*46);
+    return `<i class="mini ${v<0?"neg":""}" style="${v<0?`right:50%;width:${w}%`:`left:50%;width:${w}%`}"></i>`;
+  };
+  const line=(sym,val,note)=>
+    `<div class="eqrow"><code>${sym}</code><div class="minibar">${bar(val)}</div>${num(val)}<em>${note}</em></div>`;
   $("insBody").innerHTML=
-    `<div class="trow"><span>坐标</span><div></div><b>${selected.x}, ${selected.y}</b></div>
-     <div class="trow"><span>U 浓度</span><div></div><b>${t.a.toFixed(4)}</b></div>
-     <div class="trow"><span>V 浓度</span><div></div><b>${t.b.toFixed(4)}</b></div>
-     <div style="height:9px"></div>
-     ${row("U 扩散",t.uDiff)}${row("U 被反应吃掉",t.uReact)}${row("U 被补给",t.uFeed)}
-     <div class="tsum">${row("U 净变化",t.uSum)}</div>
-     <div style="height:9px"></div>
-     ${row("V 扩散",t.vDiff)}${row("V 由反应生成",t.vReact)}${row("V 被清除",t.vKill)}
-     <div class="tsum">${row("V 净变化",t.vSum)}</div>`;
+   `<div class="eqhead">格点 (${selected.x}, ${selected.y})　
+      <span class="c-u">u</span> = ${t.a.toFixed(4)}　
+      <span class="c-v">v</span> = ${t.b.toFixed(4)}</div>
+
+    <div class="eqtitle">∂<span class="c-u">u</span>/∂t　=　Dᵤ∇²<span class="c-u">u</span>　−　<span class="c-u">u</span><span class="c-v">v</span>²　+　F(1−<span class="c-u">u</span>)</div>
+    ${line("Dᵤ∇²u",t.uDiff,"扩散")}
+    ${line("− u v²",t.uReact,"被反应吃掉")}
+    ${line("F(1−u)",t.uFeed,"被补给")}
+    <div class="eqsum">${line("∂u/∂t",t.uSum,"净变化")}</div>
+
+    <div class="eqtitle" style="margin-top:11px">∂<span class="c-v">v</span>/∂t　=　Dᵥ∇²<span class="c-v">v</span>　+　<span class="c-u">u</span><span class="c-v">v</span>²　−　(F+k)<span class="c-v">v</span></div>
+    ${line("Dᵥ∇²v",t.vDiff,"扩散")}
+    ${line("+ u v²",t.vReact,"由反应生成")}
+    ${line("−(F+k)v",t.vKill,"被清除")}
+    <div class="eqsum">${line("∂v/∂t",t.vSum,"净变化")}</div>`;
 }
 
 /* ══════════ 阈值实验 ══════════ */
