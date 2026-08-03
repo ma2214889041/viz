@@ -315,8 +315,8 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   .card{width:100%}
 }
 </style>
-<link rel="stylesheet" href="../article.css?v=20260803144257">
-<script src="../article-shell.js?v=20260803144257" defer></script>
+<link rel="stylesheet" href="../article.css?v=20260803151309">
+<script src="../article-shell.js?v=20260803151309" defer></script>
 </head>
 <body class="home">
 
@@ -377,6 +377,10 @@ canvas.chart{display:block;border-radius:3px;width:100%;
     <canvas class="chart" id="ch1" width="520" height="300"></canvas>
     <div class="chartcap" id="cap3"></div>
     <canvas class="chart" id="ch3" width="520" height="240"></canvas>
+    <div class="chartcap" id="cap5"></div>
+    <canvas class="chart" id="ch5" width="520" height="230"></canvas>
+    <div class="chartcap" id="cap4"></div>
+    <canvas class="chart" id="ch4" width="520" height="230"></canvas>
     <div class="chartcap" id="cap2"></div>
     <canvas class="chart" id="ch2" width="520" height="180"></canvas>
   </aside>
@@ -417,7 +421,7 @@ canvas.chart{display:block;border-radius:3px;width:100%;
 
     <p style="margin-bottom:14px"><b>「1/5 个平均自由时间」的出处</b>——Lanford 自己没写这个数，下面两篇是复核他那个级数收敛半径后给出的标准说法：<br>
     <a href="https://arxiv.org/abs/1405.4676" target="_blank" rel="noopener">Pulvirenti, Simonella — The Boltzmann–Grad limit of a hard sphere system: analysis of the correlation error（估计给到「约 1/5 个平均自由时间」）</a><br>
-    <a href="https://research-portal.uu.nl/files/1609183/uffink.pdf" target="_blank" rel="noopener">Uffink, Valente — Time's Arrow and Lanford's Theorem（Séminaire Poincaré XV, 2010：「不超过平均自由时间的五分之一」）</a><br>
+    Uffink, Valente — Time's Arrow and Lanford's Theorem，Séminaire Poincaré XV «Le Temps» (2010), 141–173：「不超过平均自由时间的五分之一」。<span style="color:var(--dim2)">（这篇没有稳定的公开链接，按题名检索即可。）</span><br>
     <a href="https://www.ams.org/journals/bull/2015-52-03/S0273-0979-2015-01488-6/S0273-0979-2015-01488-6.pdf" target="_blank" rel="noopener">Gallagher, Saint-Raymond, Texier — From Newton to Boltzmann（AMS Bulletin 综述，交代了整套 BBGKY / 碰撞树框架）</a></p>
 
     <p style="margin-bottom:14px"><b>作者与合作者写给一般读者的解释</b><br>
@@ -751,6 +755,32 @@ const GAS={
   recolWin:1.5,          // 记忆窗口，每帧按 3τ 更新
   gradLock:false
 };
+/* 碰撞算符的实测缓冲。产生/损失按速率分格累加，用指数遗忘做滑动平均，
+   这样读数反映的是「当下」的 Q，而不是从开局到现在的总账。 */
+const QB={on:true,NB:40,bw:0.1,
+          gain:new Float64Array(40),loss:new Float64Array(40),      // 本帧计数
+          gAcc:new Float64Array(40),lAcc:new Float64Array(40),      // 带遗忘的累加
+          q:new Float64Array(40),top:4,net:0};
+function qbReset(top){
+  QB.top=Math.max(0.4,top||4);QB.bw=QB.top/QB.NB;
+  QB.gain.fill(0);QB.loss.fill(0);QB.gAcc.fill(0);QB.lAcc.fill(0);
+  QB.q.fill(0);QB.net=0;
+}
+/* 一帧只有几次碰撞，40 个格子上全是散粒噪声。所以不逐帧平滑 Q，
+   而是让产生/损失各自带遗忘地累加（记忆 ~1/(1-k) 帧），
+   计数攒够了再相减。net 取归一化的失衡度，才有可比的零点。 */
+function qbStep(){
+  const k=0.985;                                 // 遗忘系数 ≈ 记忆 67 帧
+  let num=0,den=0;
+  for(let b=0;b<QB.NB;b++){
+    QB.gAcc[b]=QB.gAcc[b]*k+QB.gain[b];
+    QB.lAcc[b]=QB.lAcc[b]*k+QB.loss[b];
+    QB.gain[b]=0;QB.loss[b]=0;
+    QB.q[b]=QB.gAcc[b]-QB.lAcc[b];
+    num+=Math.abs(QB.q[b]);den+=QB.gAcc[b]+QB.lAcc[b];
+  }
+  QB.net=den>1e-9?num/den:0;                     // 归一化失衡度：离平衡有多远
+}
 const gasInst=new Inst(2600);
 const gasCube=new Inst(400);
 let gasBoxVBO=null;
@@ -807,8 +837,12 @@ function gasInit(preset){
   }
   GAS.t=0;GAS.collisions=0;GAS.H=[];GAS.reversed=0;GAS.revPeak=0;GAS.revIdx=-1;
   GAS.macro=null;
-  GAS.wf=[];GAS.pairLast.clear();
+  GAS.wf=[];GAS.pairLast.clear();PROF.hist=[];PROF.contrast=1;
   GAS.recol=0;GAS.recolRecent=0;GAS.colRecent=0;GAS.recolRate=0;
+  /* 碰撞算符的刻度按初态的速率范围定一次，之后不再漂 —— 否则 Q 的形状会被
+     坐标轴自己的移动掩盖掉 */
+  let ms=0;for(let i=0;i<N;i++)ms+=GAS.vx[i]**2+GAS.vy[i]**2+GAS.vz[i]**2;
+  qbReset(2.9*Math.sqrt(ms/N));
 }
 let cellIdx=null,cellStart=null,cellItems=null,cellFill=null,lastGN=-1;
 function gasStep(dt){
@@ -857,8 +891,22 @@ function gasStep(dt){
           if(prev!==undefined&&GAS.t-prev<GAS.recolWin)recolHits++;
           GAS.pairLast.set(key,GAS.t);
         }
+        /* 碰撞算符 Q(f,f) 的直接测量：
+           损失项 = 以速率 v 进入碰撞的粒子数（碰前）
+           产生项 = 以速率 v 离开碰撞的粒子数（碰后）
+           Q(v) ∝ 产生 − 损失。平衡态下细致平衡让两者逐格相消，Q ≡ 0。 */
+        if(QB.on){
+          const s1=Math.hypot(vx[i],vy[i],vz[i]),s2=Math.hypot(vx[j],vy[j],vz[j]);
+          const b1=Math.min(QB.NB-1,Math.floor(s1/QB.bw)),b2=Math.min(QB.NB-1,Math.floor(s2/QB.bw));
+          QB.loss[b1]++;QB.loss[b2]++;
+        }
         vx[i]-=rvn*nx;vy[i]-=rvn*ny;vz[i]-=rvn*nz;
         vx[j]+=rvn*nx;vy[j]+=rvn*ny;vz[j]+=rvn*nz;
+        if(QB.on){
+          const s1=Math.hypot(vx[i],vy[i],vz[i]),s2=Math.hypot(vx[j],vy[j],vz[j]);
+          const b1=Math.min(QB.NB-1,Math.floor(s1/QB.bw)),b2=Math.min(QB.NB-1,Math.floor(s2/QB.bw));
+          QB.gain[b1]++;QB.gain[b2]++;
+        }
         col++;
       }
     }}}
@@ -928,6 +976,33 @@ window.vizGasApi={
   stats:gasStats,
   kinetics
 };
+/* 沿 x 的一维温度剖面 T(x)。冷热两半初态下它应当按热传导方程摊平——
+   这是流体那一层「傅里叶定律」在硬球模拟里的直接体现。 */
+const PROF={NX:16,T:new Float64Array(16),n:new Float64Array(16),
+            hist:[],HMAX:90,contrast:1,tick:0};
+function profStep(){
+  const NX=PROF.NX,L=GAS.L,N=GAS.N;
+  PROF.T.fill(0);PROF.n.fill(0);
+  for(let i=0;i<N;i++){
+    const b=clamp(Math.floor((GAS.px[i]+L)/(2*L)*NX),0,NX-1);
+    PROF.n[b]++;PROF.T[b]+=GAS.vx[i]**2+GAS.vy[i]**2+GAS.vz[i]**2;
+  }
+  for(let b=0;b<NX;b++)PROF.T[b]=PROF.n[b]>0?PROF.T[b]/PROF.n[b]/3:0;
+  /* 对比度取<b>第一个余弦模</b>的振幅，而不是 max−min。
+     绝热壁下热传导方程的本征模是 cos(nπ(x+L)/2L)，n=1 那个衰减最慢，
+     正是台阶抹平的主导过程。投影会对 16 个格子求平均，
+     噪声比 max−min 小 √16 倍 —— 后者的噪底高达 40%，会把物理整个盖住。 */
+  let sum=0,cnt=0,a1=0;
+  for(let b=0;b<NX;b++)if(PROF.n[b]>0){sum+=PROF.T[b];cnt++;}
+  const mean=cnt?sum/cnt:1;
+  for(let b=0;b<NX;b++)a1+=PROF.T[b]*Math.cos(Math.PI*(b+0.5)/NX);
+  a1=2*a1/NX;
+  PROF.contrast=mean>1e-9?Math.abs(a1)/mean:0;
+  if((PROF.tick=(PROF.tick+1)%4)===0){
+    PROF.hist.push(Float64Array.from(PROF.T));
+    if(PROF.hist.length>PROF.HMAX)PROF.hist.shift();
+  }
+}
 function gasMacro(){
   const G=GAS.macroN,N=GAS.N,L=GAS.L;
   if(!GAS.dens||GAS.dens.length!==G*G*G){
@@ -1029,7 +1104,19 @@ const SC={
           <p>无论从哪儿出发，最后都收敛到同一个形状——这就是<b>弛豫</b>。特征时间就是几个 τ，和读数栏里的 <b>碰撞 / 粒子</b> 走到 2–3 是同一件事。</p>
           <p>玻尔兹曼方程描述的就是 f 的演化：</p>
           <span class="fml">∂<sub>t</sub>f + <b>v</b>·∇<sub><b>x</b></sub>f = Q(f,f)</span>
-          <p>右端 Q 是二次碰撞积分，把速度对 (<b>v</b>,<b>v</b><sub>*</sub>) 换成碰后的 (<b>v</b>′,<b>v</b>′<sub>*</sub>)，做「产生减损失」的收支。</p>
+          <p class="subh">右端那个 Q 到底是什么</p>
+          <p>Q 是二次的碰撞积分，写开就是一笔<b>收支账</b>：</p>
+          <span class="fml">Q(f,f)(<b>v</b>) = ∫∫ B(|<b>v</b>−<b>v</b><sub>*</sub>|,θ) [ <span style="color:#5cd0b3">f(<b>v</b>′)f(<b>v</b>′<sub>*</sub>)</span> − <span style="color:#fc6255">f(<b>v</b>)f(<b>v</b><sub>*</sub>)</span> ] dω d<b>v</b><sub>*</sub></span>
+          <ul>
+            <li><span style="color:#fc6255">损失项</span>：速率恰为 <span class="v-amber">v</span> 的粒子撞上别人，就<b>离开</b>了这一格；</li>
+            <li><span style="color:#5cd0b3">产生项</span>：别处的一对 (<b>v</b>′,<b>v</b>′<sub>*</sub>) 撞完之后<b>落进</b>这一格。</li>
+          </ul>
+          <p>两个乘积形式 f·f 就是 A3 分子混沌被用掉的地方——把两粒子分布拆成了单粒子分布之积。</p>
+          <p><b>这笔账可以直接量。</b>图表面板最后一张是实测的 Q：每次碰撞发生时，把两个粒子<em>碰前</em>的速率记进损失、<em>碰后</em>的速率记进产生，逐格相减。不做任何积分，就是数碰撞。</p>
+          <button type="button" class="open-charts" data-open-charts>📊 打开 Q(f,f) 实测图</button>
+          <p>从同速率球壳出发时你会看到：<span style="color:#fc6255">初速率那一格深深地负</span>（粒子正被从那里搬走），两侧<span style="color:#5cd0b3">正</span>（正在被填充）。随着系统接近平衡，整条曲线<em>压回零轴</em>——</p>
+          <span class="fml">Q(f,f) = 0 ⟺ f 是麦克斯韦分布</span>
+          <p>这就是上面那条红线为什么是<b>唯一</b>的终点：细致平衡要求 f(<b>v</b>′)f(<b>v</b>′<sub>*</sub>) = f(<b>v</b>)f(<b>v</b><sub>*</sub>) 对所有碰撞成立，取对数后 log f 必须是碰撞不变量 {1, <b>v</b>, v²} 的线性组合，而这恰好把 f 逼成高斯型。</p>
           <p>问题是：这个方程<em>真的</em>能从牛顿定律推出来吗？</p>`,
        en(){camTo(0.7,0.24,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.04;
             gasInit('same');GAS.running=true;}},
@@ -1152,7 +1239,17 @@ const SC={
             <li>留到一阶，输运系数（黏度 μ、热导 κ）由碰撞算符的线性化给出，得到<b>纳维–斯托克斯–傅里叶方程</b>。</li>
           </ul>
           <span class="fml">牛顿力学 —(Boltzmann–Grad)→ 玻尔兹曼方程 —(Kn→0)→ 流体方程</span>
-          <p>注意这是<b>两个不同的极限</b>，箭头上的小字不一样。希尔伯特在 1900 年的第六问题里要求：把两支箭头都<b>严格地</b>补上。物理系的推导一直做得很顺，数学上的证明卡了 125 年。</p>`,
+          <p>注意这是<b>两个不同的极限</b>，箭头上的小字不一样。希尔伯特在 1900 年的第六问题里要求：把两支箭头都<b>严格地</b>补上。物理系的推导一直做得很顺，数学上的证明卡了 125 年。</p>
+
+          <p class="subh">当场验一条傅里叶定律</p>
+          <p>右端那一步不必只当作口号。图表面板里多了一张 <b>温度剖面 T(x)</b>：把盒子沿 x 切成 16 条，各自统计局域温度。</p>
+          <button type="button" class="open-charts" data-open-charts>🌡 打开温度剖面 T(x)</button>
+          <p>按下 <b>冷热两半</b> 的瞬间，剖面是一个<em>台阶</em>。松手之后你会看到台阶的棱角先被磨圆，再整体塌成一条平线——这正是热传导方程</p>
+          <span class="fml">∂<sub>t</sub>T = κ ∂<sub>x</sub>²T</span>
+          <p>在做的事。绝热壁下这个方程的本征模是 cos(nπ(x+L)/2L)，其中 <b>n=1 衰减最慢</b>，所以台阶很快就退化成一条余弦，之后整体按指数塌下去。图里的<b>对比度</b>就是这个第一模的振幅（除以平均温度）——实测它从 105% 掉到 7%，log 图上是一条直线。</p>
+          <p><em>没有人把热传导方程写进模拟</em>——里面只有硬球碰撞。傅里叶定律是从碰撞里长出来的，和第 3 章的麦氏分布一样。</p>
+          <p class="q">用第一模的投影而不是 T<sub>max</sub>−T<sub>min</sub>，是因为每格只有三十来个粒子，max−min 的散粒噪声就有 40%，足以把整个衰减盖掉。投影对 16 个格子求平均，噪声小 √16 倍。这类「换个统计量才看得见物理」的取舍，在数值实验里比公式推导更常遇到。</p>
+          <p class="q">这里也能看到 Kn 的意义：本页 λ ≈ 0.43，盒子尺度 L = 2，所以 Kn ≈ 0.2——不算小。真实空气在常温常压下 λ ≈ 68 nm，对厘米级的容器 Kn ≈ 10<sup>−5</sup>，那才是流体近似真正站得住的地方。<b>Kn 不够小的时候，纳维–斯托克斯就开始失效</b>（稀薄气体、微流控、再入大气层的飞行器都撞在这上面）。</p>`,
        en(){camTo(0.85,0.35,4.3,0,0,0);GAS.mode='macro';GAS.single=false;CAM.spin=0.06;gasInit('hot');}},
 
       {id:'deng',t:'邓煜：把 Lanford 的 1/5 变成永远',
@@ -1388,7 +1485,7 @@ function hud(items){
 }
 
 /* 图表 */
-const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d'),c3=$('#ch3');
+const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d'),c3=$('#ch3'),c4=$('#ch4'),c5=$('#ch5');
 function fitChart(c,w,h){
   const dpr=Math.min(2,devicePixelRatio||1);
   w=Math.round(w);h=Math.round(h);
@@ -1490,6 +1587,80 @@ function drawWF(){
   x.fillStyle='rgba(255,181,71,.9)';
   x.fillText('现在',padL+3,padT+9);
 }
+/* 碰撞算符 Q(f,f) 的实测图：产生项在上、损失项在下，净值是那条实线。
+   平衡态下两者逐格相消，实线压在零轴上；弛豫过程中它清楚地指出
+   「哪些速率在被清空、哪些在被填充」。 */
+function drawQ(){
+  const W=chartW(),H=clamp(W*0.44,110,165),x=fitChart(c4,W,H);
+  const NB=QB.NB;
+  let mx=1e-9;
+  for(let b=0;b<NB;b++)mx=Math.max(mx,Math.abs(QB.q[b]));
+  const padL=10,padB=15,padT=10;
+  const gw=W-padL-8, gh=H-padB-padT;
+  const y0=padT+gh*0.5;                       // 零轴在中间
+  const X=b=>padL+(b+0.5)/NB*gw;
+  const Y=v=>y0-(v/mx)*(gh*0.46);
+  // 零轴
+  x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;
+  x.beginPath();x.moveTo(padL,y0);x.lineTo(W-8,y0);x.stroke();
+  // 柱：正=产生占优（该速率在被填充），负=损失占优（在被清空）
+  const bw=gw/NB;
+  for(let b=0;b<NB;b++){
+    const v=QB.q[b];if(Math.abs(v)<mx*0.012)continue;
+    const yy=Y(v);
+    x.fillStyle=v>0?'rgba(92,208,179,.75)':'rgba(252,98,85,.72)';
+    x.fillRect(X(b)-bw*0.42,Math.min(y0,yy),Math.max(1,bw*0.84),Math.abs(yy-y0));
+  }
+  x.strokeStyle='rgba(255,181,71,.9)';x.lineWidth=1.6;x.beginPath();
+  for(let b=0;b<NB;b++){const px=X(b),py=Y(QB.q[b]);b?x.lineTo(px,py):x.moveTo(px,py);}
+  x.stroke();
+  x.font='9px ui-monospace,monospace';
+  x.fillStyle='rgba(92,208,179,.95)';x.fillText('+ 产生',padL+2,padT+8);
+  x.fillStyle='rgba(252,98,85,.95)';x.fillText('− 损失',padL+2,H-padB+11);
+  x.fillStyle='rgba(152,162,189,.8)';x.fillText('速率 v →',W-56,y0-4);
+}
+/* 温度剖面 T(x)：当前那条画实线，过去若干条淡出叠在后面。
+   冷热两半松手后，能看到台阶被抹成一条平线——热传导方程在动。 */
+function drawProfile(){
+  const W=chartW(),H=clamp(W*0.44,110,165),x=fitChart(c5,W,H);
+  const NX=PROF.NX,hist=PROF.hist;
+  if(!hist.length)return;
+  let mn=1e9,mx=-1e9;
+  for(const row of hist)for(let b=0;b<NX;b++){if(row[b]<=0)continue;
+    mn=Math.min(mn,row[b]);mx=Math.max(mx,row[b]);}
+  if(!(mx>mn)){mx=mn+1;}
+  const pad=(mx-mn)*0.18;mn-=pad;mx+=pad;
+  const padL=26,padB=15,padT=10;
+  const gw=W-padL-8, gh=H-padB-padT;
+  const X=b=>padL+(b+0.5)/NX*gw, Y=v=>padT+gh-(v-mn)/(mx-mn)*gh;
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.strokeRect(padL,padT,gw,gh);
+  // 历史：越旧越淡
+  for(let k=0;k<hist.length-1;k++){
+    const a=0.06+0.20*(k/hist.length);
+    x.strokeStyle=`rgba(255,181,71,${a.toFixed(3)})`;x.lineWidth=1;
+    x.beginPath();
+    for(let b=0;b<NX;b++){const py=Y(hist[k][b]);b?x.lineTo(X(b),py):x.moveTo(X(b),py);}
+    x.stroke();
+  }
+  // 当前
+  const cur=hist[hist.length-1];
+  x.lineWidth=2;x.beginPath();
+  for(let b=0;b<NX;b++){
+    const py=Y(cur[b]);
+    x.strokeStyle=heatCss(cur[b]);
+    b?x.lineTo(X(b),py):x.moveTo(X(b),py);
+  }
+  x.strokeStyle='#ffb547';x.stroke();
+  x.font='9px ui-monospace,monospace';
+  x.fillStyle='rgba(152,162,189,.85)';
+  x.fillText('T',6,padT+9);
+  x.fillText('x →',W-30,H-4);
+  x.fillStyle='rgba(255,181,71,.95)';
+  x.fillText(`对比度 ${(PROF.contrast*100).toFixed(0)}%`,padL+4,padT+10);
+}
+function heatCss(T){const c=heat(clamp((T-0.2)/1.4,0,1));
+  return `rgb(${Math.round(c[0]*255)},${Math.round(c[1]*255)},${Math.round(c[2]*255)})`;}
 function drawH(){
   const W=chartW(),H=clamp(W*0.31,76,120),x=fitChart(c2,W,H);
   const A=GAS.H;if(A.length<2)return;
@@ -1612,6 +1783,7 @@ function frame(now){
       if(GAS.reversed)GAS.revPeak=Math.max(GAS.revPeak,GAS.Hcur);
       GAS.H.push(GAS.Hcur);
       if(GAS.H.length>420){GAS.H.shift();if(GAS.revIdx>=0)GAS.revIdx--;}
+      qbStep();profStep();
       /* 演化史每 3 帧记一行，150 行大约覆盖最近 7 秒 */
       if((wfTick=(wfTick+1)%3)===0){
         if(!GAS.wf.length)GAS.wfTop=Math.max(2.9*(GAS.vrms||1),0.001);
@@ -1632,9 +1804,14 @@ function frame(now){
       {k:'H 函数',v:(GAS.Hcur||0).toFixed(3),hi:true,cls:'m-keep'},
       {k:'碰撞 / 粒子',v:(2*GAS.collisions/Math.max(1,GAS.N)).toFixed(1),
        cls:(id==='many'||id==='relax')?'m-keep':''},
+      /* Q 的归一化失衡度：0 = 细致平衡（麦氏分布），越大离平衡越远 */
+      {k:'|Q| 失衡度',v:(QB.net*100).toFixed(1),u:'%',
+       cls:(id==='relax'||id==='htheorem')?'notrans m-keep':'notrans'},
       /* 重碰率：破坏分子混沌的那类关联，Grad 极限下应当趋零 */
       {k:'重碰率',v:(GAS.recolRate*100).toFixed(1),u:'%',
        cls:(id==='recollision'||id==='deng')?'m-keep':''},
+      {k:'温度不均匀度',v:(PROF.contrast*100).toFixed(0),u:'%',
+       cls:id==='fluid'?'m-keep':''},
       {k:'N·r² (Grad 不变量)',v:(GAS.N*GAS.r*GAS.r).toFixed(2),
        cls:(id==='recollision'||id==='deng')?'notrans m-keep':'notrans'}
     ]);
@@ -1650,6 +1827,13 @@ function frame(now){
       $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';
       $('#cap3').textContent='速率分布的演化 · 上=现在，往下是过去';
       drawWF();
+      $('#cap4').textContent='碰撞算符 Q(f,f) 实测 · 产生 − 损失';
+      drawQ();
+      /* 温度剖面只在流体那一章有意义，其余章节收起来 */
+      const showProf=(id==='fluid');
+      $('#cap5').style.display=showProf?'':'none';
+      c5.style.display=showProf?'':'none';
+      if(showProf){$('#cap5').textContent='温度剖面 T(x) · 淡线是过去，看台阶被抹平';drawProfile();}
       /* 冷热两半时空间不均匀，此处 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
       $('#cap2').textContent=(GAS.preset==='hot')
         ?'H 函数 · 全局速率分布（此时空间不均匀）'

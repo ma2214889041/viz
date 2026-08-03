@@ -88,6 +88,10 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 #story .body .fml{display:block;text-align:center;font-family:var(--mono);font-size:13px;color:var(--ink);
   margin:12px 0;padding:11px;background:rgba(255,255,255,.04);border-radius:9px;letter-spacing:.02em}
 #story .body .tbar{margin:14px 0;padding:13px 13px 10px;background:rgba(255,255,255,.04);border-radius:10px}
+/* 数字/论文出处的旁注 */
+#story .body .srcnote{margin:13px 0;padding:11px 12px;border-left:2px solid var(--k1);
+  background:rgba(88,196,221,.07);border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.8;color:#b9c1d4}
+#story .body .srcnote b{color:var(--k1)}
 /* 小节标题：长章节要分段，否则手机上就是一堵墙 */
 #story .body .subh{margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--line);
   font-size:13px;font-weight:650;color:var(--k1);letter-spacing:.02em}
@@ -287,8 +291,8 @@ canvas.chart{display:block;border-radius:8px}
   .card{width:100%}
 }
 </style>
-<link rel="stylesheet" href="../article.css?v=20260803144257">
-<script src="../article-shell.js?v=20260803144257" defer></script>
+<link rel="stylesheet" href="../article.css?v=20260803151309">
+<script src="../article-shell.js?v=20260803151309" defer></script>
 </head>
 <body class="home">
 
@@ -378,11 +382,22 @@ canvas.chart{display:block;border-radius:8px}
   <div class="ev hot"><div class="yr">2026.07</div><div class="ct"><h4>王虹获得菲尔兹奖</h4><p>她因调和分析与几何测度论中的突破性工作获奖，成为菲尔兹奖历史上的第三位女性得主。</p></div></div>
 
   <div class="srcs">
-    资料来源：
-    <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">国际数学联盟 · 2026 菲尔兹奖</a> ·
-    <a href="https://www.nature.com/articles/d41586-026-02169-1" target="_blank" rel="noopener">Nature</a> ·
-    <a href="https://www.quantamagazine.org/once-in-a-century-proof-settles-maths-kakeya-conjecture-20250314/" target="_blank" rel="noopener">Quanta Magazine · Kakeya</a> ·
-    <a href="https://terrytao.wordpress.com/2025/02/25/the-three-dimensional-kakeya-conjecture-after-wang-and-zahl/" target="_blank" rel="noopener">陶哲轩博客解读</a>
+    <p style="margin-bottom:14px"><b>原始论文</b><br>
+    <a href="https://arxiv.org/abs/2502.17655" target="_blank" rel="noopener">Wang, Zahl — Volume estimates for unions of convex sets, and the Kakeya set conjecture in three dimensions (arXiv:2502.17655)</a><br>
+    <a href="https://arxiv.org/abs/2210.09581" target="_blank" rel="noopener">Wang, Zahl — Sticky Kakeya sets and the sticky Kakeya conjecture (arXiv:2210.09581)</a><br>
+    <a href="https://arxiv.org/abs/math/9906097" target="_blank" rel="noopener">Katz, Łaba, Tao — An improved bound on the Minkowski dimension of Besicovitch sets in ℝ³（1999，「黏性」概念的出处）</a></p>
+
+    <p style="margin-bottom:14px"><b>想看思路而不想啃 127 页</b><br>
+    <a href="https://arxiv.org/abs/2604.03416" target="_blank" rel="noopener">Séminaire Bourbaki — The Kakeya conjecture, after Wang and Zahl（带大量插图的综述）</a><br>
+    <a href="https://terrytao.wordpress.com/2025/02/25/the-three-dimensional-kakeya-conjecture-after-wang-and-zahl/" target="_blank" rel="noopener">陶哲轩博客解读</a><br>
+    <a href="https://arxiv.org/abs/2512.09397" target="_blank" rel="noopener">A Survey of the Kakeya conjecture, 2000–2025（这 25 年下界是怎么一步步抬上去的）</a></p>
+
+    <p style="margin-bottom:14px"><b>面向一般读者</b><br>
+    <a href="https://www.quantamagazine.org/once-in-a-century-proof-settles-maths-kakeya-conjecture-20250314/" target="_blank" rel="noopener">Quanta Magazine — 'Once in a Century' Proof Settles Math's Kakeya Conjecture</a><br>
+    <a href="https://www.nyu.edu/about/news-publications/news/2025/march/mathematicians-move-the-needle-on-decades-old-problem.html" target="_blank" rel="noopener">NYU — Mathematicians Move the Needle on Decades-Old Problem</a></p>
+
+    <p><b>奖项</b><br>
+    <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">国际数学联盟 · 2026 菲尔兹奖</a></p>
   </div>
 </div></section>
 
@@ -1313,7 +1328,21 @@ const SC={
           <p>体积会<em>停在某个正数上不动</em>：8 层之后就冻在 0.037 附近，再加层数也不动了。而关掉自相似时，同样的层数它会一路掉到 0.008。</p>
           <p>而维数——你想压低的那个——被顶到了 <b>3.00</b>。</p>
           <p class="q">机制就在这两句话里：维数由"δ 减半时体积掉多少"定义。自相似让每层压缩同一个比例，δ-邻域的体积因此<b>停止下降</b>；体积不掉，维数就只能满格。你越想用自相似省体积，越是把维数钉死。</p>
-          <p>这不是证明——它只是让你看清那个对手长什么样。真正把这一族排除掉的，是 2022 年王虹与 Zahl 关于黏性情形的论文。</p>`,
+
+          <p class="subh">「黏性」的精确说法</p>
+          <p>上面那个「每层用同一个滑动量」只是最粗糙的版本。文献里的定义是关于<b>管道如何跨尺度组织</b>的：</p>
+          <div class="deftube">
+            <p>把 <span class="k-delta">δ</span>-管道按方向归到粗尺度的 √<span class="k-delta">δ</span>-管道里。若<em>每一根粗管内部的细管，其排布方式与整体几乎相同</em>——也就是这个族在 <span class="k-delta">δ</span> 与 √<span class="k-delta">δ</span> 两个尺度上「长得一样」——就称它是<b>黏性的</b>。</p>
+          </div>
+          <p>为什么偏偏是这一族难？因为前面两章那些论证（灌木、毛刷）本质上都靠<em>「细管在粗尺度上散得开」</em>来赚体积。黏性构型恰好把这个赚头堵死：每放大一级，看到的还是同一个样子，<b>没有新的分离可以利用</b>。</p>
+          <p>Katz–Łaba–Tao 1999 的贡献正是把它<em>隔离</em>出来：他们证明非黏性的情形维数严格超过 5/2，于是整个猜想被归约成「黏性情形怎么办」。此后 26 年，下界只从 2.5 挪到 2.5+ε。</p>
+
+          <p class="subh">王虹–Zahl 2022：黏性反而是弱点</p>
+          <p>转折在于把自相似<b>反过来用</b>。既然黏性构型在每个尺度上都长得一样，它就必须<em>同时</em>满足所有尺度上的约束——这是一个很强的刚性条件，反倒给了证明抓手。</p>
+          <p>两人把这件事立成了一个独立命题（<b>黏性挂谷猜想</b>：黏性挂谷集的豪斯多夫与闵可夫斯基维数必须是 n），并在 <b>n = 3</b> 时证明了它。</p>
+          <span class="fml">跨尺度自相似 ⟹ 刚性 ⟹ 与「含有所有方向」不相容</span>
+          <p>这解决了 KLT 隔离出来的那个特殊情形，也为 2025 年的完整证明铺好了路——<em>下一章就是那篇。</em></p>
+          <p class="srcnote"><b>想读原文：</b>黏性那篇是 arXiv:2210.09581，完整证明是 arXiv:2502.17655。如果只想看思路，Bourbaki 讨论班有一篇带大量插图的综述 <em>The Kakeya conjecture, after Wang and Zahl</em>（arXiv:2604.03416）。「资料」页给了链接。</p>`,
        en(){camTo(0.85,0.28,4.0,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'boxes',0,400);to(KAK,'tDepth',10,2600);}},
