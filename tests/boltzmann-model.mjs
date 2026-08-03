@@ -294,6 +294,40 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
     logSlope: +slope.toFixed(4), T: +(GAS.vrms ** 2 / 3).toFixed(4) }));
 }
 
+/* ── 7d. Grad 标度锁必须真的守住 N·r² ──
+   第 7 章让读者拖 r 看重碰率下降，前提是 N·r² 一直不变。
+   r 小到某个程度所需的 N 会超过滑块上限，这时必须夹住 r 而不是夹住 N，
+   否则「不变量」会悄悄往下掉，正好在读者最爱拖的那一段。 */
+{
+  const html2 = html;
+  const NCAP = +(html2.match(/id="s_N" min="\d+" max="(\d+)"/) || [])[1];
+  const rMinSlider = +(html2.match(/id="s_r" min="([\d.]+)"/) || [])[1];
+  check("N 滑块有上限", Number.isFinite(NCAP) && NCAP > 0, `${NCAP}`);
+
+  /* 复刻页面里的锁定逻辑 */
+  const clampR = (N0, r0, rWanted) => {
+    const inv = N0 * r0 * r0;
+    const rMin = Math.sqrt(inv / NCAP);
+    let r = rWanted;
+    if (r < rMin) r = Math.ceil(rMin * 1000) / 1000;
+    const N = clamp(Math.round(inv / (r * r) / 20) * 20, 60, NCAP);
+    return { r, N, inv: N * r * r, target: inv };
+  };
+  let N0 = 520, r0 = 0.045;
+  const scan = [];
+  for (let r = 0.062; r >= rMinSlider - 1e-9; r -= 0.002) {
+    const s = clampR(N0, r0, +r.toFixed(3));
+    scan.push({ r: s.r, N: s.N, inv: +s.inv.toFixed(3) });
+    const drift = Math.abs(s.inv - s.target) / s.target;
+    check(`Grad 不变量在 r=${r.toFixed(3)} 处守住`, drift < 0.06,
+      `目标 ${s.target.toFixed(3)}，实得 ${s.inv.toFixed(3)}（偏 ${(drift*100).toFixed(0)}%）`);
+    check(`r=${r.toFixed(3)} 时 N 不超上限`, s.N <= NCAP, `${s.N} > ${NCAP}`);
+  }
+  const minReached = Math.min(...scan.map(s => s.r));
+  console.log("Grad 锁:", JSON.stringify({ NCAP, rSliderMin: rMinSlider,
+    rActuallyReachable: minReached, invRange: [Math.min(...scan.map(s=>s.inv)), Math.max(...scan.map(s=>s.inv))] }));
+}
+
 /* ── 8. 演化瀑布图缓冲：不许无限增长，行必须归一 ── */
 {
   run("same", 30);

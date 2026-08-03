@@ -315,8 +315,8 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   .card{width:100%}
 }
 </style>
-<link rel="stylesheet" href="../article.css?v=20260803151309">
-<script src="../article-shell.js?v=20260803151309" defer></script>
+<link rel="stylesheet" href="../article.css?v=20260803152009">
+<script src="../article-shell.js?v=20260803152009" defer></script>
 </head>
 <body class="home">
 
@@ -1407,13 +1407,18 @@ function bindCtrl(name){
     const sn=$('#s_N');sn.value=GAS.N;
     sn.oninput=()=>{GAS.N=+sn.value;gasInit();syncCtrl();};
     const sr=$('#s_r');sr.value=GAS.r;
+    const NCAP=+sn.max;
     sr.oninput=()=>{
       const old=GAS.r;GAS.r=+sr.value;
       /* Grad 标度锁：r 变了就调 N，让 N·r² 保持不变。
          这正是 Boltzmann–Grad 极限的取法 —— λ、τ 不动，重碰率往下掉。 */
       if(GAS.gradLock&&old>0){
         const inv=GAS.N*old*old;
-        GAS.N=clamp(Math.round(inv/(GAS.r*GAS.r)/20)*20,60,2600);
+        /* r 再小就需要超过 N 上限的粒子数了。这时候必须夹住 r 而不是夹住 N ——
+           夹 N 会让 N·r² 悄悄往下掉，而「这个乘积不变」正是本章要给人看的东西。 */
+        const rMin=Math.sqrt(inv/NCAP);
+        if(GAS.r<rMin){GAS.r=Math.ceil(rMin*1000)/1000;sr.value=GAS.r;}
+        GAS.N=clamp(Math.round(inv/(GAS.r*GAS.r)/20)*20,60,NCAP);
         gasInit();
       }
       syncCtrl();
@@ -1743,7 +1748,7 @@ function getScaleData(){
 /* =====================================================================
    6. 主循环
    ===================================================================== */
-let last=performance.now(), acc=0, wfTick=0, treeTick=0;
+let last=performance.now(), acc=0, wfTick=0, treeTick=0, chartTick=0;
 function resize(){
   const dpr=Math.min(2,devicePixelRatio||1);
   const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
@@ -1821,24 +1826,32 @@ function frame(now){
       if(tn)tn.textContent=K.tau>0?(GAS.t/K.tau).toFixed(1)+' τ':'—';
       if(treeTick++%30===0)drawTree();
     }
-    /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0 */
-    if(si>=2){$('#charts').classList.add('show');
-      drawMB();
-      $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';
-      $('#cap3').textContent='速率分布的演化 · 上=现在，往下是过去';
-      drawWF();
-      $('#cap4').textContent='碰撞算符 Q(f,f) 实测 · 产生 − 损失';
-      drawQ();
-      /* 温度剖面只在流体那一章有意义，其余章节收起来 */
-      const showProf=(id==='fluid');
-      $('#cap5').style.display=showProf?'':'none';
-      c5.style.display=showProf?'':'none';
-      if(showProf){$('#cap5').textContent='温度剖面 T(x) · 淡线是过去，看台阶被抹平';drawProfile();}
-      /* 冷热两半时空间不均匀，此处 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
-      $('#cap2').textContent=(GAS.preset==='hot')
-        ?'H 函数 · 全局速率分布（此时空间不均匀）'
-        :'玻尔兹曼 H 函数（只减不增）';
-      drawH();}
+    /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0。
+       图表都是统计量，20Hz 足够；手机上省下的这几毫秒都是 3D 那边的。
+       面板被藏起来时（讲解档 / 参数档）完全不画。 */
+    if(si>=2){
+      const box=$('#charts');
+      box.classList.add('show');
+      const visible=box.offsetParent!==null;
+      if(visible&&(chartTick++%3)===0){
+        drawMB();
+        $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';
+        $('#cap3').textContent='速率分布的演化 · 上=现在，往下是过去';
+        drawWF();
+        $('#cap4').textContent='碰撞算符 Q(f,f) 实测 · 产生 − 损失';
+        drawQ();
+        /* 温度剖面只在流体那一章有意义，其余章节收起来 */
+        const showProf=(id==='fluid');
+        $('#cap5').style.display=showProf?'':'none';
+        c5.style.display=showProf?'':'none';
+        if(showProf){$('#cap5').textContent='温度剖面 T(x) · 淡线是过去，看台阶被抹平';drawProfile();}
+        /* 冷热两半时空间不均匀，此处 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
+        $('#cap2').textContent=(GAS.preset==='hot')
+          ?'H 函数 · 全局速率分布（此时空间不均匀）'
+          :'玻尔兹曼 H 函数（只减不增）';
+        drawH();
+      }
+    }
     else $('#charts').classList.remove('show');
     const GL2_=[];
     if(id==='fluid'){
