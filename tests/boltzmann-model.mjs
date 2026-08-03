@@ -34,13 +34,20 @@ const GAS = {
 };
 let cellIdx = null, cellStart = null, cellItems = null, cellFill = null, lastGN = -1;
 
-const src = [grab("gasInit"), grab("gasStep"), grab("gasStats"), grab("kinetics"), grab("wfPush")].join("\n");
-const make = new Function("GAS", "clamp", "rng", "state", `
+const QB = { on: true, NB: 40, bw: 0.1, gain: new Float64Array(40), loss: new Float64Array(40),
+             gAcc: new Float64Array(40), lAcc: new Float64Array(40),
+             q: new Float64Array(40), top: 4, net: 0 };
+const PROF = { NX: 16, T: new Float64Array(16), n: new Float64Array(16),
+               hist: [], HMAX: 90, contrast: 1, tick: 0 };
+
+const src = [grab("gasInit"), grab("gasStep"), grab("gasStats"), grab("kinetics"),
+             grab("wfPush"), grab("qbReset"), grab("qbStep"), grab("profStep")].join("\n");
+const make = new Function("GAS", "clamp", "rng", "QB", "PROF", `
   let cellIdx=null,cellStart=null,cellItems=null,cellFill=null,lastGN=-1;
   ${src}
-  return {gasInit,gasStep,gasStats,kinetics,wfPush};
+  return {gasInit,gasStep,gasStats,kinetics,wfPush,qbReset,qbStep,profStep};
 `);
-const M = make(GAS, clamp, rng);
+const M = make(GAS, clamp, rng, QB, PROF);
 
 const fail = [];
 const check = (name, cond, detail) => { if (!cond) fail.push(`${name}: ${detail}`); return cond; };
@@ -208,6 +215,83 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   for (let i = 1; i < rec.length; i++) if (rec[i] > rec[i - 1] + 0.15) mono = false;
   check("重碰率随 r 减小而下降", mono && rec[rec.length - 1] < rec[0], JSON.stringify(rec));
   console.log("Grad 标度扫描:", JSON.stringify(rows));
+}
+
+/* ── 7b. 碰撞算符 Q(f,f) 的实测 ──
+   正文第 3 章的三条主张，逐条验：
+   (a) 产生与损失的总计数必须相等（每次碰撞各记两进两出）；
+   (b) 从 δ 壳层出发，初速率那一格 Q < 0，两侧 Q > 0；
+   (c) 接近平衡后整条 Q 压回零轴（|Q| 总量大幅下降）。 */
+{
+  GAS.N = 520; GAS.r = 0.045;
+  M.gasInit("same");
+  const v0 = Math.hypot(GAS.vx[0], GAS.vy[0], GAS.vz[0]);
+  const b0 = Math.min(QB.NB - 1, Math.floor(v0 / QB.bw));
+
+  // (a) 收支两侧的总量守恒
+  QB.gain.fill(0); QB.loss.fill(0);
+  for (let i = 0; i < 400; i++) M.gasStep(0.005);
+  let g = 0, l = 0;
+  for (let b = 0; b < QB.NB; b++) { g += QB.gain[b]; l += QB.loss[b]; }
+  check("Q 的产生与损失总计数相等", g === l && g > 0, `产生 ${g}，损失 ${l}`);
+
+  // (b) 弛豫早期：初速率那一格被清空，两侧被填充
+  M.gasInit("same");
+  for (let i = 0; i < 240; i++) { M.gasStep(0.005); M.qbStep(); }
+  const qAt = b => QB.q[b];
+  const side = qAt(Math.max(0, b0 - 3)) + qAt(Math.min(QB.NB - 1, b0 + 3));
+  check("初速率那一格 Q < 0（正被清空）", qAt(b0) < 0, `Q[${b0}] = ${qAt(b0).toFixed(4)}`);
+  check("两侧 Q > 0（正被填充）", side > 0, `两侧合计 ${side.toFixed(4)}`);
+  const early = QB.net;
+
+  // (c) 跑到平衡后 |Q| 应当大幅下降
+  for (let i = 0; i < 9000; i++) { M.gasStep(0.005); M.qbStep(); }
+  const late = QB.net;
+  check("接近平衡后 |Q| 明显下降", late < early * 0.5,
+    `弛豫早期 ${early.toFixed(4)} → 平衡后 ${late.toFixed(4)}`);
+  console.log("Q(f,f):", JSON.stringify({ bin0: b0, qAtBin0: +qAt(b0).toFixed(4),
+    netEarly: +early.toFixed(4), netLate: +late.toFixed(4), ratio: +(late / early).toFixed(3) }));
+}
+
+/* ── 7c. 傅里叶定律 ──
+   正文第 8 章声称：冷热两半松手后，温度剖面按热传导方程摊平，
+   对比度 (Tmax−Tmin)/T̄ 指数衰减。这是从纯硬球碰撞里长出来的。 */
+{
+  GAS.N = 520; GAS.r = 0.045;
+  M.gasInit("hot");
+  M.profStep();
+  const c0 = PROF.contrast;
+  check("冷热两半初态确有温度台阶", c0 > 0.5, `初始第一模振幅 ${(c0 * 100).toFixed(0)}%`);
+
+  // 台阶方向要对：左热右冷
+  const left = PROF.T.slice(0, 4).reduce((a, b) => a + b) / 4;
+  const right = PROF.T.slice(-4).reduce((a, b) => a + b) / 4;
+  check("左热右冷", left > right * 1.5, `左 ${left.toFixed(3)}，右 ${right.toFixed(3)}`);
+
+  // 对比度必须单调衰减到接近 0
+  const trace = [];
+  for (let k = 0; k < 60; k++) {
+    for (let i = 0; i < 100; i++) M.gasStep(0.005);
+    M.profStep();
+    trace.push(PROF.contrast);
+  }
+  const end = trace[trace.length - 1];
+  check("温度差被抹平", end < c0 * 0.12, `${(c0*100).toFixed(0)}% → ${(end*100).toFixed(1)}%`);
+
+  // 指数衰减：log(contrast) 对时间应当近似线性，且斜率为负
+  const n = Math.floor(trace.length / 2);
+  const lg = trace.slice(0, n).map(v => Math.log(Math.max(v, 1e-6)));
+  let sx = 0, sy = 0, sxy = 0, sxx = 0;
+  lg.forEach((y, i) => { sx += i; sy += y; sxy += i * y; sxx += i * i; });
+  const slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+  check("对比度指数衰减（斜率为负）", slope < -0.005, `log 斜率 ${slope.toFixed(4)}`);
+
+  // 总能量在整个过程中守恒（衰减的是不均匀性，不是能量）
+  M.gasStats();
+  check("抹平过程能量守恒", Math.abs(GAS.vrms ** 2 / 3 - 0.5605) < 0.02,
+    `T = ${(GAS.vrms ** 2 / 3).toFixed(4)}`);
+  console.log("傅里叶:", JSON.stringify({ c0: +c0.toFixed(3), cEnd: +end.toFixed(3),
+    logSlope: +slope.toFixed(4), T: +(GAS.vrms ** 2 / 3).toFixed(4) }));
 }
 
 /* ── 8. 演化瀑布图缓冲：不许无限增长，行必须归一 ── */

@@ -15,7 +15,8 @@
     "test:boltzmann": "node tests/boltzmann-model.mjs",
     "test:syntax": "node tests/page-syntax.mjs",
     "test": "npm run test:syntax && npm run test:boltzmann && npm run test:kakeya && npm run test:optimization && npm run test:reaction && npm run test:publication",
-    "test:kakeya": "node tests/kakeya-model.mjs"
+    "test:kakeya": "node tests/kakeya-model.mjs",
+    "test:links": "node tests/links.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260729.1",
