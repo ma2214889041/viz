@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>一根针最少能扫过多大地方 — 三维挂谷猜想</title>
 <meta name="description" content="把一根针在空间里转过所有方向，扫过的区域最小可以有多小？先留下预测，再用可交互三维模型检验体积与维数。">
 <link rel="canonical" href="https://viz.gopromp.com/kakeya/">
@@ -255,14 +255,15 @@ canvas.chart{display:block;border-radius:8px}
   #ctrl{padding:12px 13px 13px}
   #hud{left:10px;top:56px;bottom:auto;padding:10px 12px;gap:14px;flex-wrap:wrap;max-width:calc(100% - 210px)}
   .stat .v{font-size:16px} .stat{min-width:56px} .stat.bar{min-width:100px}
-  #charts{display:none!important}
+  /* 图表在手机上不再整个丢掉 —— 它搬到了顶部「图表」那一档里（见 article.css） */
+  body.mobile-controls #charts{display:none!important}
   #hint{display:none}
   .bios{grid-template-columns:1fr}
   .card{width:100%}
 }
 </style>
-<link rel="stylesheet" href="../article.css">
-<script src="../article-shell.js" defer></script>
+<link rel="stylesheet" href="../article.css?v=20260803131946">
+<script src="../article-shell.js?v=20260803131946" defer></script>
 </head>
 <body class="home">
 
@@ -1016,7 +1017,8 @@ const SC={
           <p>盯住左边的投影板：白色轮廓是原始大小，发亮的部分一层层往里缩。<em>亮斑越集中，省下的体积越多。</em></p>
           <p>这就是 1919 年 <b>Besicovitch</b> 的答案——层数没有上限，所以</p>
           <span class="fml">体积可以任意接近 0</span>
-          <p>不是“比较小”。是<b>要多小，有多小</b>。</p>`,
+          <p>不是「比较小」。取极限之后，得到的集合<b>勒贝格测度为零</b>，却仍然含有每个方向的单位线段。</p>
+          <p style="color:#8f9aae;font-size:12.5px">术语上要分两件事：这种<em>测度为零、含有所有方向单位线段</em>的集合叫 <b>Besicovitch 集</b>（本文后面统称挂谷集）；而挂谷原本问的「针能不能<em>连续地转过去</em>」需要的是 <b>挂谷针集</b>。Pál 与 Besicovitch 证明了后者也能做到任意小的测度——但针集本身不能是零测度的，因为连续转动需要一点「走廊」。</p>`,
        en(){camTo(0.13,0.05,5.45,-0.72,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
             KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=1;KAK.cones=0;CAM.spin=0;
             KAK.tDepth=1;to(KAK,'tDepth',7,5200,400);}},
@@ -1036,7 +1038,7 @@ const SC={
 
       {t:'方向一个都没丢',
        b:`<p>体积几乎没有了，会不会是偷偷扔掉了一些方向？</p>
-          <p>右边那个球是<em>方向罗盘</em>：每根针都在球面上点亮属于自己的那个方向。</p>
+          <p>画面里那个球是<em>方向罗盘</em>：每根针都在球面上点亮属于自己的那个方向。</p>
           <p>回头把层数拉回 0 再拉满——你会看到<b>亮斑纹丝不动</b>。平移不改变方向，所以一个点都不会熄灭。</p>
           <p>白色那根针正在集合内部逐个扫过所有方向：它确实转遍了每个方向，而它所在的集合体积接近 0。</p>`,
        en(){camTo(0.85,0.30,3.6,0,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=true;
@@ -1062,11 +1064,13 @@ const SC={
             <li>一张纸：盒子数 <b>×4</b> → <span class="k-dim">D</span> = 2</li>
             <li>一块实心物体：盒子数 <b>×8</b> → <span class="k-dim">D</span> = 3</li>
           </ul>
-          <span class="fml">N(<span class="k-delta">δ</span>) ≈ <span class="k-delta">δ</span><sup>−<span class="k-dim">D</span></sup></span>
-          <p>拖动“盒子尺寸”看看盒子是怎么盖住它的。但接下来这件事必须说清楚，否则整个测量都是假的——</p>
-          <p><b>陷阱：</b>如果把屏幕上这个<em>有限层数</em>的集合固定住、只把盒子越缩越小，你会量到 <span class="k-dim">D</span> = 3.00。可这什么也没说明：有限层数的构造体积是<b>正的</b>（左下角读数就是一个正数），它本来就是个实心物体，维数当然满格。</p>
+          <span class="fml">N(<span class="k-delta">δ</span>) ≈ <span class="k-delta">δ</span><sup>−<span class="k-dim">D</span></sup>，　<span class="k-dim">D</span><sub>M</sub> = lim<sub><span class="k-delta">δ</span>→0</sub> log N(<span class="k-delta">δ</span>) / log(1/<span class="k-delta">δ</span>)</span>
+          <p>这是<b>闵可夫斯基维数</b>（盒维数）。还有一把更细的尺子——<b>豪斯多夫维数</b> <span class="k-dim">D</span><sub>H</sub>：它允许用<em>大小不一</em>的球去盖，取 Σ(diam U<sub>i</sub>)<sup>s</sup> 的下确界，看 s 取到多少时这个量从 ∞ 掉到 0。</p>
+          <p>盖法更自由，所以永远有 <span class="k-dim">D</span><sub>H</sub> ≤ <span class="k-dim">D</span><sub>M</sub>。这意味着<b>关于 D<sub>H</sub> 的下界是更强的结论</b>——本页的图量的是 D<sub>M</sub>（能算），而挂谷猜想真正要的是 D<sub>H</sub>。王虹与 Zahl 两个都证了。</p>
+          <p>拖动「盒子尺寸」看看盒子是怎么盖住它的。但接下来这件事必须说清楚，否则整个测量都是假的——</p>
+          <p><b>陷阱：</b>如果把屏幕上这个<em>有限层数</em>的集合固定住、只把盒子越缩越小，你会量到 <span class="k-dim">D</span> = 3.00。可这什么也没说明：有限层数的构造体积是<b>正的</b>（读数栏里的「集合体积 V」就是一个正数），它本来就是个实心物体，维数当然满格。</p>
           <p>挂谷猜想问的是<em>极限</em>：针无限细、方向无限密。所以正确的量法是让两件事<b>一起细化</b>——<span class="k-delta">δ</span> 减半的同时，方向也加密一倍（递归再深一层）。</p>
-          <p>这叫<b>离散化的挂谷问题</b>。它问的不是“这个物体多大”，而是“当针细到 <span class="k-delta">δ</span> 时，要装下所有方向<em>至少</em>得占多少地方”。下一章右下角那张图，做的就是这件事。</p>`,
+          <p>这叫<b>离散化的挂谷问题</b>。它问的不是“这个物体多大”，而是“当针细到 <span class="k-delta">δ</span> 时，要装下所有方向<em>至少</em>得占多少地方”。下一章的图表做的就是这件事。</p>`,
        en(){camTo(0.5,0.40,3.5,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'tDepth',5,900);to(KAK,'boxes',1,700,300);}},
@@ -1094,7 +1098,7 @@ const SC={
       {t:'换你来当对手',
        b:`<p>假证明被否掉了，但一个更实在的问题还在：<b>会不会真有某个挂谷集，维数确实不到 3？</b></p>
           <p>1999 年 Katz、Łaba 与陶哲轩指出，最难对付的是一类<b>跨尺度近似自相似</b>的构型——他们把它命名为<em>黏性</em>（sticky）。它成了此后 26 年绕不过去的坎。</p>
-          <p>现在你可以亲手造一个。右侧按<b>「自相似（黏性）」</b>：原本每一层用不同的滑动量，现在<b>每层都用同一个</b>——这就是自相似。</p>
+          <p>现在你可以亲手造一个。在<b>「参数」</b>面板里按<b>「自相似（黏性）」</b>：原本每一层用不同的滑动量，现在<b>每层都用同一个</b>——这就是自相似。</p>
           <p>然后把层数拉满，盯住两个读数：</p>
           <p>体积会<em>停在某个正数上不动</em>：8 层之后就冻在 0.037 附近，再加层数也不动了。而关掉自相似时，同样的层数它会一路掉到 0.008。</p>
           <p>而维数——你想压低的那个——被顶到了 <b>3.00</b>。</p>
@@ -1105,12 +1109,16 @@ const SC={
             to(KAK,'boxes',0,400);to(KAK,'tDepth',10,2600);}},
 
       {t:'王虹 & Zahl：维数必须是 3',
-       b:`<p>右下角是实测数据。把针不断变细（δ 每次减半），看体积怎么变：</p>
+       b:`<p>这一章的两张图是实测数据。把针不断变细（δ 每次减半），看体积怎么变：</p>
+          <button type="button" class="open-charts" data-open-charts>📉 打开 log V–log δ 曲线与逐档维数</button>
           <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的<span class="k-dim">维数</span>从 1.90 升到 <b class="k-dim">2.89</b>。它不是单调上升的（中途会回落，因为每一层的滑动量不同），但趋势明确指向 3。</p>
           <p>而上一章你自己试过：把构造改成自相似，维数直接顶到 <b>3.00</b>。<em>两条路都通向 3</em>。</p>
-          <p><b>挂谷猜想</b>断言：ℝⁿ 中任何挂谷集，不管体积多小，维数必定是满的 n。二维情形 1971 年由 Davies 解决；三维卡了半个多世纪，是调和分析里最硬的骨头之一。</p>
-          <p>2025 年 2 月 24 日，<b>王虹</b>与 <b>Joshua Zahl</b> 用一篇 127 页的论文把它解决了。Nets Katz 称之为“百年一遇”。</p>
-          <p>一年后，她成为菲尔兹奖 90 年历史上的<b>第三位女性得主</b>。</p>`,
+          <p><b>挂谷猜想</b>断言：ℝⁿ 中任何挂谷集，不管测度多小，豪斯多夫维数必定是满的 n。n=2 由 Davies 于 1971 年解决；n=3 卡了半个多世纪。</p>
+          <p>2025 年 2 月 24 日，<b>王虹</b>与 <b>Joshua Zahl</b> 用一篇 127 页的论文证明了 n=3 的情形——ℝ³ 中任何挂谷集的<b>闵可夫斯基维数与豪斯多夫维数都等于 3</b>。技术核心是一族关于「δ-管道之并」的体积估计：若一组管道不会大量塞进同一个凸集里，它们的并就必须占据几乎最大的体积。Nets Katz 称之为「百年一遇」。</p>
+          <p><b>为什么调和分析的人这么在意。</b>挂谷问题不是孤立的几何趣题，它坐在一条蕴含链的底部：</p>
+          <span class="fml">限制性猜想 ⇒ Bochner–Riesz 猜想 ⇒ 局部光滑性 ⇒ 挂谷猜想</span>
+          <p>方向越多、管道越难压缩，Fourier 变换在曲面上的限制就越可控。反过来，只要能造出一个低维的挂谷集，上面那一整串猜想就会连锁崩塌。所以在 n=3 上把它钉死，等于替这条链的最底层封了口。</p>
+          <p>一年后，王虹成为菲尔兹奖 90 年历史上的<b>第三位女性得主</b>（前两位是 2014 年的 Maryam Mirzakhani 与 2022 年的 Maryna Viazovska）。</p>`,
        en(){camTo(1.05,0.24,4.4,0,0,0);KAK.oneNeedle=0;KAK.sweeping=true;KAK.dirGlobe=1;
             KAK.boxes=0;KAK.shadow=0;CAM.spin=0.05;
             to(KAK,'tDepth',7,1500);to(KAK,'cones',1,2400,600);}}
@@ -1183,7 +1191,6 @@ function setScene(name){
     if(name==='home'){KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
       KAK.boxes=0;KAK.shadow=0;KAK.alpha=0.42;CAM.spin=0.075;camTo(CAM.taz,0.16,3.5,0,0,0);}
   }
-  if(name==='gas'&&!GAS.px)gasInit('same');
 }
 function buildDots(){
   const n=SC[scene].steps.length;
@@ -1211,7 +1218,6 @@ document.addEventListener('keydown',e=>{
   if(scene!=='kakeya'&&scene!=='gas')return;
   if(e.key==='ArrowRight')gotoStep(si+1);
   if(e.key==='ArrowLeft')gotoStep(si-1);
-  if(e.key===' '){e.preventDefault();if(scene==='gas'){GAS.running=!GAS.running;syncCtrl();}}
 });
 $$('#nav button').forEach(b=>b.onclick=()=>setScene(b.dataset.go));
 $$('[data-go]').forEach(b=>{if(!b.closest('#nav'))b.onclick=()=>setScene(b.dataset.go);});
@@ -1240,31 +1246,6 @@ function bindCtrl(name){
     $('#b_sweep').onclick=()=>{KAK.sweeping=!KAK.sweeping;syncCtrl();};
     $('#b_spin').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
     $('#b_reset').onclick=()=>{clearShow();KAK.tDepth=0;to(KAK,'tDepth',10,5200);};
-  }else{
-    const sn=$('#s_N');sn.value=GAS.N;
-    sn.oninput=()=>{GAS.N=+sn.value;gasInit();syncCtrl();};
-    const sr=$('#s_r');sr.value=GAS.r;
-    sr.oninput=()=>{GAS.r=+sr.value;syncCtrl();};
-    const ss=$('#s_sp');ss.value=GAS.speed;
-    ss.oninput=()=>{GAS.speed=+ss.value;syncCtrl();};
-    $('#b_run').onclick=()=>{GAS.running=!GAS.running;syncCtrl();};
-    $('#b_rev').onclick=()=>{for(let i=0;i<GAS.N;i++){GAS.vx[i]*=-1;GAS.vy[i]*=-1;GAS.vz[i]*=-1;}
-      GAS.reversed=performance.now();GAS.revH=GAS.Hcur;GAS.revIdx=GAS.H.length;
-      GAS.running=true;syncCtrl();};
-    $('#b_early').onclick=()=>{
-      // 慢放到 0.4×，跑约 0.5 个模拟秒后整体反向 —— 实测这是 H 回升最明显的时机
-      clearShow();gasInit('same');GAS.running=true;GAS.speed=0.4;GAS.H=[];GAS.reversed=0;
-      syncCtrl();
-      beat(1300,()=>{
-        for(let i=0;i<GAS.N;i++){GAS.vx[i]*=-1;GAS.vy[i]*=-1;GAS.vz[i]*=-1;}
-        GAS.reversed=performance.now();GAS.revH=GAS.Hcur;GAS.revIdx=GAS.H.length;
-      });
-      beat(9000,()=>{GAS.speed=1;syncCtrl();});
-    };
-    $('#b_same').onclick=()=>{gasInit('same');GAS.running=true;syncCtrl();};
-    $('#b_hot').onclick=()=>{gasInit('hot');};
-    $('#b_macro').onclick=()=>{GAS.mode=GAS.mode==='macro'?'micro':'macro';syncCtrl();};
-    $('#b_spin2').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
   }
 }
 /* 滑块的已填充部分要跟着走 */
@@ -1282,27 +1263,18 @@ function syncCtrl(){
     t('#b_sweep',KAK.sweeping);t('#b_globe',KAK.dirGlobe>0.5);t('#b_box',KAK.boxes>0.5);
     t('#b_spin',!!CAM.spin);t('#b_shadow',KAK.shadow>0.5);t('#b_cones',KAK.cones>0.5);
     t('#b_sticky',STICKY);
-  }else if(scene==='gas'){
-    const e=id=>$(id);
-    if(e('#v_N')){e('#v_N').textContent=GAS.N;e('#v_r').textContent=GAS.r.toFixed(3);
-      e('#v_sp').textContent=GAS.speed.toFixed(1)+'×';}
-    if(e('#s_N'))e('#s_N').value=GAS.N;
-    if(e('#s_r'))e('#s_r').value=GAS.r;
-    if(e('#b_run')){e('#b_run').textContent=GAS.running?'暂停':'继续';e('#b_run').classList.toggle('on',GAS.running);}
-    if(e('#b_macro'))e('#b_macro').classList.toggle('on',GAS.mode==='macro');
-    if(e('#b_spin2'))e('#b_spin2').classList.toggle('on',!!CAM.spin);
   }
 }
 
 /* HUD */
 let hudSig='';
 function hud(items){
-  const html=items.map(it=>it.bar
-    ?`<div class="stat bar hi"><div class="k">${it.k}</div><div class="v">${it.v}<small>${it.u||''}</small></div>
+  const html=items.map(it=>{const c=it.cls?' '+it.cls:'';return it.bar
+    ?`<div class="stat bar hi${c}"><div class="k">${it.k}</div><div class="v">${it.v}<small>${it.u||''}</small></div>
        <div class="barwrap"><div class="barfill" style="width:${it.pct}%"></div>
        <div class="barref" style="left:${it.ref}%" data-l="${it.rl||''}"></div></div></div>`
-    :`<div class="stat${it.hi?' hi':''}"><div class="k">${it.k}</div><div class="v">${it.v}${it.u?`<small>${it.u}</small>`:''}</div></div>`
-  ).join('');
+    :`<div class="stat${it.hi?' hi':''}${c}"><div class="k">${it.k}</div><div class="v">${it.v}${it.u?`<small>${it.u}</small>`:''}</div></div>`;
+  }).join('');
   if(html!==hudSig){hudSig=html;$('#hud').innerHTML=html;}
 }
 
@@ -1310,9 +1282,16 @@ function hud(items){
 const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d');
 function fitChart(c,w,h){
   const dpr=Math.min(2,devicePixelRatio||1);
-  if(c.width!==w*dpr){c.width=w*dpr;c.height=h*dpr;}
+  w=Math.round(w);h=Math.round(h);
+  if(c.width!==w*dpr||c.height!==h*dpr){c.width=w*dpr;c.height=h*dpr;}
   c.style.width=w+'px';c.style.height=h+'px';
   const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return x;
+}
+/* 图表宽度跟着面板走：手机上「图表」那一档是整屏宽的，写死 248px 会只占半边 */
+function chartW(){
+  const box=$('#charts');
+  const w=box?box.clientWidth-28:248;   // 减掉 #charts 左右各 14px 的 padding
+  return clamp(w,180,560);
 }
 /* δ→0 的标度数据：与交互参数无关，算一次后给最后两章的图表复用 */
 let scaleData=null,scaleQueued=false;
@@ -1354,7 +1333,7 @@ function updateLiveK(){
 }
 function drawScale(){
   updateLiveK();
-  const W=248,H=132,x=fitChart(c1,W,H);
+  const W=chartW(),H=clamp(W*0.54,132,190),x=fitChart(c1,W,H);
   const pts=getScaleData();
   const lx=pts.map(p=>Math.log2(p[0])),ly=pts.map(p=>Math.log2(p[1]));
   const x0=Math.min(...lx),x1_=Math.max(...lx);
@@ -1380,7 +1359,7 @@ function drawScale(){
   x.fillStyle='rgba(94,231,255,.9)';x.fillText('实测：几乎变平 = 维数→3',34,25);
 }
 function drawDimBars(){
-  const W=248,H=76,x=fitChart(c2,W,H);
+  const W=chartW(),H=clamp(W*0.31,76,120),x=fitChart(c2,W,H);
   const pts=getScaleData(),rows=[];
   for(let i=1;i<pts.length;i++)rows.push(3-Math.log2(pts[i-1][1]/pts[i][1]));
   const bw=(W-20)/rows.length;
@@ -1419,13 +1398,13 @@ function syncHudH(){
 function frame(now){
   syncHudH();
   requestAnimationFrame(frame);
-  if(document.hidden||(scene!=='kakeya'&&scene!=='gas')){last=now;return;}
+  if(document.hidden||scene!=='kakeya'){last=now;return;}
   const dt=Math.min(0.05,(now-last)/1000);last=now;
   resize();stepAnims();camUpdate(dt);
   gl.viewport(0,0,cv.width,cv.height);
   gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);
   gl.useProgram(P_BG);
-  const dark=scene==='gas'?[0.030,0.022,0.045]:[0.020,0.028,0.052];
+  const dark=[0.020,0.028,0.052];
   gl.uniform3f(P_BG.u.uA,dark[0]*1.6,dark[1]*1.6,dark[2]*1.9);
   gl.uniform3f(P_BG.u.uB,0.012,0.014,0.028);
   gl.bindBuffer(gl.ARRAY_BUFFER,MESH.quad);
@@ -1433,68 +1412,37 @@ function frame(now){
   gl.drawArrays(gl.TRIANGLES,0,3);
   gl.enable(gl.DEPTH_TEST);gl.clear(gl.DEPTH_BUFFER_BIT);
 
-  if(scene==='gas'){
-    if(GAS.running){
-      const sub=2, dts=dt*GAS.speed/sub;
-      for(let s=0;s<sub;s++)gasStep(Math.min(0.02,dts));
-      gasStats();
-      GAS.H.push(GAS.Hcur);
-      if(GAS.H.length>420){GAS.H.shift();if(GAS.revIdx>=0)GAS.revIdx--;}
-    }
-    gasRender();
-    const V=8, n=GAS.N/V, mfp=1/(Math.SQRT2*Math.PI*(2*GAS.r)**2*n);
-    hud([
-      {k:'粒子数',v:GAS.N},
-      {k:'碰撞总数',v:GAS.collisions>9999?(GAS.collisions/1000).toFixed(1)+'k':GAS.collisions},
-      {k:'温度 T',v:((GAS.vrms||0)**2/3).toFixed(3)},
-      {k:'H 函数',v:(GAS.Hcur||0).toFixed(3),hi:true},
-      {k:'平均自由程',v:mfp.toFixed(2)},
-      {k:'N·r²',v:(GAS.N*GAS.r*GAS.r).toFixed(2)}
-    ]);
-    if(si>=2){drawMB();
-      $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';$('#cap2').textContent='玻尔兹曼 H 函数（只减不增）';drawH();
-      $('#charts').classList.add('show');}
-    else $('#charts').classList.remove('show');
-    const GL2_=[];
-    if(si===5){
-      GL2_.push({p:[-0.55,1.22,0],t:'热（快）',c:'#fc6255',dot:1});
-      GL2_.push({p:[0.55,1.22,0],t:'冷（慢）',c:'#58c4dd',dot:1});
-      GL2_.push({p:[0,-1.28,0],t:GAS.mode==='macro'?'宏观：每格的密度与温度':'微观：每个球的轨迹',c:'#9aa5bd',dot:1});
-    }
-    if(si===4&&GAS.reversed){
-      const age=(performance.now()-GAS.reversed)/1000;
-      if(age<7)GL2_.push({p:[0,1.28,0],o:clamp(2-age/3.5,0,1),
-        t:`已反演 ${age.toFixed(1)}s　H：${GAS.revH.toFixed(3)} → ${GAS.Hcur.toFixed(3)}`,c:'#ffd866',dot:1});
-    }
-    labels(GL2_);
-  }else{
-    // 首页：针束在“扇束 ↔ 压缩”之间缓慢呼吸，预告主演示
-    if(scene!=='kakeya')KAK.tDepth=2.6+2.6*Math.sin(now*0.00016);
+  {
     kakBuild();
     if(KAK.sweeping)KAK.needleSweep+=dt*130;
     if(KAK.boxes>0.5)kakBoxes(cellSize);
     kakRender(dt);
-    if(scene==='kakeya'){
+    {
       const sd=$('#s_depth');
       if(sd&&Math.abs(+sd.value-KAK.tDepth)>0.005){sd.value=KAK.tDepth;$('#v_depth').textContent=KAK.tDepth.toFixed(2);}
       const pct=clamp(kakVol/(1/3)*100,0,100);
       const nCone=KAK.cones>0.5?Math.round(1+KAK.cones*(CONES.length-1)):1;
+      /* .m-keep = 手机讲解视图里也保留的读数（见 article.css）。
+         当前章节正在讲的那几个必须留下，其余的到「图表」那一档看全。 */
       const items=si<=1?[
         {k:'针长',v:'1.000'},
-        {k:'扫出的球',v:'0.5236',hi:true},
-        {k:'公式',v:'4π/3·(1/2)³'}
+        {k:'扫出的球',v:'0.5236',hi:true,cls:'m-keep'},
+        {k:'公式',v:'4π/3·(1/2)³',cls:'m-keep'}
       ]:[
         {k:'方向数',v:(KAK.K*KAK.K*nCone).toLocaleString()},
-        {k:'递归层数',v:KAK.tDepth.toFixed(2)},
-        {k:'集合体积 V',v:kakVol.toFixed(4),hi:true},
+        {k:'递归层数',v:KAK.tDepth.toFixed(2),cls:'m-keep'},
+        {k:'集合体积 V',v:kakVol.toFixed(4),hi:true,cls:'m-keep'},
         {k:'占初始扇束',v:(kakVol/(1/3)*100).toFixed(1),u:'%',bar:true,pct:pct,ref:100,rl:'起点'}
       ];
-      if(si>1&&KAK.shadow>0.5)items.push({k:'投影面积',v:kakArea.toFixed(4),u:'/ 0.5'});
-      if(si>1&&KAK.cones>0.5)items.push({k:'方向锥',v:nCone,u:'/ 12'});
-      if(si>1&&KAK.boxes>0.5)items.push({k:'需要的盒子',v:kakBoxN.toLocaleString()});
+      /* 这三个只在对应工具打开时出现，出现了就说明正文正在讲它 */
+      if(si>1&&KAK.shadow>0.5)items.push({k:'投影面积',v:kakArea.toFixed(4),u:'/ 0.5',cls:'m-keep'});
+      if(si>1&&KAK.cones>0.5)items.push({k:'方向锥',v:nCone,u:'/ 12',cls:'m-keep'});
+      if(si>1&&KAK.boxes>0.5)items.push({k:'需要的盒子',v:kakBoxN.toLocaleString(),cls:'m-keep'});
       hud(items);
-      if(si>=7){$('#cap1').textContent='δ 与方向密度同步细化时的体积 V';$('#cap2').textContent='每次 δ 减半后测得的维数';
-        drawScale();drawDimBars();$('#charts').classList.add('show');}
+      /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0 */
+      if(si>=7){$('#charts').classList.add('show');
+        $('#cap1').textContent='δ 与方向密度同步细化时的体积 V';$('#cap2').textContent='每次 δ 减半后测得的维数';
+        drawScale();drawDimBars();}
       else $('#charts').classList.remove('show');
       const L=[];
       if(KAK.oneNeedle>0.5)L.push({p:[0,-0.80,0],
@@ -1508,7 +1456,7 @@ function frame(now){
       }
       if(KAK.boxes>0.4)L.push({p:[0,0.98,0],o:KAK.boxes,t:'用边长 δ 的盒子把它盖住',c:'#58c4dd',dot:1});
       labels(L);
-    }else labels([]);
+    }
   }
 }
 $('#loader').classList.add('hide');

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>一盒气体为什么知道时间方向 — 玻尔兹曼与希尔伯特第六问题</title>
 <meta name="description" content="一堆只服从可逆牛顿定律的粒子，为什么会产生不可逆的时间方向？用可交互三维演示理解玻尔兹曼方程、H 定理与希尔伯特第六问题。">
 <link rel="canonical" href="https://viz.gopromp.com/boltzmann/">
@@ -98,6 +98,31 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 .tbar .tt i.full{background:linear-gradient(90deg,var(--g1),var(--ok));box-shadow:0 0 12px rgba(91,230,168,.5)}
 .tbar .tv{width:26px;flex:none;text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink)}
 .tbar .tcap{font-size:10px;color:var(--dim2);margin-top:2px}
+/* 小节标题：长章节需要分段，否则在手机上就是一堵墙 */
+#story .body .subh{margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--line);
+  font-size:13px;font-weight:650;color:var(--amber);letter-spacing:.02em}
+/* 假设台账：把玻尔兹曼方程依赖的四条假设摊开，标出哪一条不是时间对称的 */
+.axioms{display:grid;gap:8px;margin:14px 0 16px}
+.ax{padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.035)}
+.ax-h{display:flex;align-items:baseline;gap:9px;margin-bottom:6px}
+.ax-h span{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--dim2);
+  border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.ax-h b{color:#fff;font-size:12.5px;font-weight:650}
+#story .body .ax p{margin:0 0 5px;font-size:12px;line-height:1.72;color:#b3bccd}
+.ax .axf{display:block;text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink);
+  margin:7px 0;padding:8px;background:rgba(0,0,0,.28);border-radius:6px}
+#story .body .ax .ax-v{margin:6px 0 0;padding-top:6px;border-top:1px dashed rgba(255,255,255,.1);
+  font-size:11px;color:var(--ok)}
+#story .body .ax .ax-break{color:var(--hot)}
+.ax-hot{border-color:rgba(252,98,85,.45);background:rgba(252,98,85,.07)}
+/* 碰撞树示意图 */
+.treewrap{margin:12px 0 14px;padding:10px;border:1px solid var(--line);border-radius:9px;
+  background:rgba(0,0,0,.26)}
+.treewrap canvas{display:block;width:100%}
+/* 数字出处的旁注：正文里凡是引了别人一个具体数字，就地说明它从哪来 */
+#story .body .srcnote{margin:13px 0;padding:11px 12px;border-left:2px solid var(--amber);
+  background:rgba(255,181,71,.07);border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.8;color:#b9c1d4}
+#story .body .srcnote b{color:var(--amber)}
 #story .body ul{margin:0 0 11px 2px;list-style:none}
 #story .body li{padding-left:15px;position:relative;margin-bottom:6px}
 #story .body li::before{content:'';position:absolute;left:0;top:9px;width:5px;height:1px;background:var(--dim2)}
@@ -153,6 +178,7 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
 .btn.on{background:rgba(255,255,255,.14);color:var(--ink);border-color:rgba(255,255,255,.28)}
 .k .btn.on{color:var(--k1);border-color:rgba(88,196,221,.5);box-shadow:0 0 16px rgba(88,196,221,.16) inset}
 .g .btn.on{color:var(--g1);border-color:rgba(255,216,102,.5);box-shadow:0 0 16px rgba(255,216,102,.16) inset}
+.btn.wide{min-width:100%;flex:1 0 100%;margin-top:7px}
 .sep{height:1px;background:var(--line);margin:16px 0}
 
 /* 底部：数据 */
@@ -162,6 +188,8 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
   text-transform:uppercase;white-space:nowrap}
 .stat .v{font-family:var(--mono);font-size:21px;line-height:1;color:var(--ink);font-weight:500;white-space:nowrap}
 .stat .v small{font-size:11px;color:var(--dim);margin-left:2px}
+/* t 和 T 是两个不同的量，这一格不能被 text-transform 抹平 */
+.stat.notrans .k{text-transform:none;letter-spacing:.1em}
 .stat.hi .v{color:var(--k1)}
 .g .stat.hi .v{color:var(--g1)}
 .stat.bar{min-width:132px}
@@ -190,6 +218,14 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   background:rgba(0,0,0,.28)}
 .liveeq b{color:var(--ink);font-weight:600}
 .liveeq .lb{font-size:9.5px;letter-spacing:.14em;color:var(--dim2);display:block;margin-bottom:4px}
+.liveeq .eqline{display:block;color:var(--ink);font-size:11px;line-height:1.75;margin-bottom:2px}
+.liveeq .eqnote{display:block;margin:7px 0 2px;padding-top:7px;border-top:1px solid var(--line);
+  font-family:var(--sans);font-size:10.5px;line-height:1.7;color:var(--dim)}
+.liveeq .eqnote b{color:var(--ink)}
+.liveeq .eqgrid{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-top:8px;
+  padding-top:8px;border-top:1px solid var(--line);font-size:10.5px}
+.liveeq .eqgrid span{color:var(--dim2)}
+.liveeq .eqgrid b{text-align:right;color:var(--amber)}
 /* 公式里的符号与曲线共用颜色 */
 .v-hot{color:#fc6255;font-weight:650}
 .v-cold{color:#58c4dd;font-weight:650}
@@ -272,14 +308,15 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   #ctrl{padding:12px 13px 13px}
   #hud{left:10px;top:56px;bottom:auto;padding:10px 12px;gap:14px;flex-wrap:wrap;max-width:calc(100% - 210px)}
   .stat .v{font-size:16px} .stat{min-width:56px} .stat.bar{min-width:100px}
-  #charts{display:none!important}
+  /* 图表在手机上不再整个丢掉 —— 它搬到了顶部「图表」那一档里（见 article.css） */
+  body.mobile-controls #charts{display:none!important}
   #hint{display:none}
   .bios{grid-template-columns:1fr}
   .card{width:100%}
 }
 </style>
-<link rel="stylesheet" href="../article.css">
-<script src="../article-shell.js" defer></script>
+<link rel="stylesheet" href="../article.css?v=20260803131946">
+<script src="../article-shell.js?v=20260803131946" defer></script>
 </head>
 <body class="home">
 
@@ -338,6 +375,8 @@ canvas.chart{display:block;border-radius:3px;width:100%;
     <div class="liveeq" id="liveMB"></div>
     <div class="chartcap" id="cap1"></div>
     <canvas class="chart" id="ch1" width="520" height="300"></canvas>
+    <div class="chartcap" id="cap3"></div>
+    <canvas class="chart" id="ch3" width="520" height="240"></canvas>
     <div class="chartcap" id="cap2"></div>
     <canvas class="chart" id="ch2" width="520" height="180"></canvas>
   </aside>
@@ -357,22 +396,37 @@ canvas.chart{display:block;border-radius:3px;width:100%;
     <div class="bio" style="grid-column:1/-1">
       <h4>Yu Deng, Zaher Hani &amp; Xiao Ma</h4>
       <div class="m">希尔伯特第六问题 · 2024.08 / 2025.03 · arXiv:2408.07818, 2503.01800</div>
-      <p>1975 年 Lanford 证明硬球系统会收敛到玻尔兹曼方程，但只在约 1/5 个平均自由时间内成立——粒子平均还没来得及碰上一次。此后 50 年这个限制纹丝不动，难点在于碰撞会制造粒子间的关联，而玻尔兹曼方程假定它们始终独立。</p>
-      <p style="margin-top:10px">三人通过对碰撞历史做累积量展开与重整化，把关联项完全控制住，把收敛推广到<b>任意长时间</b>，并接力推出欧拉方程与纳维–斯托克斯–傅里叶方程，打通了牛顿力学 → 动理学 → 流体力学的完整链条。</p>
+      <p>1975 年 Lanford 证明：在 Boltzmann–Grad 标度（N→∞，r→0，Nr² 固定）下，硬球系统的 BBGKY 层级收敛到玻尔兹曼层级——但只在极短时间内成立。此后 50 年这个上界纹丝不动，难点在于重碰会制造粒子间的关联，而玻尔兹曼方程假定碰前速度始终独立（分子混沌）。</p>
+      <p style="margin-top:10px">三人对碰撞史做累积量展开与重整化，证明危险项之间存在系统性相消，把收敛推广到<b>任意长时间</b>（只要玻尔兹曼方程的解存在），并接力推出欧拉方程与纳维–斯托克斯–傅里叶方程，打通了牛顿力学 → 动理学 → 流体力学的完整链条。</p>
+      <p style="margin-top:10px;color:var(--dim2);font-size:12px">关于常被引用的「1/5 个平均自由时间」：这个分数不出自 Lanford 原文，也不出自邓煜等人的摘要（他们写的是 "sufficiently short time"），而是后续文献复核 Lanford 级数收敛半径时给出的标准估计。下面「时间上界的出处」一栏给了可以直接核对的原文。</p>
     </div>
   </div>
 
   <div class="ev"><div class="yr">1900</div><div class="ct"><h4>希尔伯特提出 23 个问题</h4><p>其中第六问题要求：把物理学公理化，特别是从原子的力学出发，严格推导出连续介质（流体）的方程。</p></div></div>
-  <div class="ev"><div class="yr">1975</div><div class="ct"><h4>Lanford 的短时间推导</h4><p>Lanford 证明硬球系统在极短时间内（约一个平均自由时间的 1/5）收敛到玻尔兹曼方程。此后 50 年，时间限制无法突破。</p></div></div>
+  <div class="ev"><div class="yr">1872</div><div class="ct"><h4>玻尔兹曼方程与 H 定理</h4><p>玻尔兹曼写下 ∂<sub>t</sub>f + v·∇<sub>x</sub>f = Q(f,f)，并用分子混沌假设（Stoßzahlansatz）证明 H = ∫∫f log f 单调不增。争议随即开始：一个可逆的力学系统怎么会有单调量？</p></div></div>
+  <div class="ev"><div class="yr">1876 / 1896</div><div class="ct"><h4>洛施密特与策梅洛的两次反驳</h4><p>洛施密特用时间反演、策梅洛用庞加莱回归，各自指出 H 定理不可能是纯力学结论。玻尔兹曼的回应把它改造成一个关于「绝大多数初态」的统计陈述。</p></div></div>
+  <div class="ev"><div class="yr">1975</div><div class="ct"><h4>Lanford 的短时间推导</h4><p>Lanford 在 Boltzmann–Grad 标度下证明硬球系统收敛到玻尔兹曼方程，但只在充分短的时间内成立；后续文献把这个上界估到约一个平均自由时间的 1/5。此后 50 年无法突破。</p></div></div>
   <div class="ev hot"><div class="yr">2025.03</div><div class="ct"><h4>Deng–Hani–Ma 攻克希尔伯特第六问题的核心</h4><p>把 Lanford 的“极短时间”推广到<b>任意长时间</b>，并接力推导出欧拉方程与纳维–斯托克斯–傅里叶方程。</p></div></div>
   <div class="ev hot"><div class="yr">2026.07</div><div class="ct"><h4>邓煜获得菲尔兹奖</h4><p>其工作跨越偏微分方程、动力系统与统计物理，希尔伯特第六问题的突破成为最受关注的成果之一。</p></div></div>
 
   <div class="srcs">
-    资料来源：
-    <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">国际数学联盟 · 2026 菲尔兹奖</a> ·
-    <a href="https://www.nature.com/articles/d41586-026-02169-1" target="_blank" rel="noopener">Nature</a> ·
-    <a href="https://arxiv.org/abs/2503.01800" target="_blank" rel="noopener">arXiv:2503.01800</a> ·
-    <a href="https://arxiv.org/abs/2408.07818" target="_blank" rel="noopener">arXiv:2408.07818</a>
+    <p style="margin-bottom:14px"><b>原始论文</b><br>
+    <a href="https://arxiv.org/abs/2408.07818" target="_blank" rel="noopener">Deng, Hani, Ma — Long time derivation of the Boltzmann equation from hard sphere dynamics (arXiv:2408.07818)</a><br>
+    <a href="https://arxiv.org/abs/2503.01800" target="_blank" rel="noopener">Deng, Hani, Ma — Hilbert's sixth problem: derivation of fluid equations via Boltzmann's kinetic theory (arXiv:2503.01800)</a><br>
+    <a href="https://www.numdam.org/article/AST_1976__40__117_0.pdf" target="_blank" rel="noopener">Lanford — On a derivation of the Boltzmann equation (Astérisque 40, 1976)</a></p>
+
+    <p style="margin-bottom:14px"><b>「1/5 个平均自由时间」的出处</b>——Lanford 自己没写这个数，下面两篇是复核他那个级数收敛半径后给出的标准说法：<br>
+    <a href="https://arxiv.org/abs/1405.4676" target="_blank" rel="noopener">Pulvirenti, Simonella — The Boltzmann–Grad limit of a hard sphere system: analysis of the correlation error（估计给到「约 1/5 个平均自由时间」）</a><br>
+    <a href="https://research-portal.uu.nl/files/1609183/uffink.pdf" target="_blank" rel="noopener">Uffink, Valente — Time's Arrow and Lanford's Theorem（Séminaire Poincaré XV, 2010：「不超过平均自由时间的五分之一」）</a><br>
+    <a href="https://www.ams.org/journals/bull/2015-52-03/S0273-0979-2015-01488-6/S0273-0979-2015-01488-6.pdf" target="_blank" rel="noopener">Gallagher, Saint-Raymond, Texier — From Newton to Boltzmann（AMS Bulletin 综述，交代了整套 BBGKY / 碰撞树框架）</a></p>
+
+    <p style="margin-bottom:14px"><b>作者与合作者写给一般读者的解释</b><br>
+    <a href="https://zhuanlan.zhihu.com/p/1892322673566126464" target="_blank" rel="noopener">马骁专访：破解百年数学难题，希尔伯特第六问题究竟是什么？（墨子沙龙，中文，无公式）</a><br>
+    <a href="https://www.quantamagazine.org/epic-effort-to-ground-physics-in-math-opens-up-the-secrets-of-time-20250611/" target="_blank" rel="noopener">Quanta Magazine — Epic Effort to Ground Physics in Math Opens Up the Secrets of Time</a><br>
+    <a href="https://www.scientificamerican.com/article/lofty-math-problem-called-hilberts-sixth-closer-to-being-solved/" target="_blank" rel="noopener">Scientific American — Lofty Math Problem Called Hilbert's Sixth Closer to Being Solved</a></p>
+
+    <p><b>奖项</b><br>
+    <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">国际数学联盟 · 2026 菲尔兹奖</a></p>
   </div>
 </div></section>
 
@@ -687,7 +741,15 @@ const GAS={
   t:0, collisions:0, colRate:0, mode:'micro', view:1,
   hist:new Float32Array(46), NB:46, vmaxHist:0,
   H:[], Hcur:0, reversed:0, revPeak:0, preset:'same',
-  macroN:7, dens:null, temp:null, mom:null, single:false
+  macroN:7, dens:null, temp:null, mom:null, single:false,
+  /* 速率分布的演化史：每帧存一行归一化直方图，画成瀑布图，
+     一眼看到 δ 尖峰怎么摊平成麦氏分布 */
+  wf:[], WFMAX:150, wfTop:1,
+  /* 重碰统计：同一对粒子在一个自由时间窗口内再次相撞。
+     这正是破坏分子混沌的那类关联，也是 Lanford 证明卡住的地方。 */
+  pairLast:new Map(), recol:0, recolRecent:0, colRecent:0, recolRate:0,
+  recolWin:1.5,          // 记忆窗口，每帧按 3τ 更新
+  gradLock:false
 };
 const gasInst=new Inst(2600);
 const gasCube=new Inst(400);
@@ -701,32 +763,52 @@ function initBoxLines(L){
 initBoxLines(1);
 
 function gasInit(preset){
-  GAS.preset=preset||'same';
+  /* 不带参数调用时保留当前初态（例如拖动 N 滑块时不该把「角落」重置成「同速率」） */
+  GAS.preset=preset||GAS.preset||'same';
   const N=GAS.N,L=GAS.L,r=GAS.r;
   GAS.px=new Float32Array(N);GAS.py=new Float32Array(N);GAS.pz=new Float32Array(N);
   GAS.vx=new Float32Array(N);GAS.vy=new Float32Array(N);GAS.vz=new Float32Array(N);
   const R=rng(20260723);
-  // 均匀铺满整个盒子：取 per³ 个晶格位点，打乱后取前 N 个（保证不重叠且无空区）
-  const per=Math.ceil(Math.cbrt(N*1.35)), gap=(2*L-2*r)/per;
+  /* 「角落」是空间上的低熵初态：粒子只占 x,y,z 全 < 0 的那个卦限（1/8 体积），
+     松手后自由膨胀 —— 焦耳膨胀。晶格直接按这个更小的区域来铺，
+     不能先按整盒铺完再压缩：那样间距会减半，硬球会在 t=0 就叠在一起。 */
+  const corner=GAS.preset==='corner';
+  const per=Math.ceil(Math.cbrt(N*1.35));
+  /* 想压到 1/8 体积，但硬球得装得下：晶格间距不能小于 2r。
+     装不下就把角落区域放大到刚好装得下，压缩比如实报给读者（GAS.occ）。 */
+  const need=2*r*(per*1.02+1);   // 1.02 是留给 float32 舍入的余量
+  const side=corner?clamp(Math.max(L,need),0,2*L):2*L;
+  const lo=-L+r;                              // 区域左下角（含半径留边）
+  const gap=(side-2*r)/per;
+  GAS.occ=Math.pow(side/(2*L),3);             // 初态占整盒体积的比例
   const sites=new Int32Array(per*per*per);
   for(let i=0;i<sites.length;i++)sites[i]=i;
   for(let i=sites.length-1;i>0;i--){const j=Math.floor(R()*(i+1));const t=sites[i];sites[i]=sites[j];sites[j]=t;}
-  const jit=Math.min(gap*0.3,(gap-2*r)*0.5);
+  /* 抖动量必须保证任意两个相邻格点仍隔开 2r，否则初态就是重叠的 */
+  const jit=Math.max(0,Math.min(gap*0.3,(gap-2*r)*0.5));
   for(let k=0;k<N;k++){
     const s=sites[k], i=s%per, j=Math.floor(s/per)%per, m=Math.floor(s/(per*per));
-    GAS.px[k]=-L+r+gap*(i+0.5)+(R()-0.5)*2*jit;
-    GAS.py[k]=-L+r+gap*(j+0.5)+(R()-0.5)*2*jit;
-    GAS.pz[k]=-L+r+gap*(m+0.5)+(R()-0.5)*2*jit;
+    GAS.px[k]=lo+gap*(i+0.5)+(R()-0.5)*2*jit;
+    GAS.py[k]=lo+gap*(j+0.5)+(R()-0.5)*2*jit;
+    GAS.pz[k]=lo+gap*(m+0.5)+(R()-0.5)*2*jit;
   }
-  GAS.preset=preset||GAS.preset;
   for(let i=0;i<N;i++){
     let sp=1.0;
     if(GAS.preset==='hot'){ sp = GAS.px[i]<0 ? 1.75 : 0.55; }
+    if(GAS.preset==='beam'){
+      /* 方向上的低熵初态：所有粒子几乎同向飞（一束流），
+         速率相同、方向也相同 —— 比 δ 壳层还要有序 */
+      const j=0.06;
+      GAS.vx[i]=1+(R()-0.5)*j;GAS.vy[i]=(R()-0.5)*j;GAS.vz[i]=(R()-0.5)*j;
+      continue;
+    }
     const u=R()*2-1, th=R()*Math.PI*2, s=Math.sqrt(1-u*u);
     GAS.vx[i]=sp*s*Math.cos(th);GAS.vy[i]=sp*u;GAS.vz[i]=sp*s*Math.sin(th);
   }
   GAS.t=0;GAS.collisions=0;GAS.H=[];GAS.reversed=0;GAS.revPeak=0;GAS.revIdx=-1;
   GAS.macro=null;
+  GAS.wf=[];GAS.pairLast.clear();
+  GAS.recol=0;GAS.recolRecent=0;GAS.colRecent=0;GAS.recolRate=0;
 }
 let cellIdx=null,cellStart=null,cellItems=null,cellFill=null,lastGN=-1;
 function gasStep(dt){
@@ -751,7 +833,7 @@ function gasStep(dt){
   for(let i=0;i<nc;i++)cellStart[i+1]+=cellStart[i];
   if(!cellFill||cellFill.length<nc)cellFill=new Int32Array(nc);else cellFill.fill(0,0,nc);
   for(let i=0;i<N;i++){const ci=cellIdx[i];cellItems[cellStart[ci]+cellFill[ci]++]=i;}
-  let col=0;
+  let col=0,recolHits=0;
   for(let i=0;i<N;i++){
     const ci=cellIdx[i];
     const a=ci%gn, b=Math.floor(ci/gn)%gn, c=Math.floor(ci/(gn*gn));
@@ -767,13 +849,30 @@ function gasStep(dt){
         const inv=1/Math.sqrt(dd);nx*=inv;ny*=inv;nz*=inv;
         const rvn=(vx[i]-vx[j])*nx+(vy[i]-vy[j])*ny+(vz[i]-vz[j])*nz;
         if(rvn>=0)continue;
+        /* 重碰：这一对之前碰过，而且是在最近一个记忆窗口之内。
+           分子混沌假定「即将相撞的两个粒子速度无关」——重碰恰恰违反它，
+           因为它们的速度是上一次碰撞留下的。 */
+        {
+          const key=i*N+j, prev=GAS.pairLast.get(key);
+          if(prev!==undefined&&GAS.t-prev<GAS.recolWin)recolHits++;
+          GAS.pairLast.set(key,GAS.t);
+        }
         vx[i]-=rvn*nx;vy[i]-=rvn*ny;vz[i]-=rvn*nz;
         vx[j]+=rvn*nx;vy[j]+=rvn*ny;vz[j]+=rvn*nz;
         col++;
       }
     }}}
   }
-  GAS.collisions+=col;GAS.t+=dt;
+  GAS.collisions+=col;GAS.recol+=recolHits;GAS.t+=dt;
+  /* 重碰率用滑动窗口统计，读数才不会被开局的瞬态钉住 */
+  GAS.colRecent=GAS.colRecent*0.995+col;
+  GAS.recolRecent=GAS.recolRecent*0.995+recolHits;
+  GAS.recolRate=GAS.colRecent>20?GAS.recolRecent/GAS.colRecent:0;
+  /* 记忆表只保留一个窗口内的配对，否则 Map 会无限长大 */
+  if(GAS.pairLast.size>6*N){
+    const cut=GAS.t-GAS.recolWin;
+    for(const [k,v] of GAS.pairLast)if(v<cut)GAS.pairLast.delete(k);
+  }
   return col;
 }
 function gasStats(){
@@ -798,11 +897,36 @@ function gasStats(){
   GAS.Hcur=H;GAS.vrms=vrms;GAS.binw=bw;GAS.top=top;
   return H;
 }
+/* 每隔几帧把当前直方图压一行进演化史。
+   横轴统一用固定的速率刻度（不跟着 vrms 漂），否则瀑布图会自己抵消掉展宽。 */
+function wfPush(){
+  const NB=GAS.NB,N=GAS.N;
+  const top=GAS.wfTop||1, bw=top/NB;
+  const row=new Float32Array(NB);
+  for(let i=0;i<N;i++){
+    const s=Math.hypot(GAS.vx[i],GAS.vy[i],GAS.vz[i]);
+    const b=Math.min(NB-1,Math.floor(s/bw));row[b]++;
+  }
+  let mx=0;for(let i=0;i<NB;i++){row[i]/=N;if(row[i]>mx)mx=row[i];}
+  row.mx=mx;
+  GAS.wf.push(row);
+  if(GAS.wf.length>GAS.WFMAX)GAS.wf.shift();
+}
+/* 动理学尺度：盒子是 [-1,1]³，体积 8。单位取 m = k_B = 1。
+   λ = 1/(√2 · π d² n)，d = 2r 是硬球直径，n = N/V 是数密度。
+   平均自由时间 τ = λ / v̄，麦氏分布下 v̄ = √(8/3π) · v_rms。 */
+function kinetics(){
+  const V=8, n=GAS.N/V, d=2*GAS.r;
+  const mfp=1/(Math.SQRT2*Math.PI*d*d*n);
+  const vbar=(GAS.vrms||0)*Math.sqrt(8/(3*Math.PI));
+  return{n,mfp,vbar,tau:vbar>1e-9?mfp/vbar:0,grad:GAS.N*GAS.r*GAS.r};
+}
 window.vizGasApi={
   state:GAS,
   init:gasInit,
   step:gasStep,
-  stats:gasStats
+  stats:gasStats,
+  kinetics
 };
 function gasMacro(){
   const G=GAS.macroN,N=GAS.N,L=GAS.L;
@@ -857,53 +981,87 @@ const SC={
   gas:{
     color:'g',
     steps:[
-      {t:'一个球，完全可预测',
-       b:`<p>盒子里先放<b>一个</b>球，让它按<em>牛顿定律</em>运动：匀速直线，碰壁反弹。没有摩擦，没有损耗。</p>
+      {id:'one',t:'一个球，完全可预测',
+       b:`<p>盒子里先放<b>一个</b>球，让它按<em>牛顿定律</em>运动：匀速直线，碰壁弹性反射。没有摩擦，没有损耗。</p>
           <p>这套规则有两个特点：</p>
           <ul>
-            <li><b>确定</b>——知道此刻，就知道永远</li>
+            <li><b>确定</b>——知道此刻的 (x, v)，就知道所有时刻的 (x, v)</li>
             <li><b>可逆</b>——把速度反向，它会一丝不差地退回去</li>
           </ul>
-          <p>在这个层面上，物理定律<em>根本不区分过去和未来</em>。</p>
-          <p>记住这一点。等下会出问题。</p>`,
+          <p>「可逆」可以写得很精确。记相流为 Φ<sub>t</sub>，记速度反号这个操作为 R:(x,<b>v</b>) ↦ (x,−<b>v</b>)，那么</p>
+          <span class="fml">Φ<sub>−t</sub> = R ∘ Φ<sub>t</sub> ∘ R，　R² = id</span>
+          <p>也就是说：<em>倒放一段演化</em>和<em>正放它的速度反号版本</em>，是同一件事。硬球碰撞满足这条——弹性碰撞的散射律对时间反演不变。</p>
+          <p>于是在这个层面上，物理定律<em>根本不区分过去和未来</em>。</p>
+          <p>记住这个式子。第 5 章会拿它来打脸。</p>`,
        en(){camTo(0.7,0.26,3.6,0,0,0);GAS.single=true;GAS.mode='micro';GAS.N=520;
             GAS.speed=1;CAM.spin=0.05;gasInit('same');GAS.running=true;}},
 
-      {t:'加到五百个',
-       b:`<p>现在把球加到五百个。规则<b>一模一样</b>：直线飞行，弹性碰撞，能量和动量都守恒。</p>
-          <p>没有任何一条规则告诉它们“该往哪个方向发展”。</p>
-          <p>开始时我给了它们<em>完全相同的速率</em>——颜色代表速率，所以现在满屏是同一个颜色。这是一个极不自然的状态，就像一屋子人步伐完全一致。</p>
-          <p>盯着颜色。接下来会发生什么？</p>`,
+      {id:'many',t:'加到五百个',
+       b:`<p>现在把球加到五百个。规则<b>一模一样</b>：直线飞行，硬球弹性碰撞（只交换法向动量），能量与动量逐次碰撞严格守恒。</p>
+          <p>相空间是 6N 维的，刘维尔定理照样成立：相体积不增不减。<em>没有任何一条规则告诉系统「该往哪个方向发展」。</em></p>
+          <p>初态我取的是速度空间里的一层<b>球壳</b>——所有粒子速率相同、方向各向同性：</p>
+          <span class="fml">f<sub>0</sub>(<b>v</b>) = δ(|<b>v</b>| − v<sub>0</sub>) / 4πv<sub>0</sub>²</span>
+          <p>颜色编码速率，所以现在满屏是同一个颜色。这是个测度为零的状态：随手从平衡态里抽，永远抽不到它。</p>
+          <p>盯着颜色，也盯住读数栏里的 <b>碰撞 / 粒子</b>。看它走到 2、3 的时候画面变成什么样。</p>
+          <p>「参数」面板里还有另外三个<b>低熵初态</b>，各自在不同的自由度上有序，值得挨个试一遍：</p>
+          <ul>
+            <li><b>全挤在角落</b>——空间上有序：全部粒子塞进 1/8 的体积，松手后自由膨胀（焦耳膨胀）。这是最直观的一个：你会看到它<em>铺满盒子之后再也不会自己缩回角落</em>。</li>
+            <li><b>同向束流</b>——方向上有序：所有粒子几乎同向同速，比球壳还要有序。看它多久失去方向记忆。</li>
+            <li><b>冷热两半</b>——温度上有序：左热右冷。</li>
+          </ul>
+          <p>三种有序方式不一样，但它们都会走向同一个终点。<em>下一章去看那个终点长什么样。</em></p>`,
        en(){camTo(0.7,0.26,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;
             CAM.spin=0.05;gasInit('same');GAS.running=true;}},
 
-      {t:'统计的涌现：麦克斯韦–玻尔兹曼分布',
-       b:`<p>看右边的直方图——横轴是速率 <span class="v-amber">v</span>，柱子高度是“速率为 <span class="v-amber">v</span> 的球有多少”。柱子的颜色就是画面上球的颜色。</p>
-          <p>一开始它是一根孤零零的尖峰。可平均每个球只碰上两三次，尖峰就<em>自己</em>塌了下来，稳稳铺成这条曲线：</p>
-          <span class="fml">f(<span class="v-amber">v</span>) ∝ <span class="v-amber">v</span>² · e<sup>−m<span class="v-amber">v</span>²/2kT</sup></span>
-          <p>红线是理论曲线，柱子是实测。<b>没有人安排它</b>——它是从纯粹的碰撞里长出来的。</p>
-          <p>画面上的颜色也从单一变得冷暖交杂：<span class="v-cold">慢的偏蓝</span>，<span class="v-hot">快的偏红</span>——直方图的横轴 <span class="v-amber">v</span> 用的是同一套色标，所以柱子的位置和球的颜色是对应的。</p>
-          <p>这就是<b>麦克斯韦–玻尔兹曼分布</b>。玻尔兹曼方程描述的正是这条曲线随时间的演化。</p>
-          <p>问题是：它<em>真的</em>能从牛顿定律推出来吗？</p>`,
+      {id:'relax',t:'统计的涌现：麦克斯韦–玻尔兹曼分布',
+       b:`<p>横轴是速率 <span class="v-amber">v</span>，柱高是落在 [<span class="v-amber">v</span>, <span class="v-amber">v</span>+Δ<span class="v-amber">v</span>) 里的粒子占比。柱子的颜色就是画面上球的颜色——同一套色标。</p>
+          <button type="button" class="open-charts" data-open-charts>📊 打开速率分布图与 H 曲线</button>
+          <p>初态是一根 δ 尖峰。让 <b>碰撞 / 粒子</b> 走到 2–3，尖峰就<em>自己</em>塌成这条曲线：</p>
+          <span class="fml">F(<span class="v-amber">v</span>) = 4π<span class="v-amber">v</span>²·f(<b>v</b>) = √(2/π) <span class="v-amber">v</span>² (k<sub>B</sub>T/m)<sup>−3/2</sup> e<sup>−m<span class="v-amber">v</span>²/2k<sub>B</sub>T</sup></span>
+          <p>注意别把两个东西搞混：<em>速度</em>分布 f(<b>v</b>) ∝ e<sup>−mv²/2k<sub>B</sub>T</sup> 在 <b>v</b>=0 处最大；图里画的是<em>速率</em>分布 F(v)，多出来的 4πv² 是速度空间球壳面积，正是它把小 v 那头压了下去。本页取 m = k<sub>B</sub> = 1，T 直接由 ⟨v²⟩/3 读出。</p>
+          <p>红线是理论，柱子是实测。<b>没有人安排它</b>：麦氏分布是碰撞算符的零点，log f 属于碰撞不变量 {1, <b>v</b>, v²} 张成的空间时 Q(f,f)=0，这是唯一的选择。</p>
+          <p><b>把弛豫过程整个看一遍。</b>图表面板第二张是<em>演化瀑布图</em>：横轴速率，纵轴时间（上面是现在，往下是过去），亮度是该速率的粒子占比。回到「参数」里换一个低熵初态再回来看——</p>
+          <ul>
+            <li><b>同速率球壳</b>：起手是一条竖直亮线（δ 尖峰），往上逐渐摊成麦氏那个鼓包；</li>
+            <li><b>同向束流</b>：同样从一条线出发，但因为方向也是有序的，摊开得更慢；</li>
+            <li><b>冷热两半</b>：起手是<em>两条</em>亮线，看它们并成一条。</li>
+          </ul>
+          <p>无论从哪儿出发，最后都收敛到同一个形状——这就是<b>弛豫</b>。特征时间就是几个 τ，和读数栏里的 <b>碰撞 / 粒子</b> 走到 2–3 是同一件事。</p>
+          <p>玻尔兹曼方程描述的就是 f 的演化：</p>
+          <span class="fml">∂<sub>t</sub>f + <b>v</b>·∇<sub><b>x</b></sub>f = Q(f,f)</span>
+          <p>右端 Q 是二次碰撞积分，把速度对 (<b>v</b>,<b>v</b><sub>*</sub>) 换成碰后的 (<b>v</b>′,<b>v</b>′<sub>*</sub>)，做「产生减损失」的收支。</p>
+          <p>问题是：这个方程<em>真的</em>能从牛顿定律推出来吗？</p>`,
        en(){camTo(0.7,0.24,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.04;
             gasInit('same');GAS.running=true;}},
 
-      {t:'时间之箭从哪来',
-       b:`<p>玻尔兹曼定义了一个量 <b>H</b>（本质上就是负的熵），并证明它<em>只减不增</em>——这就是 <b>H 定理</b>。</p>
-          <p>右边那条<span class="v-H">黄色曲线</span>就是 <span class="v-H">H(t)</span>：一路下滑，到达平衡后躺平，再也不回头。</p>
-          <span class="fml"><span class="v-H">dH/dt</span> ≤ 0</span>
-          <p>于是<b>时间有了方向</b>。你能分清哪一帧在前、哪一帧在后了。</p>
-          <p>可是等一下——底层的牛顿定律明明是<em>完全可逆</em>的。方向是从哪冒出来的？</p>`,
+      {id:'htheorem',t:'时间之箭从哪来：H 定理',
+       b:`<p>玻尔兹曼定义了泛函</p>
+          <span class="fml"><span class="v-H">H</span>(t) = ∫∫ f log f  d<b>x</b> d<b>v</b></span>
+          <p>并证明沿玻尔兹曼方程的解它<em>单调不增</em>。它就是负的熵：S = −k<sub>B</sub><span class="v-H">H</span>。</p>
+          <button type="button" class="open-charts" data-open-charts>📈 打开 H(t) 曲线</button>
+          <p>推导的关键一步是利用碰撞的两组对称性——交换 (<b>v</b>,<b>v</b><sub>*</sub>) 与交换碰前/碰后——把 dH/dt 对称化成</p>
+          <span class="fml"><span class="v-H">dH/dt</span> = −¼∫ (f′f′<sub>*</sub> − ff<sub>*</sub>) log(f′f′<sub>*</sub>/ff<sub>*</sub>) B dΩ d<b>v</b> d<b>v</b><sub>*</sub> ≤ 0</span>
+          <p>被积函数是 (a−b)·log(a/b) 的形式，恒 ≥ 0，所以整体 ≤ 0。<b>取等当且仅当</b> f′f′<sub>*</sub> = ff<sub>*</sub>，即 log f 是碰撞不变量的线性组合——那正好把 f 逼成麦氏分布。这就是上一章那条红线的来历。</p>
+          <p><b>本页实际画的是什么：</b>盒子里空间是均匀的，所以我只算速度空间那一份，把 f 归一到 ∫f d³<b>v</b>=1：</p>
+          <span class="fml"><span class="v-H">H</span> = ∫ f log f  d³<b>v</b> ≈ Σ<sub>b</sub> P<sub>b</sub> log[ P<sub>b</sub> / (4πv<sub>b</sub>²Δv) ]</span>
+          <p>它和真正的 ∫∫f log f d<b>x</b>d<b>v</b> 只差一个常数因子与 log n 的平移。用「冷热两半」时空间不再均匀，那条曲线就<em>不再是</em> H 定理里的 H——图注会提醒你。</p>
+          <p>于是<b>时间有了方向</b>。可是等一下——底层的牛顿定律明明满足 Φ<sub>−t</sub> = R∘Φ<sub>t</sub>∘R。方向是从哪冒出来的？</p>`,
        en(){camTo(0.9,0.18,3.6,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.03;}},
 
-      {t:'洛施密特的诘问',
+      {id:'loschmidt',t:'洛施密特的诘问',
        b:`<p>1876 年，洛施密特（Loschmidt）当面反驳玻尔兹曼：</p>
-          <p>既然每次碰撞都可逆，那把<b>所有球的速度同时取反</b>，系统就该沿原路倒回去，H 会一路<em>回升</em>——这不就违反 H 定理了吗？</p>
-          <p>他说得对。右侧按 <b>⏮ 早期反演</b>：系统会重置、只跑一小会儿、然后瞬间反向。盯住 H 曲线——</p>
-          <p>它<b>真的会先爬回去</b>，然后因离散仿真的数值误差与重新混合再次下降。上方实验回执记录的是本次运行中反演后的 <b>H 峰值</b>，不使用写死的示范数字。</p>
-          <p>可是如果先让它跑到平衡，再按 <b>⇄ 时间反演</b>，H 会<em>纹丝不动</em>。</p>
-          <p>区别不在定律，而在<b>初始状态有多特殊</b>。反演后的那个状态特殊到几乎不可能被“碰”出来；一旦系统忘记了出身，反演就什么也换不回来。</p>
-          <span class="fml">可逆的定律 + 特殊的初态 = 不可逆的世界</span>
+          <p>既然 Φ<sub>−t</sub> = R∘Φ<sub>t</sub>∘R，那把<b>所有粒子的速度同时取反</b>，系统就该沿原路倒回去，H 会一路<em>回升</em>。可逆的微观定律怎么可能蕴含单调的 dH/dt ≤ 0？</p>
+          <p>他说得对。在<b>「参数」</b>面板里按 <b>早期反演</b>：系统会重置、只跑一小会儿、然后整体反向。盯住 H 曲线——</p>
+          <p>它<b>真的会先爬回去</b>。下面那个「峰值回升」是<em>你这次运行当场量到的</em> H 最大值，每跑一次都会不一样，不是我事先填在页面里的数字。</p>
+          <p>然后 H 会再次下降，原因有两个，得分清楚：</p>
+          <ul>
+            <li><b>物理的</b>——反演后的态并非精确落在原轨道上（碰撞按格子顺序批量处理，不是精确的事件驱动），系统很快重新混合；</li>
+            <li><b>数值的</b>——硬球气体是 K 系统，李雅普诺夫指数为正。每碰一次，横向偏差大约被放大 λ/r 倍（本页 λ/r ≈ 10），所以双精度的 10<sup>−16</sup> 只要十几次碰撞就长到 O(1)。真实气体里这个放大倍数更大，反演在实验上根本做不到。</li>
+          </ul>
+          <p>可是如果先让它跑到平衡，再按 <b>时间反演</b>，H 会<em>纹丝不动</em>。</p>
+          <p>区别不在定律，而在<b>初态在相空间里有多特殊</b>。反演后的那个态属于一个测度极小的集合；一旦系统忘了出身，反演就什么也换不回来。玻尔兹曼后来的回答正是这个：H 定理不是力学恒等式，而是<em>关于绝大多数初态</em>的陈述。</p>
+          <span class="fml">可逆的定律 + 测度极小的初态 = 不可逆的世界</span>
+          <p style="color:#8f9aae;font-size:12.5px">顺带一提，策梅洛（Zermelo, 1896）从另一头进攻：庞加莱回归定理保证有限能量的有界系统迟早回到初态附近，所以 H 必然回升。玻尔兹曼的回答是算了个数——对 1 摩尔气体，回归时间约 10<sup>10<sup>19</sup></sup> 倍宇宙年龄。定理没错，只是与任何观测无关。</p>
           <div class="counterfactual-lab" data-counterfactual-lab>
             <div class="cf-head">
               <div><span>共享初态实验</span><strong>只改变反演时刻</strong></div>
@@ -927,42 +1085,142 @@ const SC={
        en(){camTo(1.05,0.16,3.6,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;
             GAS.reversed=0;}},
 
-      {t:'再退一步：流体',
-       b:`<p>把镜头拉远，不再看单个球，而是把空间切成小格子，统计每格的<em>密度</em>和<em>温度</em>——这就是流体力学的视角。</p>
-          <p>点“冷热两半”：左边热、右边冷。看着热量扩散、温度抹平。</p>
-          <p>这一层的方程是<b>欧拉方程</b>与<b>纳维–斯托克斯–傅里叶方程</b>。于是有了三层阶梯：</p>
-          <span class="fml">牛顿力学 → 玻尔兹曼方程 → 流体方程</span>
-          <p>希尔伯特在 1900 年的第六问题里要求：把这三层<b>严格地</b>连起来。</p>`,
+      {id:'assumptions',t:'时间之矢到底是从哪一步冒出来的',
+       b:`<p>上一章的结论容易被误读成「时间之矢来自初始条件，讲完了」。更准确的说法是：<b>玻尔兹曼方程本身已经不是时间对称的了</b>——不对称是在<em>推导它的某一步</em>被放进去的。要看清是哪一步，得把这个方程依赖的假设一条条摊开。</p>
+          <div class="axioms">
+            <div class="ax">
+              <div class="ax-h"><span>A1</span><b>稀薄气体极限（Boltzmann–Grad）</b></div>
+              <p>N → ∞，r → 0，<b>N r² 固定</b>。于是 nr³ → 0（体积占比消失）而 nr² 有限（碰撞频率有限）：只有<em>二体</em>碰撞留下来，三体同时相碰的概率是高阶小量。</p>
+              <p class="ax-v">时间对称 ✓ —— 它只是在说「哪些项可以扔」。</p>
+            </div>
+            <div class="ax">
+              <div class="ax-h"><span>A2</span><b>碰撞是瞬时的、局域的</b></div>
+              <p>两球在同一点、同一瞬间完成动量交换。硬球势下这是精确的；对有作用程的势则是近似。</p>
+              <p class="ax-v">时间对称 ✓ —— 弹性散射律本身对 t → −t 不变。</p>
+            </div>
+            <div class="ax ax-hot">
+              <div class="ax-h"><span>A3</span><b>分子混沌（Stoßzahlansatz）</b></div>
+              <p>即将相撞的两个粒子，速度<em>互不相关</em>：</p>
+              <span class="axf">f<sub>2</sub>(<b>x</b>,<b>v</b>,<b>v</b><sub>*</sub>,t) = f(<b>x</b>,<b>v</b>,t)·f(<b>x</b>,<b>v</b><sub>*</sub>,t)</span>
+              <p><b>只对碰前（incoming）的一对成立</b>，碰后的那一对是相关的——它们刚刚交换过动量。</p>
+              <p class="ax-v ax-break">时间对称 ✗ —— <b>不对称就是在这里进来的。</b></p>
+            </div>
+            <div class="ax">
+              <div class="ax-h"><span>A4</span><b>初态是混沌的</b></div>
+              <p>t = 0 时刻 N 粒子分布近似张量化：f<sub>N</sub>(0) ≈ f<sub>0</sub><sup>⊗N</sup>。粒子一开始就没有互相关联。</p>
+              <p class="ax-v">时间对称 ✗ —— 它是对<em>某一端</em>提的条件，不是对两端。</p>
+            </div>
+          </div>
+          <p><b>关键在 A3 那个「碰前」。</b>如果把同一条独立性假设改写在<em>碰后</em>的一对上，同样的推导会给出一个反玻尔兹曼方程，H 定理变成 <span class="v-H">dH/dt ≥ 0</span>——熵单调<em>减少</em>。两条路数学上一样干净。<b>是「碰前而非碰后」这个选择，而不是牛顿定律，定出了时间的方向。</b></p>
+          <p>所以问题被推到了下一层：凭什么是碰前？答案在 A4。碰撞会<em>制造</em>关联，关联随粒子四散出去、越摊越薄，不会自己聚回来。只要系统出发时是不相关的（A4），那么在任何后续时刻，「即将相撞」的一对就仍然近似不相关——而「刚刚撞完」的一对不是。</p>
+          <p>于是 A3 不该是一条独立假设，它<b>应该是 A1 + A2 + A4 的推论</b>。这正是数学上要证的东西，有个名字：</p>
+          <span class="fml">分子混沌的传播 (propagation of chaos)<br>f<sub>N</sub>(0) ≈ f<sub>0</sub><sup>⊗N</sup> ⟹ f<sub>N</sub>(t) ≈ f(t)<sup>⊗N</sup></span>
+          <p>Lanford 1975 把它证到了 0.2τ。邓煜–Hani–马骁把它证到了任意长时间。<em>下一章先看看它是怎么坏掉的。</em></p>`,
+       en(){camTo(0.95,0.20,3.7,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;}},
+
+      {id:'recollision',t:'分子混沌是怎么坏掉的：重碰',
+       b:`<p>A3 说「即将相撞的一对速度无关」。有一种情形它一定不成立：<b>这一对刚才已经碰过一次</b>。</p>
+          <p>它们现在的速度正是上次碰撞的产物，彼此高度相关。这类事件叫<b>重碰</b>（recollision），它是分子混沌唯一真正的敌人，也是 Lanford 那个 0.2τ 的直接来源。</p>
+          <button type="button" class="open-charts" data-open-charts>📊 打开重碰率与分布演化图</button>
+          <p>读数栏里的 <b>重碰率</b> 是当场统计的：一对粒子在 3τ 之内再次相撞，就记一次。现在它大约是百分之几。</p>
+          <p><b>现在做那个决定性的实验。</b>在「参数」里打开 <b>Grad 标度锁</b>，然后把半径 r 往小拖：</p>
+          <ul>
+            <li>N 会自动增大，让 <b>N·r²</b> 保持不变——这正是 A1 的取极限方式；</li>
+            <li>λ 和 τ 几乎不动，气体的宏观「性格」不变；</li>
+            <li>但<b>重碰率一路往下掉</b>。</li>
+          </ul>
+          <p>这就是 Boltzmann–Grad 极限在做的事：它不是让气体变稀（λ 没变），而是让粒子<em>相对于自由程越来越小</em>，于是「碰完还能撞回同一个人」这种事越来越不可能。重碰率 → 0，A3 就从假设变成了结论。</p>
+          <p class="q">量级上：重碰要求第三个粒子把其中一个精准地弹回来，几何上被压制的因子大致正比于 r/λ。Grad 标度下 λ 不变而 r → 0，所以重碰率近似线性地趋零。</p>
+          <p>这条不用信我，本页的自检脚本按 N·r² = 1.05 扫过一遍，结果是：</p>
+          <div class="tbar">
+            <div class="tbar-row"><span>r=0.062，N=280</span><div class="tt"><i style="width:100%"></i></div><span class="tv">6.4%</span></div>
+            <div class="tbar-row"><span>r=0.045，N=520</span><div class="tt"><i style="width:79%"></i></div><span class="tv">5.1%</span></div>
+            <div class="tbar-row"><span>r=0.032，N=1020</span><div class="tt"><i style="width:47%"></i></div><span class="tv">3.0%</span></div>
+            <div class="tbar-row"><span>r=0.024，N=1820</span><div class="tt"><i class="full" style="width:31%"></i></div><span class="tv">2.0%</span></div>
+            <div class="tcap">四组的 τ 分别是 0.454 / 0.464 / 0.468 / 0.466 —— 气体的「性格」没变，变的只有重碰。</div>
+          </div>
+          <p>可惜「趋于零」不等于「可以忽略」。碰撞历史越长，可能的重碰构型越多，两者是赛跑关系。<em>时间一长，谁赢就不显然了。</em>这正是下面两章的全部内容。</p>`,
+       en(){camTo(0.6,0.22,3.2,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.03;
+            GAS.running=true;}},
+
+      {id:'fluid',t:'再退一步：流体',
+       b:`<p>把镜头拉远，把空间切成小格子，每格只记 f 的前几个矩：密度 ρ = ∫f d<b>v</b>、速度 <b>u</b> = ρ<sup>−1</sup>∫<b>v</b>f d<b>v</b>、温度 T ∝ ∫|<b>v</b>−<b>u</b>|²f d<b>v</b>。这就是流体力学的视角。</p>
+          <p>在「参数」里点 <b>冷热两半</b>：左热右冷，看热量扩散、温度抹平。</p>
+          <p>控制这一步的是<b>克努森数</b> Kn = λ/L（平均自由程比上宏观尺度）。把 Q(f,f) 除以 Kn，做 Hilbert / Chapman–Enskog 展开 f = f<sub>0</sub> + Kn·f<sub>1</sub> + …：</p>
+          <ul>
+            <li>取 Kn → 0 的领头阶，矩方程闭合成<b>可压缩欧拉方程</b>；</li>
+            <li>留到一阶，输运系数（黏度 μ、热导 κ）由碰撞算符的线性化给出，得到<b>纳维–斯托克斯–傅里叶方程</b>。</li>
+          </ul>
+          <span class="fml">牛顿力学 —(Boltzmann–Grad)→ 玻尔兹曼方程 —(Kn→0)→ 流体方程</span>
+          <p>注意这是<b>两个不同的极限</b>，箭头上的小字不一样。希尔伯特在 1900 年的第六问题里要求：把两支箭头都<b>严格地</b>补上。物理系的推导一直做得很顺，数学上的证明卡了 125 年。</p>`,
        en(){camTo(0.85,0.35,4.3,0,0,0);GAS.mode='macro';GAS.single=false;CAM.spin=0.06;gasInit('hot');}},
 
-      {t:'邓煜：把 Lanford 的 1/5 变成永远',
-       b:`<p>1975 年 <b>Lanford</b> 迈出第一步：他证明硬球系统确实收敛到玻尔兹曼方程——但只在<em>极短的时间</em>内成立，大约是一个平均自由时间的 <b>1/5</b>，粒子平均还没来得及碰上一次。</p>
-          <p>此后 50 年，这个时间限制纹丝不动。困难在于：碰撞会让粒子之间产生关联，而玻尔兹曼方程假定它们始终独立（分子混沌）。时间一长，关联就会累积失控。</p>
+      {id:'deng',t:'邓煜：把 Lanford 的 1/5 变成永远',
+       b:`<p>先说清楚极限怎么取。玻尔兹曼方程不是 N→∞ 的任意极限，而是 <b>Boltzmann–Grad 标度</b>：</p>
+          <span class="fml">N → ∞，　r → 0，　N r² = const</span>
+          <p>这样总碰撞截面 Nr² 保持有限，平均自由程 λ ~ 1/(Nr²) 也保持有限。读数栏里的 <b>N·r²（Grad 不变量）</b>就是它——拖动 N 和 r 让它保持不变，你会看到画面变密变小，但气体的「性格」（λ、τ）几乎不动。</p>
+          <p>1975 年 <b>Lanford</b> 在这个标度下迈出第一步：硬球系统的 BBGKY 层级确实收敛到玻尔兹曼层级——但只在 |t| &lt; T 内成立，而 T 大约是<b>一个平均自由时间的五分之一</b>，粒子平均还没碰上一次。</p>
           <div class="tbar">
             <div class="tbar-row"><span>Lanford 1975</span>
-              <div class="tt"><i style="width:5%"></i></div><span class="tv">0.2 τ</span></div>
+              <div class="tt"><i style="width:5%"></i></div><span class="tv">≈0.2 τ</span></div>
             <div class="tbar-row"><span>邓煜–Hani–马骁</span>
               <div class="tt"><i class="full" style="width:100%"></i></div><span class="tv">∞</span></div>
-            <div class="tcap">τ = 平均自由时间（粒子平均碰一次所需的时间）</div>
+            <div class="tcap">τ = 平均自由时间。本次模拟已跑到 <b id="tauNow">—</b>——早就越过 Lanford 能保证的范围了。</div>
           </div>
-          <p>2024–2025 年，<b>邓煜</b>与 Zaher Hani、马骁通过对碰撞历史做累积量展开与重整化，把关联项完全控制住，证明收敛在<b>任意长时间</b>内都成立，并接力推出了欧拉与纳维–斯托克斯–傅里叶方程。</p>
-          <p>悬置 125 年的希尔伯特第六问题，核心部分就此解决。2026 年，邓煜获菲尔兹奖。</p>`,
+          <p class="srcnote"><b>「1/5」这个数从哪来：</b>Lanford 原文只说「充分短的时间」，没写这个分数。0.2τ 是后来文献复核他那个 Duhamel 级数收敛半径时给出的标准估计（Pulvirenti–Simonella；Uffink–Valente 的说法是「不超过平均自由时间的五分之一」）。邓煜–Hani–马骁自己的摘要里也只写 "sufficiently short time"。想核对的话，「资料」页给了这三条链接。</p>
+          <p><b>为什么会卡在一个自由时间以内？</b>要看清这一点，得看他用的是什么工具。</p>
+
+          <p class="subh">① 不封闭的层级：BBGKY</p>
+          <p>从 N 粒子刘维尔方程出发，把后 N−s 个粒子积掉，得到 s 粒子边缘分布 f<sup>(s)</sup> 的方程：</p>
+          <span class="fml">∂<sub>t</sub>f<sup>(s)</sup> + Σ<sub>i≤s</sub> <b>v</b><sub>i</sub>·∇<sub><b>x</b><sub>i</sub></sub>f<sup>(s)</sup> = C<sub>s,s+1</sub> f<sup>(s+1)</sup></span>
+          <p>右端把 f<sup>(s+1)</sup> 拽了进来：<em>1 个粒子的方程要问 2 个粒子，2 个要问 3 个</em>……这条<b>不封闭</b>的链就是 BBGKY 层级。玻尔兹曼方程相当于在第一层强行截断——用 A3 把 f<sup>(2)</sup> 换成 f<sup>(1)</sup>⊗f<sup>(1)</sup>。整个问题就是：<em>这一步截断合不合法。</em></p>
+
+          <p class="subh">② 碰撞树与 n! 爆炸</p>
+          <p>Lanford 不截断，而是把层级迭代展开（Duhamel）：f<sup>(1)</sup>(t) 写成一列积分之和，第 n 项是「恰好经历 n 次碰撞的所有历史」。这些历史可以画成一棵树——每次碰撞添一个新粒子做分支。</p>
+          <div class="treewrap"><canvas id="treeCv"></canvas></div>
+          <p>第 n 层的分支数按 <b>n!</b> 增长，而 n 重时间积分只给出 <b>t<sup>n</sup>/n!</b>。两者刚好抵消，于是级数的每一项都是 O((Ct)<sup>n</sup>)——<b>只有 t &lt; 1/C 才收敛</b>。把常数 C 算出来，就是那个约 0.2τ。这不是估计得不够仔细，而是这套展开方式的固有半径。</p>
+
+          <p class="subh">③ 真正的敌人：重碰</p>
+          <p>树上绝大多数分支对应「每次都撞上新粒子」的历史——这类项在 Grad 极限下正好收敛到玻尔兹曼层级，没有问题。出问题的是上图中<span style="color:#fc6255">红色</span>那类：<b>重碰分支</b>，两个已经碰过的粒子又撞回来。</p>
+          <p>单个重碰项的确是小量（上一章你亲手把它拖下去过，量级 ~ r/λ）。但树的分支数在涨。<em>时间越长，重碰构型越多</em>——小量乘以巨大的计数，逐项估计就顶不住了。这就是 50 年没人推进的原因：<b>不是不知道敌人是谁，是数不过来。</b></p>
+
+          <p class="subh">④ 邓煜–Hani–马骁做了什么</p>
+          <p>2024–2025 年三人的思路是<b>不再逐项取绝对值估计</b>，而是保留符号做相消。技术上是对碰撞史做<b>累积量展开（cumulant expansion）与重整化</b>：</p>
+          <ul>
+            <li>把展开项按碰撞树的<b>拓扑</b>分类，而不是按阶数；</li>
+            <li>证明危险的那一类（带重碰的簇）之间存在<b>系统性相消</b>——它们成对地互相抵消，而不是各自都小；</li>
+            <li>剩下的部分能被一个与 t 无关的界一致控制。</li>
+          </ul>
+          <p>这套思路他们并不陌生：邓煜与 Hani 此前在<b>波湍流</b>（wave turbulence）里推导动理学方程时，面对的正是同一类「共振历史的组合爆炸」，用的也是同一族重整化工具。</p>
+          <p>结论就是上一章那个还没证完的命题：</p>
+          <span class="fml">分子混沌对<b>任意长时间</b>传播<br>（只要玻尔兹曼方程的解还存在）</span>
+          <p>换句话说，<b>A3 不再是假设，而是 A1 + A2 + A4 的定理</b>。时间之矢没有被凭空造出来，它被追溯回了唯一那个不对称的输入——初态。</p>
+
+          <p class="srcnote"><b>说清楚它<em>没有</em>做到什么：</b>这不是「证明了熵增」。初态混沌（A4）依然是外加条件，而且它对 t &gt; 0 和 t &lt; 0 同样有效——从 t=0 的混沌初态往<em>过去</em>推，H 同样单调下降。为什么现实世界只有一个方向，那是宇宙初始低熵（past hypothesis）的问题，不在这篇论文的射程里。这篇论文做到的是：把「为什么可以用玻尔兹曼方程」从物理直觉变成了硬球势下的定理。</p>
+          <p>随后他们把同一套控制接力用到 Kn → 0 的那一支，推出欧拉与纳维–斯托克斯–傅里叶方程。悬置 125 年的希尔伯特第六问题，核心部分就此解决。2026 年，邓煜获菲尔兹奖。</p>`,
        en(){camTo(0.7,0.28,4.0,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.04;}}
     ],
     ctrl:`
       <div class="row"><label>粒子数 N <b id="v_N"></b></label>
-        <input type="range" id="s_N" min="60" max="1400" step="20"></div>
+        <input type="range" id="s_N" min="60" max="2600" step="20"></div>
       <div class="row"><label>半径 r <b id="v_r"></b></label>
-        <input type="range" id="s_r" min="0.02" max="0.07" step="0.001"></div>
+        <input type="range" id="s_r" min="0.016" max="0.07" step="0.001"></div>
       <div class="row"><label>时间倍速 <b id="v_sp"></b></label>
         <input type="range" id="s_sp" min="0.1" max="4" step="0.1"></div>
+      <button class="btn wide" id="b_grad">Grad 标度锁：N·r² 固定</button>
+      <div class="sep"></div>
+      <div class="hd" style="margin-bottom:9px">低熵初态</div>
+      <div class="btns">
+        <button class="btn" id="b_corner">全挤在角落</button>
+        <button class="btn" id="b_beam">同向束流</button>
+        <button class="btn" id="b_same">同速率球壳</button>
+        <button class="btn" id="b_hot">冷热两半</button>
+      </div>
       <div class="sep"></div>
       <div class="btns">
         <button class="btn on" id="b_run">暂停</button>
         <button class="btn" id="b_rev">时间反演</button>
-        <button class="btn" id="b_early" style="min-width:100%">早期反演（观察 H 回升）</button>
-        <button class="btn" id="b_same">同速重置</button>
-        <button class="btn" id="b_hot">冷热两半</button>
+        <button class="btn wide" id="b_early">早期反演（观察 H 回升）</button>
         <button class="btn" id="b_macro">宏观视角</button>
         <button class="btn" id="b_spin2">自动旋转</button>
       </div>`
@@ -1047,24 +1305,25 @@ $$('#nav button').forEach(b=>b.onclick=()=>setScene(b.dataset.go));
 $$('[data-go]').forEach(b=>{if(!b.closest('#nav'))b.onclick=()=>setScene(b.dataset.go);});
 $('#brand').onclick=()=>setScene('home');
 
-let cellSize=0.14;
 function bindCtrl(name){
-  if(name==='kakeya'){
-    const sd=$('#s_depth');sd.value=KAK.tDepth;
-    sd.oninput=()=>{clearShow();KAK.tDepth=+sd.value;syncCtrl();};
-    const sc=$('#s_cell');sc.value=cellSize;
-    sc.oninput=()=>{cellSize=+sc.value;syncCtrl();};
-    const tog=(id,k)=>{$(id).onclick=()=>{to(KAK,k,KAK[k]>0.5?0:1,450);syncCtrl();};};
-    tog('#b_shadow','shadow');tog('#b_globe','dirGlobe');tog('#b_box','boxes');
-    $('#b_cones').onclick=()=>{to(KAK,'cones',KAK.cones>0.5?0:1,KAK.cones>0.5?800:2600);syncCtrl();};
-    $('#b_sweep').onclick=()=>{KAK.sweeping=!KAK.sweeping;syncCtrl();};
-    $('#b_spin').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
-    $('#b_reset').onclick=()=>{clearShow();KAK.tDepth=0;to(KAK,'tDepth',10,5200);};
-  }else{
+  {
     const sn=$('#s_N');sn.value=GAS.N;
     sn.oninput=()=>{GAS.N=+sn.value;gasInit();syncCtrl();};
     const sr=$('#s_r');sr.value=GAS.r;
-    sr.oninput=()=>{GAS.r=+sr.value;syncCtrl();};
+    sr.oninput=()=>{
+      const old=GAS.r;GAS.r=+sr.value;
+      /* Grad 标度锁：r 变了就调 N，让 N·r² 保持不变。
+         这正是 Boltzmann–Grad 极限的取法 —— λ、τ 不动，重碰率往下掉。 */
+      if(GAS.gradLock&&old>0){
+        const inv=GAS.N*old*old;
+        GAS.N=clamp(Math.round(inv/(GAS.r*GAS.r)/20)*20,60,2600);
+        gasInit();
+      }
+      syncCtrl();
+    };
+    $('#b_grad').onclick=()=>{GAS.gradLock=!GAS.gradLock;syncCtrl();};
+    $('#b_corner').onclick=()=>{gasInit('corner');GAS.running=true;syncCtrl();};
+    $('#b_beam').onclick=()=>{gasInit('beam');GAS.running=true;syncCtrl();};
     const ss=$('#s_sp');ss.value=GAS.speed;
     ss.oninput=()=>{GAS.speed=+ss.value;syncCtrl();};
     $('#b_run').onclick=()=>{GAS.running=!GAS.running;syncCtrl();};
@@ -1088,7 +1347,7 @@ function bindCtrl(name){
       beat(9000,()=>{GAS.speed=1;syncCtrl();});
     };
     $('#b_same').onclick=()=>{gasInit('same');GAS.running=true;syncCtrl();};
-    $('#b_hot').onclick=()=>{gasInit('hot');};
+    $('#b_hot').onclick=()=>{gasInit('hot');GAS.running=true;syncCtrl();};
     $('#b_macro').onclick=()=>{GAS.mode=GAS.mode==='macro'?'micro':'macro';syncCtrl();};
     $('#b_spin2').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
   }
@@ -1101,13 +1360,7 @@ function paintRange(el){
 }
 function syncCtrl(){
   $$('#ctrlbody input[type=range]').forEach(paintRange);
-  if(scene==='kakeya'){
-    const d=$('#s_depth');if(d){d.value=KAK.tDepth;$('#v_depth').textContent=KAK.tDepth.toFixed(2);}
-    const c=$('#v_cell');if(c)c.textContent=cellSize.toFixed(3);
-    const t=(id,on)=>{const e=$(id);e&&e.classList.toggle('on',on);};
-    t('#b_sweep',KAK.sweeping);t('#b_globe',KAK.dirGlobe>0.5);t('#b_box',KAK.boxes>0.5);
-    t('#b_spin',!!CAM.spin);t('#b_shadow',KAK.shadow>0.5);t('#b_cones',KAK.cones>0.5);
-  }else if(scene==='gas'){
+  if(scene==='gas'){
     const e=id=>$(id);
     if(e('#v_N')){e('#v_N').textContent=GAS.N;e('#v_r').textContent=GAS.r.toFixed(3);
       e('#v_sp').textContent=GAS.speed.toFixed(1)+'×';}
@@ -1116,6 +1369,9 @@ function syncCtrl(){
     if(e('#b_run')){e('#b_run').textContent=GAS.running?'暂停':'继续';e('#b_run').classList.toggle('on',GAS.running);}
     if(e('#b_macro'))e('#b_macro').classList.toggle('on',GAS.mode==='macro');
     if(e('#b_spin2'))e('#b_spin2').classList.toggle('on',!!CAM.spin);
+    if(e('#b_grad')){e('#b_grad').classList.toggle('on',GAS.gradLock);
+      e('#b_grad').textContent=GAS.gradLock?`Grad 标度锁：已锁 N·r²=${(GAS.N*GAS.r*GAS.r).toFixed(2)}`:'Grad 标度锁：N·r² 固定';}
+    ['corner','beam','same','hot'].forEach(p=>{const b=e('#b_'+p);b&&b.classList.toggle('on',GAS.preset===p);});
   }
 }
 
@@ -1126,32 +1382,48 @@ function hud(items){
     ?`<div class="stat bar hi"><div class="k">${it.k}</div><div class="v">${it.v}<small>${it.u||''}</small></div>
        <div class="barwrap"><div class="barfill" style="width:${it.pct}%"></div>
        <div class="barref" style="left:${it.ref}%" data-l="${it.rl||''}"></div></div></div>`
-    :`<div class="stat${it.hi?' hi':''}"><div class="k">${it.k}</div><div class="v">${it.v}${it.u?`<small>${it.u}</small>`:''}</div></div>`
+    :`<div class="stat${it.hi?' hi':''}${it.cls?' '+it.cls:''}"><div class="k">${it.k}</div><div class="v">${it.v}${it.u?`<small>${it.u}</small>`:''}</div></div>`
   ).join('');
   if(html!==hudSig){hudSig=html;$('#hud').innerHTML=html;}
 }
 
 /* 图表 */
-const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d');
+const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d'),c3=$('#ch3');
 function fitChart(c,w,h){
   const dpr=Math.min(2,devicePixelRatio||1);
-  if(c.width!==w*dpr){c.width=w*dpr;c.height=h*dpr;}
+  w=Math.round(w);h=Math.round(h);
+  if(c.width!==w*dpr||c.height!==h*dpr){c.width=w*dpr;c.height=h*dpr;}
   c.style.width=w+'px';c.style.height=h+'px';
   const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return x;
+}
+/* 图表宽度跟着面板走：手机上「图表」那一档是整屏宽的，写死 248px 会只占半边 */
+function chartW(){
+  const box=$('#charts');
+  const w=box?box.clientWidth-30:248;   // 减掉 #charts 左右各 15px 的 padding
+  return clamp(w,180,560);
 }
 function updateLiveMB(){
   const el=document.getElementById('liveMB');
   if(!el)return;
   const T=(GAS.vrms*GAS.vrms)/3||0;
-  const a=Math.sqrt(T)||1;
+  const a=Math.sqrt(T)||1;          // a = √(k_BT/m)，本页取 m = k_B = 1
+  const K=kinetics();
   el.innerHTML=
-    `<span class="lb">麦克斯韦–玻尔兹曼 · 当前实测</span>`+
-    `f(<span class="v-amber">v</span>) ∝ <span class="v-amber">v</span>² · e<sup>−<span class="v-amber">v</span>²/(2·<b>${T.toFixed(3)}</b>)</sup><br>`+
-    `<span class="lb" style="display:inline;margin:0">T = ⟨v²⟩/3 =</span> <b>${T.toFixed(4)}</b>　`+
-    `<span class="lb" style="display:inline;margin:0">最概然速率</span> <b>${(a*Math.SQRT2).toFixed(3)}</b>`;
+    `<span class="lb">本次实测 · 全部量取 m = k<sub>B</sub> = 1</span>`+
+    `<span class="eqline">速度分布 f(<b>v</b>) = (2πT)<sup>−3/2</sup> e<sup>−<span class="v-amber">v</span>²/2T</sup></span>`+
+    `<span class="eqline">速率分布 F(<span class="v-amber">v</span>) = 4π<span class="v-amber">v</span>²f = √(2/π)·<span class="v-amber">v</span>²T<sup>−3/2</sup>e<sup>−<span class="v-amber">v</span>²/2T</sup></span>`+
+    `<span class="eqnote">图里画的是<b>速率</b>分布 F(v)：多出来的 4πv² 是速度空间球壳的面积，它才是柱子在小 v 处压下去的原因。</span>`+
+    `<div class="eqgrid">`+
+      `<span>T = ⟨v²⟩/3</span><b>${T.toFixed(4)}</b>`+
+      `<span>v<sub>p</sub> = √(2T)</span><b>${(a*Math.SQRT2).toFixed(3)}</b>`+
+      `<span>v̄ = √(8T/π)</span><b>${K.vbar.toFixed(3)}</b>`+
+      `<span>v<sub>rms</sub> = √(3T)</span><b>${(GAS.vrms||0).toFixed(3)}</b>`+
+      `<span>λ = 1/(√2πd²n)</span><b>${K.mfp.toFixed(3)}</b>`+
+      `<span>τ = λ / v̄</span><b>${K.tau.toFixed(3)}</b>`+
+    `</div>`;
 }
 function drawMB(){
-  const W=248,H=132,x=fitChart(c1,W,H);
+  const W=chartW(),H=clamp(W*0.54,128,190),x=fitChart(c1,W,H);
   const NB=GAS.NB,h=GAS.hist,N=GAS.N,bw=GAS.binw||1;
   let mx=0;for(let i=0;i<NB;i++)mx=Math.max(mx,h[i]/N);
   const a=Math.sqrt((GAS.vrms*GAS.vrms)/3)||1;
@@ -1183,8 +1455,43 @@ function drawMB(){
   x.fillStyle='rgba(152,162,189,.75)';
   x.fillText('速率 v →',W-52,H-5);
 }
+/* 演化瀑布图：纵轴是时间（上=现在），横轴是速率，亮度=该速率的粒子占比。
+   低熵初态是一条竖亮线，往下（时间推进）逐渐摊成麦氏分布的形状。 */
+function drawWF(){
+  const W=chartW(),H=clamp(W*0.46,110,170),x=fitChart(c3,W,H);
+  const rows=GAS.wf,NB=GAS.NB;
+  if(!rows.length)return;
+  const padL=8,padB=14,padT=12;
+  const gw=W-padL-6, gh=H-padB-padT;
+  let mx=0;for(const r of rows)if(r.mx>mx)mx=r.mx;
+  if(mx<=0)return;
+  const cw=gw/NB, rh=gh/GAS.WFMAX;
+  const vs=GAS.wfTop/NB;
+  for(let k=0;k<rows.length;k++){
+    const row=rows[k];
+    // 最新一行画在最上面
+    const y=padT+(GAS.WFMAX-rows.length+k)*rh;
+    for(let b=0;b<NB;b++){
+      const p=row[b]/mx;
+      if(p<=0.004)continue;
+      const v=(b+0.5)*vs;
+      const c=heat(clamp(v/((GAS.vrms||1)*1.85),0,1));
+      const a=Math.pow(p,0.55);
+      x.fillStyle=`rgba(${Math.round(c[0]*255)},${Math.round(c[1]*255)},${Math.round(c[2]*255)},${a.toFixed(3)})`;
+      x.fillRect(padL+b*cw,y,Math.max(1,cw+0.5),Math.max(1,rh+0.6));
+    }
+  }
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.strokeRect(padL,padT,gw,gh);
+  x.fillStyle='rgba(152,162,189,.8)';x.font='9px ui-monospace,monospace';
+  x.fillText('速率 v →',W-56,H-4);
+  x.save();x.translate(padL-1,padT+gh*0.5);x.rotate(-Math.PI/2);
+  x.fillText('← 时间',-16,-1);x.restore();
+  x.fillStyle='rgba(255,181,71,.9)';
+  x.fillText('现在',padL+3,padT+9);
+}
 function drawH(){
-  const W=248,H=76,x=fitChart(c2,W,H);
+  const W=chartW(),H=clamp(W*0.31,76,120),x=fitChart(c2,W,H);
   const A=GAS.H;if(A.length<2)return;
   let mn=1e9,mx=-1e9;for(const v of A){mn=Math.min(mn,v);mx=Math.max(mx,v);}
   if(mx-mn<1e-6){mx+=0.5;mn-=0.5;}
@@ -1205,6 +1512,51 @@ function drawH(){
   x.fillStyle='rgba(154,165,189,.8)';x.font='9px ui-monospace,monospace';
   x.fillText('H(t)',10,12);
 }
+/* 碰撞树：Duhamel 展开的第 n 项，就是所有「n 次碰撞的历史」之和。
+   树的分支数按 n! 爆炸，只有 t 小到能被 1/n! 压住，级数才收敛 —— 这就是 0.2τ 的来历。
+   红色分支表示重碰（同一对再碰一次），正是它破坏分子混沌。 */
+function drawTree(){
+  const cv=document.getElementById('treeCv');
+  if(!cv)return;
+  const box=cv.parentElement;
+  const W=clamp((box?box.clientWidth:300),200,560),H=Math.round(W*0.52);
+  const dpr=Math.min(2,devicePixelRatio||1);
+  if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr;cv.height=H*dpr;}
+  cv.style.width=W+'px';cv.style.height=H+'px';
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+  /* 第 k 次碰撞后的历史条数取 k!（1,2,6,24）—— 这就是那个压垮级数的组合因子 */
+  const level=[1,2,6,24], depth=level.length-1;
+  const padT=26, padB=20;
+  const rowH=(H-padT-padB)/depth;
+  const yOf=k=>padT+k*rowH;
+  x.font='9px ui-monospace,monospace';x.textAlign='left';
+  for(let k=0;k<depth;k++){
+    const a=level[k], b=level[k+1], per=b/a;
+    const ya=yOf(k), yb=yOf(k+1);
+    for(let i=0;i<a;i++){
+      const xa=W*(i+0.5)/a;
+      for(let j=0;j<per;j++){
+        const idx=i*per+j;
+        const xb=W*(idx+0.5)/b;
+        const reco=(j===per-1);           // 每个分叉里最后一支代表「撞回老相识」
+        x.strokeStyle=reco?'rgba(252,98,85,.7)':'rgba(88,196,221,.34)';
+        x.lineWidth=reco?1.5:0.9;
+        x.beginPath();x.moveTo(xa,ya+3);x.lineTo(xb,yb-3);x.stroke();
+      }
+    }
+  }
+  for(let k=0;k<=depth;k++){
+    const a=level[k], y=yOf(k);
+    for(let i=0;i<a;i++){
+      x.fillStyle='#58c4dd';
+      x.beginPath();x.arc(W*(i+0.5)/a,y,a>8?1.5:2.5,0,7);x.fill();
+    }
+    x.fillStyle='rgba(179,167,148,.85)';
+    x.fillText(k===0?'初始 · 1':`碰 ${k} 次 · ${a} 条历史 (${k}!)`,4,y-7);
+  }
+  x.fillStyle='rgba(252,98,85,.9)';
+  x.fillText('红 = 重碰分支：分子混沌在这里失效',4,H-6);
+}
 /* δ→0 的标度数据：与交互参数无关，算一次即可 */
 let scaleData=null;
 function getScaleData(){
@@ -1220,7 +1572,7 @@ function getScaleData(){
 /* =====================================================================
    6. 主循环
    ===================================================================== */
-let last=performance.now(), acc=0;
+let last=performance.now(), acc=0, wfTick=0, treeTick=0;
 function resize(){
   const dpr=Math.min(2,devicePixelRatio||1);
   const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
@@ -1251,6 +1603,8 @@ function frame(now){
   gl.enable(gl.DEPTH_TEST);gl.clear(gl.DEPTH_BUFFER_BIT);
 
   if(scene==='gas'||scene==='home'){
+    const K0=kinetics();
+    GAS.recolWin=K0.tau>0?3*K0.tau:1.5;
     if(GAS.running){
       const sub=2, dts=dt*GAS.speed/sub;
       for(let s=0;s<sub;s++)gasStep(Math.min(0.02,dts));
@@ -1258,34 +1612,64 @@ function frame(now){
       if(GAS.reversed)GAS.revPeak=Math.max(GAS.revPeak,GAS.Hcur);
       GAS.H.push(GAS.Hcur);
       if(GAS.H.length>420){GAS.H.shift();if(GAS.revIdx>=0)GAS.revIdx--;}
+      /* 演化史每 3 帧记一行，150 行大约覆盖最近 7 秒 */
+      if((wfTick=(wfTick+1)%3)===0){
+        if(!GAS.wf.length)GAS.wfTop=Math.max(2.9*(GAS.vrms||1),0.001);
+        wfPush();
+      }
     }
     gasRender();
     if(scene==='gas'){
-    const V=8, n=GAS.N/V, mfp=1/(Math.SQRT2*Math.PI*(2*GAS.r)**2*n);
+    const K=K0;
+    const id=(SC.gas.steps[si]||{}).id||'';
     hud([
-      {k:'粒子数',v:GAS.N},
-      {k:'碰撞总数',v:GAS.collisions>9999?(GAS.collisions/1000).toFixed(1)+'k':GAS.collisions},
-      {k:'温度 T',v:((GAS.vrms||0)**2/3).toFixed(3)},
-      {k:'H 函数',v:(GAS.Hcur||0).toFixed(3),hi:true},
-      {k:'平均自由程',v:mfp.toFixed(2)},
-      {k:'N·r²',v:(GAS.N*GAS.r*GAS.r).toFixed(2)}
+      /* .m-keep = 手机讲解视图里也保留的读数（见 article.css） */
+      {k:'粒子数 N',v:GAS.N,cls:id==='recollision'?'m-keep':''},
+      /* 把时间换算成「平均自由时间」——这样 Lanford 的 0.2τ 是可以当场量的。
+         这个标签必须区分大小写（t 是时间、T 是温度），所以关掉 .k 的全大写 */
+      {k:'时间 t / τ',v:K.tau>0?(GAS.t/K.tau).toFixed(2):'—',hi:true,cls:'notrans m-keep'},
+      {k:'温度 T',v:((GAS.vrms||0)**2/3).toFixed(3),cls:'m-keep'},
+      {k:'H 函数',v:(GAS.Hcur||0).toFixed(3),hi:true,cls:'m-keep'},
+      {k:'碰撞 / 粒子',v:(2*GAS.collisions/Math.max(1,GAS.N)).toFixed(1),
+       cls:(id==='many'||id==='relax')?'m-keep':''},
+      /* 重碰率：破坏分子混沌的那类关联，Grad 极限下应当趋零 */
+      {k:'重碰率',v:(GAS.recolRate*100).toFixed(1),u:'%',
+       cls:(id==='recollision'||id==='deng')?'m-keep':''},
+      {k:'N·r² (Grad 不变量)',v:(GAS.N*GAS.r*GAS.r).toFixed(2),
+       cls:(id==='recollision'||id==='deng')?'notrans m-keep':'notrans'}
     ]);
-    if(si>=2){drawMB();
+    /* 最后一章那句「本次模拟已跑到 X τ」——让 Lanford 的 0.2τ 有个当场的参照 */
+    if(id==='deng'){
+      const tn=document.getElementById('tauNow');
+      if(tn)tn.textContent=K.tau>0?(GAS.t/K.tau).toFixed(1)+' τ':'—';
+      if(treeTick++%30===0)drawTree();
+    }
+    /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0 */
+    if(si>=2){$('#charts').classList.add('show');
+      drawMB();
       $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';
+      $('#cap3').textContent='速率分布的演化 · 上=现在，往下是过去';
+      drawWF();
       /* 冷热两半时空间不均匀，此处 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
       $('#cap2').textContent=(GAS.preset==='hot')
         ?'H 函数 · 全局速率分布（此时空间不均匀）'
         :'玻尔兹曼 H 函数（只减不增）';
-      drawH();
-      $('#charts').classList.add('show');}
+      drawH();}
     else $('#charts').classList.remove('show');
     const GL2_=[];
-    if(si===5){
+    if(id==='fluid'){
       GL2_.push({p:[-0.55,1.22,0],t:'热（快）',c:'#fc6255',dot:1});
       GL2_.push({p:[0.55,1.22,0],t:'冷（慢）',c:'#58c4dd',dot:1});
       GL2_.push({p:[0,-1.28,0],t:GAS.mode==='macro'?'宏观：每格的密度与温度':'微观：每个球的轨迹',c:'#9aa5bd',dot:1});
     }
-    if(si===4&&GAS.reversed){
+    if(id==='recollision'){
+      GL2_.push({p:[0,1.28,0],t:`重碰率 ${(GAS.recolRate*100).toFixed(1)}% · r/λ = ${(GAS.r/K.mfp).toFixed(3)}`,c:'#fc6255',dot:1});
+    }
+    if((id==='many'||id==='relax')&&GAS.preset==='corner'){
+      const pctV=Math.round((GAS.occ||0.125)*100);
+      GL2_.push({p:[0,-1.30,0],t:`低熵初态：全部粒子挤在 ${pctV}% 的体积里`,c:'#ffd866',dot:1});
+    }
+    if(id==='loschmidt'&&GAS.reversed){
       const age=(performance.now()-GAS.reversed)/1000;
       if(age<7)GL2_.push({p:[0,1.28,0],o:clamp(2-age/3.5,0,1),
         t:`已反演 ${age.toFixed(1)}s　H：${GAS.revH.toFixed(3)} → ${GAS.Hcur.toFixed(3)}`,c:'#ffd866',dot:1});
