@@ -640,8 +640,59 @@ body.home .srcs a:hover{color:#0a0a0a}
 }
 #storyExpand:hover{background:rgba(255,255,255,.14)}
 
-/* 正文里的「打开图表」按钮 —— 电脑上图表就在右边，不需要它 */
-.open-charts{
+/* ── 分层阅读 ──────────────────────────────────────────────
+   同一篇文章要同时喂饱两种读者：想跟住主线的，和想看推导的。
+   .lede 是每章开头的一句话（无公式，读它就够了）；
+   details.deep 把公式推导收起来，想看的人自己点开。 */
+.lede{
+  margin:0 0 15px;
+  padding:0 0 13px;
+  border-bottom:1px solid rgba(255,255,255,.09);
+  color:#e8ecf6;
+  font:500 15px/1.75 var(--sans);
+  letter-spacing:.005em;
+}
+.lede b{color:#ffd866;font-weight:600}
+details.deep{
+  margin:15px 0;
+  border:1px solid rgba(120,160,230,.24);
+  border-radius:9px;
+  background:rgba(96,140,220,.055);
+}
+details.deep>summary{
+  padding:10px 13px;
+  color:#9fc0ee;
+  font:600 12.5px/1.5 var(--sans);
+  cursor:pointer;
+  list-style:none;
+  user-select:none;
+}
+details.deep>summary::-webkit-details-marker{display:none}
+details.deep>summary::before{
+  content:"▸ ";
+  display:inline-block;
+  transition:transform .18s ease;
+}
+details.deep[open]>summary::before{content:"▾ "}
+details.deep>summary:hover{color:#cfe0fb}
+details.deep>*:not(summary){
+  margin-left:13px;
+  margin-right:13px;
+}
+details.deep>*:last-child{margin-bottom:12px}
+/* 「现在动手做这个」的指令，和叙述区分开 */
+.watch{
+  margin:13px 0;
+  padding:9px 12px;
+  border-left:2px solid rgba(255,196,87,.6);
+  background:rgba(255,196,87,.06);
+  color:#e6d6b0;
+  font:500 13px/1.7 var(--sans);
+}
+.watch b{color:#ffd866}
+
+/* 正文里的「打开图表 / 打开参数」按钮 —— 电脑上面板就在旁边，不需要它 */
+.open-charts,.open-controls{
   display:none;
   width:100%;
   margin:12px 0 14px;
@@ -663,7 +714,7 @@ body.home .srcs a:hover{color:#0a0a0a}
   color:#8f9aae;
   font:400 12px/1.75 var(--sans);
 }
-#charts.flash{
+#charts.flash,#ctrl.flash{
   animation:chartsFlash 1.1s ease-out 2;
 }
 @keyframes chartsFlash{
@@ -671,8 +722,22 @@ body.home .srcs a:hover{color:#0a0a0a}
   40%{box-shadow:0 0 0 2px rgba(255,196,87,.75),0 18px 40px -22px rgba(0,0,0,.9)}
 }
 
+/* ── 本章相关的控件 ────────────────────────────────────────
+   面板一次摆十几个东西，读者不知道该碰哪个。把与本章无关的压暗，
+   但不隐藏——想用随时能用，鼠标移上去就恢复。 */
+.ckgrp{transition:opacity .25s ease}
+.ckgrp.ck-dim{opacity:.44}
+.ckgrp.ck-dim:hover,.ckgrp.ck-dim:focus-within{opacity:1}
+.ckhint{
+  margin:6px 2px 0;
+  color:#7d879b;
+  font:400 11px/1.55 var(--sans);
+}
+
 @media(max-width:900px){
-  .open-charts{display:block}
+  .open-charts,.open-controls{display:block}
+  /* 手机上「相关控件」的提示没意义（一次只看得到一档），全部还原 */
+  .ckgrp.ck-dim{opacity:1}
   #storyExpand{display:block}
   /* 标题别钻到展开键底下 */
   body:not(.home) #story h2{padding-right:52px}

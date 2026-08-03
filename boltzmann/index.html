@@ -753,7 +753,19 @@ const GAS={
      这正是破坏分子混沌的那类关联，也是 Lanford 证明卡住的地方。 */
   pairLast:new Map(), recol:0, recolRecent:0, colRecent:0, recolRate:0,
   recolWin:1.5,          // 记忆窗口，每帧按 3τ 更新
-  gradLock:false
+  gradLock:false,
+  /* 位置空间 ⇄ 速度空间的连续形变（0=位置，1=速度）。
+     整篇文章讲的都是 f(v) 怎么演化，画面却只画 x 空间——读者从头到尾
+     没见过一次那个「球壳」。这里让同一批粒子平滑飞到自己的速度坐标上：
+     δ 球壳、同向束流、麦氏鼓包就都成了直接看得见的东西。 */
+  vmix:0, vRef:1,
+  /* 拖尾。只给被标记的粒子留轨迹：单球那章画一条完整的，
+     反演那章画十几条——按下反演时你会看见它们沿着自己的旧路走回去。
+     这比任何一句「它会原路返回」都更像证据。 */
+  tr:null, trN:0, trK:0, trHead:0, trFill:0, trTick:0,
+  /* 重碰闪光：发生重碰的那一对当场亮一下。
+     「关联」本来是个抽象词，这样它就变成了屏幕上数得出来的事件。 */
+  flash:null
 };
 /* 碰撞算符的实测缓冲。产生/损失按速率分格累加，用指数遗忘做滑动平均，
    这样读数反映的是「当下」的 Q，而不是从开局到现在的总账。 */
@@ -783,6 +795,7 @@ function qbStep(){
 }
 const gasInst=new Inst(2600);
 const gasCube=new Inst(400);
+const trInst=new Inst(2400);      // 拖尾：最多 20 条 × 110 段
 let gasBoxVBO=null;
 function initBoxLines(L){
   const v=[],e=[[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
@@ -791,6 +804,44 @@ function initBoxLines(L){
   gasBoxVBO=buf(new Float32Array(v));
 }
 initBoxLines(1);
+
+/* 速度空间的参照系：三根轴 + 三个大圆。大圆半径 1，画的时候整体缩放到
+   均方根速率上，于是「球壳在圆上」「麦氏分布把圆铺厚」都是直接看出来的。 */
+let vGuideVBO=null;
+{
+  const v=[],SEG=72;
+  for(let ax=0;ax<3;ax++)for(let s=0;s<SEG;s++){
+    const a=s/SEG*Math.PI*2,b=(s+1)/SEG*Math.PI*2;
+    const P=t=>ax===0?[Math.cos(t),Math.sin(t),0]:ax===1?[Math.cos(t),0,Math.sin(t)]:[0,Math.cos(t),Math.sin(t)];
+    v.push(...P(a),...P(b));
+  }
+  const E=1.42;
+  v.push(-E,0,0, E,0,0, 0,-E,0, 0,E,0, 0,0,-E, 0,0,E);
+  vGuideVBO=buf(new Float32Array(v));
+}
+const V_GUIDE_N=72*3*2+6;
+
+/* ── 拖尾 ──────────────────────────────────────────────────
+   环形缓冲：trN 个被标记的粒子，各存 trK 个历史位置。
+   只标记前 trN 个粒子（初态是随机打乱过的格点，所以这就是一份随机抽样）。 */
+function trSet(n,k){
+  GAS.trN=n;GAS.trK=k;
+  GAS.tr=n?new Float32Array(n*k*3):null;
+  GAS.trHead=0;GAS.trFill=0;GAS.trTick=0;
+}
+function trReset(){GAS.trHead=0;GAS.trFill=0;GAS.trTick=0;if(GAS.tr)GAS.tr.fill(0);}
+/* 章节声明自己要停在位置空间还是速度空间。声明过就不会被默认值拉回去。 */
+function vmixTo(v,ms,delay){GAS.vmixSet=true;to(GAS,'vmix',v,ms===undefined?1100:ms,delay);}
+function trPush(){
+  if(!GAS.tr||!GAS.trN)return;
+  const n=Math.min(GAS.trN,GAS.N),k=GAS.trK,h=GAS.trHead,tr=GAS.tr;
+  for(let i=0;i<n;i++){
+    const o=(i*k+h)*3;
+    tr[o]=GAS.px[i];tr[o+1]=GAS.py[i];tr[o+2]=GAS.pz[i];
+  }
+  GAS.trHead=(h+1)%k;
+  if(GAS.trFill<k)GAS.trFill++;
+}
 
 function gasInit(preset){
   /* 不带参数调用时保留当前初态（例如拖动 N 滑块时不该把「角落」重置成「同速率」） */
@@ -839,6 +890,12 @@ function gasInit(preset){
   GAS.macro=null;
   GAS.wf=[];GAS.pairLast.clear();PROF.hist=[];PROF.contrast=1;
   GAS.recol=0;GAS.recolRecent=0;GAS.colRecent=0;GAS.recolRate=0;
+  GAS.flash=new Float32Array(N);
+  trReset();
+  /* 速度空间的标尺定死在初态的均方根速率上。若跟着当前 vrms 走，
+     整个点云会随着弛豫一起呼吸，「分布在变形」就看不出来了。 */
+  {let s2=0;for(let i=0;i<N;i++)s2+=GAS.vx[i]**2+GAS.vy[i]**2+GAS.vz[i]**2;
+   GAS.vRef=Math.max(1e-6,Math.sqrt(s2/N));}
   /* 碰撞算符的刻度按初态的速率范围定一次，之后不再漂 —— 否则 Q 的形状会被
      坐标轴自己的移动掩盖掉 */
   let ms=0;for(let i=0;i<N;i++)ms+=GAS.vx[i]**2+GAS.vy[i]**2+GAS.vz[i]**2;
@@ -888,7 +945,12 @@ function gasStep(dt){
            因为它们的速度是上一次碰撞留下的。 */
         {
           const key=i*N+j, prev=GAS.pairLast.get(key);
-          if(prev!==undefined&&GAS.t-prev<GAS.recolWin)recolHits++;
+          if(prev!==undefined&&GAS.t-prev<GAS.recolWin){
+            recolHits++;
+            /* 让这一对当场亮一下。重碰在文字里是个抽象名词，
+               在屏幕上它应该是一次数得出来的闪光。 */
+            if(GAS.flash){GAS.flash[i]=1;GAS.flash[j]=1;}
+          }
           GAS.pairLast.set(key,GAS.t);
         }
         /* 碰撞算符 Q(f,f) 的直接测量：
@@ -1019,7 +1081,11 @@ function gasMacro(){
 }
 function gasRender(){
   const N=GAS.N;
-  drawLines(gasBoxVBO,24,M4.id(),[1,1,1,0.13],1);
+  const m=clamp(GAS.vmix||0,0,1);          // 0 = 位置空间，1 = 速度空间
+  /* 盒子淡出、速度坐标系淡入。两者同时半透明的那一瞬间，
+     正是「同一批粒子，换一个空间去看」这句话的意思。 */
+  if(m<0.995)drawLines(gasBoxVBO,24,M4.id(),[1,1,1,0.13*(1-m)],1);
+  if(m>0.005)drawLines(vGuideVBO,V_GUIDE_N,M4.trs(0,0,0,0.62),[0.42,0.78,1,0.30*m],1);
   if(GAS.mode==='macro'){
     gasMacro();
     const G=GAS.macroN,cw=2*GAS.L/G,ins=gasCube;ins.reset();
@@ -1037,16 +1103,52 @@ function gasRender(){
     gl.depthMask(true);gl.disable(gl.BLEND);
     return;
   }
+  /* 拖尾先画，让球压在自己的轨迹上面 */
+  if(GAS.tr&&GAS.trFill>1&&m<0.9){
+    const ti=trInst;ti.reset();
+    const n=Math.min(GAS.trN,N),k=GAS.trK,tr=GAS.tr;
+    const rad=Math.max(0.008,GAS.r*0.36);
+    for(let i=0;i<n;i++)for(let a=0;a<GAS.trFill;a++){
+      /* a=0 是最老的一帧。越老越暗，于是轨迹自带方向感。 */
+      const idx=(GAS.trHead-GAS.trFill+a+k*2)%k, o=(i*k+idx)*3;
+      const age=a/Math.max(1,GAS.trFill-1);
+      const f=(0.10+0.90*age*age)*(1-m);
+      /* Inst.add 的签名是 (ox,oy,oz, ax,ay,az, rad, r,g,b)：
+         (0,0,size) 是轴，size 还要再传一次做半径。少传一个参数的话
+         半径位会被颜色顶掉，蓝通道变 undefined —— 这个坑踩过一次。 */
+      const sz=rad*(0.45+0.55*age);
+      ti.add(tr[o],tr[o+1],tr[o+2],0,0,sz,sz,0.36*f,0.62*f,0.95*f);
+    }
+    ti.upload();
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.depthMask(false);
+    drawInstanced(MESH.ball,ti,M4.id(),{flat:1,glow:0.5});
+    gl.depthMask(true);gl.disable(gl.BLEND);
+  }
   const ins=gasInst;ins.reset();
   const lim=GAS.single?1:N;
   const vs=GAS.vrms||1;
+  /* 速度空间的标尺：均方根速率映到半径 0.62，麦氏分布的长尾正好落在视野里 */
+  const vk=0.62/GAS.vRef;
+  /* x 空间里球有真实半径 r（碰撞看得见）；v 空间里它只是一个点，
+     半径没有物理含义，缩小才不会糊成一团 */
+  const rad=lerp(GAS.r,Math.min(GAS.r,0.019),m);
+  const fl=GAS.flash;
   for(let i=0;i<lim;i++){
     const s=Math.hypot(GAS.vx[i],GAS.vy[i],GAS.vz[i]);
-    const c=heat(clamp(s/(vs*1.85),0,1));
-    ins.add(GAS.px[i],GAS.py[i],GAS.pz[i],0,0,GAS.r,GAS.r,c[0],c[1],c[2]);
+    let c=heat(clamp(s/(vs*1.85),0,1));
+    let cr=c[0],cg=c[1],cb=c[2],rr=rad;
+    const f=fl?fl[i]:0;
+    if(f>0.01){          // 刚发生重碰：亮一下、胀一下
+      cr=lerp(cr,1,f);cg=lerp(cg,0.96,f);cb=lerp(cb,0.72,f);
+      rr*=1+1.25*f;
+    }
+    ins.add(lerp(GAS.px[i],GAS.vx[i]*vk,m),
+            lerp(GAS.py[i],GAS.vy[i]*vk,m),
+            lerp(GAS.pz[i],GAS.vz[i]*vk,m),
+            0,0,rr,rr,cr,cg,cb);
   }
   ins.upload();
-  drawInstanced(GAS.single?MESH.ballHi:MESH.ball,ins,M4.id(),{glow:0.14});
+  drawInstanced(GAS.single?MESH.ballHi:MESH.ball,ins,M4.id(),{glow:0.14+0.16*m});
 }
 
 /* =====================================================================
@@ -1057,98 +1159,157 @@ const SC={
     color:'g',
     steps:[
       {id:'one',t:'一个球，完全可预测',
-       b:`<p>盒子里先放<b>一个</b>球，让它按<em>牛顿定律</em>运动：匀速直线，碰壁弹性反射。没有摩擦，没有损耗。</p>
-          <p>这套规则有两个特点：</p>
+       b:`<p class="lede">盒子里先放一个球，让它按牛顿定律飞。这一章只确认一件事：<b>这套规则不区分过去和未来。</b></p>
+          <p>匀速直线，碰壁弹性反射，没有摩擦，没有损耗。它身后那条淡蓝色的尾巴，就是它刚刚走过的路。</p>
+          <p>这套规则有两个性质：</p>
           <ul>
-            <li><b>确定</b>——知道此刻的 (x, v)，就知道所有时刻的 (x, v)</li>
-            <li><b>可逆</b>——把速度反向，它会一丝不差地退回去</li>
+            <li><b>确定</b>——知道此刻的位置和速度，就知道所有时刻的位置和速度；</li>
+            <li><b>可逆</b>——把速度反向，它会沿着这条尾巴一丝不差地退回去。</li>
           </ul>
-          <p>「可逆」可以写得很精确。记相流为 Φ<sub>t</sub>，记速度反号这个操作为 R:(x,<b>v</b>) ↦ (x,−<b>v</b>)，那么</p>
-          <span class="fml">Φ<sub>−t</sub> = R ∘ Φ<sub>t</sub> ∘ R，　R² = id</span>
-          <p>也就是说：<em>倒放一段演化</em>和<em>正放它的速度反号版本</em>，是同一件事。硬球碰撞满足这条——弹性碰撞的散射律对时间反演不变。</p>
-          <p>于是在这个层面上，物理定律<em>根本不区分过去和未来</em>。</p>
-          <p>记住这个式子。第 5 章会拿它来打脸。</p>`,
+          <p>第二条尤其要记住。整篇文章的谜题就是：<em>一堆各自可逆的球，凑在一起怎么会变得不可逆？</em></p>
+          <details class="deep"><summary>把「可逆」写精确</summary>
+            <p>记相流为 Φ<sub>t</sub>（把 t=0 的状态推到时刻 t），记速度反号这个操作为 R:(<b>x</b>,<b>v</b>) ↦ (<b>x</b>,−<b>v</b>)。那么</p>
+            <span class="fml">Φ<sub>−t</sub> = R ∘ Φ<sub>t</sub> ∘ R，　R² = id</span>
+            <p>也就是说：<em>倒放一段演化</em>和<em>正放它的速度反号版本</em>，是同一件事。硬球满足这条——弹性碰撞的散射律对时间反演不变。</p>
+            <p>第 7 章会拿这个式子来打脸。</p>
+          </details>`,
        en(){camTo(0.7,0.26,3.6,0,0,0);GAS.single=true;GAS.mode='micro';GAS.N=520;
-            GAS.speed=1;CAM.spin=0.05;gasInit('same');GAS.running=true;}},
+            GAS.speed=1;CAM.spin=0.05;gasInit('same');GAS.running=true;trSet(1,110);}},
 
       {id:'many',t:'加到五百个',
-       b:`<p>现在把球加到五百个。规则<b>一模一样</b>：直线飞行，硬球弹性碰撞（只交换法向动量），能量与动量逐次碰撞严格守恒。</p>
-          <p>相空间是 6N 维的，刘维尔定理照样成立：相体积不增不减。<em>没有任何一条规则告诉系统「该往哪个方向发展」。</em></p>
-          <p>初态我取的是速度空间里的一层<b>球壳</b>——所有粒子速率相同、方向各向同性：</p>
-          <span class="fml">f<sub>0</sub>(<b>v</b>) = δ(|<b>v</b>| − v<sub>0</sub>) / 4πv<sub>0</sub>²</span>
-          <p>颜色编码速率，所以现在满屏是同一个颜色。这是个测度为零的状态：随手从平衡态里抽，永远抽不到它。</p>
-          <p>盯着颜色，也盯住读数栏里的 <b>碰撞 / 粒子</b>。看它走到 2、3 的时候画面变成什么样。</p>
-          <p>「参数」面板里还有另外三个<b>低熵初态</b>，各自在不同的自由度上有序，值得挨个试一遍：</p>
-          <ul>
-            <li><b>全挤在角落</b>——空间上有序：全部粒子塞进 1/8 的体积，松手后自由膨胀（焦耳膨胀）。这是最直观的一个：你会看到它<em>铺满盒子之后再也不会自己缩回角落</em>。</li>
-            <li><b>同向束流</b>——方向上有序：所有粒子几乎同向同速，比球壳还要有序。看它多久失去方向记忆。</li>
-            <li><b>冷热两半</b>——温度上有序：左热右冷。</li>
-          </ul>
-          <p>三种有序方式不一样，但它们都会走向同一个终点。<em>下一章去看那个终点长什么样。</em></p>`,
+       b:`<p class="lede">规则一个字都不改，球从 1 个加到 500 个。</p>
+          <p>还是直线飞行、还是硬球弹性碰撞（只交换法向动量），每一次碰撞都严格守恒能量与动量。<b>没有新增任何规则</b>——尤其没有任何一条告诉系统「该往哪个方向发展」。</p>
+          <p>现在满屏是同一个颜色，因为颜色编码的是速率，而我给的初态是<em>所有粒子速率完全相同</em>。</p>
+          <p>盯着颜色，也盯住读数里的 <b>碰撞 / 粒子</b>。等它走到 2、3 的时候，颜色会散开。</p>
+          <p>可是看着这一盒乱飞的球，你其实说不出它在往哪儿走。<em>问题出在我们看的地方不对。</em></p>
+          <details class="deep"><summary>为什么「多体」本身不产生方向</summary>
+            <p>N 个球的状态是 6N 维相空间里的一个点，它按哈密顿流演化。刘维尔定理说：相空间体积元沿流动<b>既不增也不减</b>。</p>
+            <span class="fml">∂<sub>t</sub>ρ + {ρ, H} = 0</span>
+            <p>整套动力学对 t → −t 依然对称（配上速度反号）。所以「粒子多了」本身，一个方向也变不出来。</p>
+          </details>`,
        en(){camTo(0.7,0.26,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;
             CAM.spin=0.05;gasInit('same');GAS.running=true;}},
 
-      {id:'relax',t:'统计的涌现：麦克斯韦–玻尔兹曼分布',
-       b:`<p>横轴是速率 <span class="v-amber">v</span>，柱高是落在 [<span class="v-amber">v</span>, <span class="v-amber">v</span>+Δ<span class="v-amber">v</span>) 里的粒子占比。柱子的颜色就是画面上球的颜色——同一套色标。</p>
-          <button type="button" class="open-charts" data-open-charts>📊 打开速率分布图与 H 曲线</button>
-          <p>初态是一根 δ 尖峰。让 <b>碰撞 / 粒子</b> 走到 2–3，尖峰就<em>自己</em>塌成这条曲线：</p>
-          <span class="fml">F(<span class="v-amber">v</span>) = 4π<span class="v-amber">v</span>²·f(<b>v</b>) = √(2/π) <span class="v-amber">v</span>² (k<sub>B</sub>T/m)<sup>−3/2</sup> e<sup>−m<span class="v-amber">v</span>²/2k<sub>B</sub>T</sup></span>
-          <p>注意别把两个东西搞混：<em>速度</em>分布 f(<b>v</b>) ∝ e<sup>−mv²/2k<sub>B</sub>T</sup> 在 <b>v</b>=0 处最大；图里画的是<em>速率</em>分布 F(v)，多出来的 4πv² 是速度空间球壳面积，正是它把小 v 那头压了下去。本页取 m = k<sub>B</sub> = 1，T 直接由 ⟨v²⟩/3 读出。</p>
-          <p>红线是理论，柱子是实测。<b>没有人安排它</b>：麦氏分布是碰撞算符的零点，log f 属于碰撞不变量 {1, <b>v</b>, v²} 张成的空间时 Q(f,f)=0，这是唯一的选择。</p>
-          <p><b>把弛豫过程整个看一遍。</b>图表面板第二张是<em>演化瀑布图</em>：横轴速率，纵轴时间（上面是现在，往下是过去），亮度是该速率的粒子占比。回到「参数」里换一个低熵初态再回来看——</p>
+      {id:'vspace',t:'换一个空间：让每个球飞到自己的速度上',
+       b:`<p class="lede">同样这 500 个球，现在把每一个都画到它<b>速度</b>所在的位置——不是它在哪儿，而是它多快、往哪飞。</p>
+          <p>这一步是整篇文章的枢纽，值得说清楚为什么要走。</p>
+          <p>上一章那盒球，看着热闹，但它没告诉你任何东西：球在盒子里本来就该是均匀撒开的，从头到尾都一样。<b>真正在变的东西不在位置里，在速度里。</b>整套动理学理论关心的对象只有一个：</p>
+          <span class="fml">f(<b>v</b>)　＝　速度分布</span>
+          <p>所以我把画面换了个坐标：第 i 个球不再画在 <b>x</b><sub>i</sub>，而是画在 <b>v</b><sub>i</sub>。盒子淡出，取而代之的是速度坐标系，那三个圆是<em>均方根速率</em>所在的位置。同一批球，同一个瞬间，只是换了一个问题去问它们。</p>
+          <p>看这个形状：<b>一层空心的壳。</b></p>
+          <p>所有粒子速率相同、方向各向同性——这正是我给的初态</p>
+          <span class="fml">f<sub>0</sub>(<b>v</b>) = δ(|<b>v</b>| − v<sub>0</sub>) / 4πv<sub>0</sub>²</span>
+          <p>只不过现在它不再是一行公式，而是画面上一眼能认出来的东西。这是一个测度为零的状态：从平衡态里随手抽，永远抽不到它。</p>
+          <p class="watch">「参数」面板里多了一根滑块 <b>位置 ⇄ 速度</b>。自己来回搓几下，看着同一批球在两个空间之间飞。这两头不是两幅图，是同一个瞬间的两种问法。</p>
+          <button type="button" class="open-controls" data-open-controls>🎚 打开「位置 ⇄ 速度」滑块</button>
+          <p><b>换个初态，壳会变成别的形状。</b>这是速度空间最值钱的地方——「有序」终于变得看得见了：</p>
           <ul>
-            <li><b>同速率球壳</b>：起手是一条竖直亮线（δ 尖峰），往上逐渐摊成麦氏那个鼓包；</li>
-            <li><b>同向束流</b>：同样从一条线出发，但因为方向也是有序的，摊开得更慢；</li>
+            <li><b>同向束流</b>——在 v 空间里缩成<em>一个点</em>：速率相同、连方向都相同，比球壳还有序；</li>
+            <li><b>冷热两半</b>——<em>两层同心壳</em>：热的那半在外圈，冷的那半在内圈；</li>
+            <li><b>全挤在角落</b>——v 空间里<em>还是那层壳</em>，因为这个初态的有序性在<b>位置</b>里，不在速度里。把滑块拉回位置那头才看得见它。</li>
+          </ul>
+          <p>最后一条值得多看两眼：它说明这两个空间各自藏着不同的信息，而熵同时管着两边。</p>
+          <p><em>接下来整篇文章讲的，都是这团点云怎么变形。</em></p>`,
+       en(){camTo(0.85,0.22,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;
+            CAM.spin=0.10;vmixTo(1,1400,260);}},
+
+      {id:'relax',t:'壳自己塌成麦克斯韦分布',
+       b:`<p class="lede">什么都不做，只让它们互相碰。<b>那层壳会自己塌掉。</b></p>
+          <p>让读数里的 <b>碰撞 / 粒子</b> 走到 2–3，盯着这团点云：壳先变糊（速率不再唯一），再往里填实，最后成为一团<em>中间厚、边缘稀</em>的云。</p>
+          <p>这团云的径向分布，就是<b>麦克斯韦–玻尔兹曼分布</b>。</p>
+          <button type="button" class="open-charts" data-open-charts>📊 打开速率分布图</button>
+          <span class="fml">F(<span class="v-amber">v</span>) = √(2/π) <span class="v-amber">v</span>² (k<sub>B</sub>T/m)<sup>−3/2</sup> e<sup>−m<span class="v-amber">v</span>²/2k<sub>B</sub>T</sup></span>
+          <p>红线是理论，柱子是实测。<b>没有人安排它</b>——模拟里只有硬球碰撞，麦氏分布是碰撞自己找到的终点。</p>
+          <p class="subh">一个几乎人人踩过的坑，现在能直接看出来</p>
+          <p>速度分布 f(<b>v</b>) ∝ e<sup>−mv²/2k<sub>B</sub>T</sup> 在 <b>v</b>=0 处<em>最大</em>；可速率分布 F(v) 在 v=0 处却<em>是零</em>。哪来的矛盾？</p>
+          <p>看画面：球心附近的点确实最密（那正是 f 最大）。但速率恰好是 v 的那些粒子住在<b>半径为 v 的那层壳上</b>，而壳的面积是 4πv²——v 越小壳越小，装得下的粒子就越少。</p>
+          <span class="fml">F(<span class="v-amber">v</span>) = 4π<span class="v-amber">v</span>² · f(<b>v</b>)</span>
+          <p>这个 4πv² 不是配平用的常数，它就是<em>你正在看的那层壳的面积</em>。两条曲线的最大值不在同一处，是因为它们回答的是两个问题：「哪个速度矢量最常见」和「哪个速率最常见」。</p>
+          <p class="subh">从哪儿出发都一样</p>
+          <p>图表面板第二张是<b>演化瀑布图</b>：横轴速率，纵轴时间（上面是现在，往下是过去），亮度是该速率的粒子占比。换一个低熵初态再回来看——</p>
+          <ul>
+            <li><b>同速率球壳</b>：起手一条竖直亮线，往上摊成麦氏那个鼓包；</li>
+            <li><b>同向束流</b>：同样从一条线出发，但方向也有序，摊开得更慢；</li>
             <li><b>冷热两半</b>：起手是<em>两条</em>亮线，看它们并成一条。</li>
           </ul>
-          <p>无论从哪儿出发，最后都收敛到同一个形状——这就是<b>弛豫</b>。特征时间就是几个 τ，和读数栏里的 <b>碰撞 / 粒子</b> 走到 2–3 是同一件事。</p>
-          <p>玻尔兹曼方程描述的就是 f 的演化：</p>
-          <span class="fml">∂<sub>t</sub>f + <b>v</b>·∇<sub><b>x</b></sub>f = Q(f,f)</span>
-          <p class="subh">右端那个 Q 到底是什么</p>
-          <p>Q 是二次的碰撞积分，写开就是一笔<b>收支账</b>：</p>
-          <span class="fml">Q(f,f)(<b>v</b>) = ∫∫ B(|<b>v</b>−<b>v</b><sub>*</sub>|,θ) [ <span style="color:#5cd0b3">f(<b>v</b>′)f(<b>v</b>′<sub>*</sub>)</span> − <span style="color:#fc6255">f(<b>v</b>)f(<b>v</b><sub>*</sub>)</span> ] dω d<b>v</b><sub>*</sub></span>
-          <ul>
-            <li><span style="color:#fc6255">损失项</span>：速率恰为 <span class="v-amber">v</span> 的粒子撞上别人，就<b>离开</b>了这一格；</li>
-            <li><span style="color:#5cd0b3">产生项</span>：别处的一对 (<b>v</b>′,<b>v</b>′<sub>*</sub>) 撞完之后<b>落进</b>这一格。</li>
-          </ul>
-          <p>两个乘积形式 f·f 就是 A3 分子混沌被用掉的地方——把两粒子分布拆成了单粒子分布之积。</p>
-          <p><b>这笔账可以直接量。</b>图表面板最后一张是实测的 Q：每次碰撞发生时，把两个粒子<em>碰前</em>的速率记进损失、<em>碰后</em>的速率记进产生，逐格相减。不做任何积分，就是数碰撞。</p>
-          <button type="button" class="open-charts" data-open-charts>📊 打开 Q(f,f) 实测图</button>
-          <p>从同速率球壳出发时你会看到：<span style="color:#fc6255">初速率那一格深深地负</span>（粒子正被从那里搬走），两侧<span style="color:#5cd0b3">正</span>（正在被填充）。随着系统接近平衡，整条曲线<em>压回零轴</em>——</p>
-          <span class="fml">Q(f,f) = 0 ⟺ f 是麦克斯韦分布</span>
-          <p>这就是上面那条红线为什么是<b>唯一</b>的终点：细致平衡要求 f(<b>v</b>′)f(<b>v</b>′<sub>*</sub>) = f(<b>v</b>)f(<b>v</b><sub>*</sub>) 对所有碰撞成立，取对数后 log f 必须是碰撞不变量 {1, <b>v</b>, v²} 的线性组合，而这恰好把 f 逼成高斯型。</p>
-          <p>问题是：这个方程<em>真的</em>能从牛顿定律推出来吗？</p>`,
-       en(){camTo(0.7,0.24,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.04;
-            gasInit('same');GAS.running=true;}},
+          <p>无论从哪儿出发，终点是同一个形状。这就是<b>弛豫</b>，特征时间是几个 τ——和 <b>碰撞 / 粒子</b> 走到 2–3 是同一件事。</p>
+          <p>本页取 m = k<sub>B</sub> = 1，温度直接由 ⟨v²⟩/3 读出。</p>
+          <details class="deep"><summary>为什么终点<em>必须</em>是麦氏分布</summary>
+            <p>平衡要求碰撞的收支相抵：对每一种碰撞构型都有 f(<b>v</b>′)f(<b>v</b>′<sub>*</sub>) = f(<b>v</b>)f(<b>v</b><sub>*</sub>)（细致平衡）。取对数：</p>
+            <span class="fml">log f(<b>v</b>′) + log f(<b>v</b>′<sub>*</sub>) = log f(<b>v</b>) + log f(<b>v</b><sub>*</sub>)</span>
+            <p>也就是说 log f 是一个<b>碰撞不变量</b>——碰撞前后求和不变的量。而硬球碰撞的守恒量只有质量、动量、能量三样，对应的函数空间由 {1, <b>v</b>, v²} 张成。于是</p>
+            <span class="fml">log f = a + <b>b</b>·<b>v</b> + c v²　⟹　f 是高斯型</span>
+            <p>在固定质量、动量、能量的条件下，这个解是<b>唯一</b>的。麦氏分布不是众多平衡态里最可能的一个，它是唯一一个。</p>
+          </details>`,
+       en(){camTo(0.8,0.20,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.08;
+            vmixTo(1,900);GAS.running=true;}},
 
-      {id:'htheorem',t:'时间之箭从哪来：H 定理',
-       b:`<p>玻尔兹曼定义了泛函</p>
+      {id:'qop',t:'是什么在推着它变形：碰撞算符 Q',
+       b:`<p class="lede">上一章看到壳塌了。这一章问：<b>谁在推它？</b>答案是碰撞算符 Q——而 Q 说白了就是一本账。</p>
+          <p>玻尔兹曼方程只有两项：</p>
+          <span class="fml">∂<sub>t</sub>f + <b>v</b>·∇<sub><b>x</b></sub>f = Q(f,f)</span>
+          <p>左边是<b>自由飞行</b>（不碰的时候，粒子只是把 f 沿着自己的速度搬走）；右边是<b>碰撞</b>。所有有意思的事情都在右边。</p>
+          <p>Q 记的是每一格速率的<b>进出</b>：</p>
+          <ul>
+            <li><span style="color:#fc6255">损失</span>：速率恰为 <span class="v-amber">v</span> 的粒子撞上了别人，于是<b>离开</b>这一格；</li>
+            <li><span style="color:#5cd0b3">产生</span>：别处的一对粒子撞完之后，<b>落进</b>这一格。</li>
+          </ul>
+          <p><b>这笔账可以直接数，不用做任何积分。</b>每发生一次碰撞，我把两个粒子<em>碰前</em>的速率记进损失、<em>碰后</em>的速率记进产生，逐格相减。图里那条曲线就是这么来的。</p>
+          <button type="button" class="open-charts" data-open-charts>📊 打开 Q(f,f) 实测图</button>
+          <p>从同速率球壳出发时你会看到：<span style="color:#fc6255">初速率那一格深深地负</span>（粒子正被从那里搬走），两侧<span style="color:#5cd0b3">正</span>（正在被填上）。这就是上一章那层壳塌下去的<em>受力图</em>。</p>
+          <p>随着系统接近平衡，整条曲线会<b>压回零轴</b>。读数里的 <b>|Q| 失衡度</b> 就是它离零有多远：</p>
+          <span class="fml">Q(f,f) = 0 ⟺ f 是麦克斯韦分布</span>
+          <p>所以麦氏分布不是「碰到最后大概会变成那样」，而是<b>这本账唯一能平的地方</b>。</p>
+          <p class="subh">顺手埋一个伏笔</p>
+          <p>把 Q 写成积分形式，被积函数里会出现<b>两个 f 相乘</b>——比如 f(<b>v</b>)f(<b>v</b><sub>*</sub>)。这一步看着天经地义，其实是整个推导里唯一一次<em>没有摊在明面上</em>的假设：它默认了即将相撞的两个粒子互不相关。第 8 章我们回来算这笔账。</p>
+          <details class="deep"><summary>Q 的积分形式</summary>
+            <span class="fml">Q(f,f)(<b>v</b>) = ∫∫ B(|<b>v</b>−<b>v</b><sub>*</sub>|,θ) [ <span style="color:#5cd0b3">f(<b>v</b>′)f(<b>v</b>′<sub>*</sub>)</span> − <span style="color:#fc6255">f(<b>v</b>)f(<b>v</b><sub>*</sub>)</span> ] dω d<b>v</b><sub>*</sub></span>
+            <p>B 是碰撞核，由相互作用势决定；硬球情形下 B ∝ |<b>v</b>−<b>v</b><sub>*</sub>|·(几何因子)。撇号表示碰后速度，由弹性碰撞律给出：</p>
+            <span class="fml"><b>v</b>′ = <b>v</b> − ((<b>v</b>−<b>v</b><sub>*</sub>)·ω)ω，　<b>v</b>′<sub>*</sub> = <b>v</b><sub>*</sub> + ((<b>v</b>−<b>v</b><sub>*</sub>)·ω)ω</span>
+            <p>注意这是个<b>二次</b>算符——玻尔兹曼方程是非线性的，难就难在这里。</p>
+          </details>`,
+       en(){camTo(0.8,0.24,3.4,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.06;
+            vmixTo(1,900);GAS.running=true;}},
+
+      {id:'htheorem',t:'时间之箭：H 定理',
+       b:`<p class="lede">给这团点云配一个数。玻尔兹曼证明：<b>这个数只会往一个方向走。</b></p>
           <span class="fml"><span class="v-H">H</span>(t) = ∫∫ f log f  d<b>x</b> d<b>v</b></span>
-          <p>并证明沿玻尔兹曼方程的解它<em>单调不增</em>。它就是负的熵：S = −k<sub>B</sub><span class="v-H">H</span>。</p>
+          <p>它就是负的熵：S = −k<sub>B</sub><span class="v-H">H</span>。玻尔兹曼证明沿着方程的解，<span class="v-H">H</span> <em>单调不增</em>。</p>
           <button type="button" class="open-charts" data-open-charts>📈 打开 H(t) 曲线</button>
-          <p>推导的关键一步是利用碰撞的两组对称性——交换 (<b>v</b>,<b>v</b><sub>*</sub>) 与交换碰前/碰后——把 dH/dt 对称化成</p>
-          <span class="fml"><span class="v-H">dH/dt</span> = −¼∫ (f′f′<sub>*</sub> − ff<sub>*</sub>) log(f′f′<sub>*</sub>/ff<sub>*</sub>) B dΩ d<b>v</b> d<b>v</b><sub>*</sub> ≤ 0</span>
-          <p>被积函数是 (a−b)·log(a/b) 的形式，恒 ≥ 0，所以整体 ≤ 0。<b>取等当且仅当</b> f′f′<sub>*</sub> = ff<sub>*</sub>，即 log f 是碰撞不变量的线性组合——那正好把 f 逼成麦氏分布。这就是上一章那条红线的来历。</p>
-          <p><b>本页实际画的是什么：</b>盒子里空间是均匀的，所以我只算速度空间那一份，把 f 归一到 ∫f d³<b>v</b>=1：</p>
-          <span class="fml"><span class="v-H">H</span> = ∫ f log f  d³<b>v</b> ≈ Σ<sub>b</sub> P<sub>b</sub> log[ P<sub>b</sub> / (4πv<sub>b</sub>²Δv) ]</span>
-          <p>它和真正的 ∫∫f log f d<b>x</b>d<b>v</b> 只差一个常数因子与 log n 的平移。用「冷热两半」时空间不再均匀，那条曲线就<em>不再是</em> H 定理里的 H——图注会提醒你。</p>
-          <p>于是<b>时间有了方向</b>。可是等一下——底层的牛顿定律明明满足 Φ<sub>−t</sub> = R∘Φ<sub>t</sub>∘R。方向是从哪冒出来的？</p>`,
-       en(){camTo(0.9,0.18,3.6,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.03;}},
+          <p>直观上它量的是「这团点云有多集中」：壳是极端集中的（H 大），摊开的麦氏云是最分散的（H 最小）。上一章看到的塌缩，在这里就是一条往下走的曲线。</p>
+          <p><b>取等的时刻只有一个</b>：f 是麦氏分布的时候。所以 H 定理和上一章的结论是同一件事的两种说法——一个说「账只能在那里平」，一个说「坡只能滑到那里」。</p>
+          <p class="q"><b>本页画的是什么：</b>盒子里空间是均匀的，所以我只算速度空间那一份，把 f 归一到 ∫f d³<b>v</b>=1。它和真正的 ∫∫f log f d<b>x</b>d<b>v</b> 只差一个常数因子与 log n 的平移。用「冷热两半」时空间不再均匀，那条曲线就<em>不再是</em> H 定理里的 H——图注会提醒你。</p>
+          <p>于是<b>时间有了方向</b>。可是等一下——第 1 章那个式子说，底层的牛顿定律根本不分方向。</p>
+          <p><em>方向是从哪冒出来的？</em></p>
+          <details class="deep"><summary>dH/dt ≤ 0 的推导</summary>
+            <p>关键是利用碰撞的两组对称性——交换 (<b>v</b>,<b>v</b><sub>*</sub>)，以及交换碰前/碰后——把 dH/dt 对称化成一个显然有号的形式：</p>
+            <span class="fml"><span class="v-H">dH/dt</span> = −¼∫ (f′f′<sub>*</sub> − ff<sub>*</sub>) log(f′f′<sub>*</sub>/ff<sub>*</sub>) B dΩ d<b>v</b> d<b>v</b><sub>*</sub></span>
+            <p>被积函数是 (a−b)·log(a/b) 的形式。a&gt;b 时两个因子都正，a&lt;b 时两个因子都负，所以乘积恒 ≥ 0，整体 ≤ 0。</p>
+            <p>取等当且仅当 f′f′<sub>*</sub> = ff<sub>*</sub> 处处成立——正是上一章那个细致平衡条件。</p>
+          </details>`,
+       en(){camTo(0.9,0.18,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.05;
+            vmixTo(1,800);}},
 
       {id:'loschmidt',t:'洛施密特的诘问',
-       b:`<p>1876 年，洛施密特（Loschmidt）当面反驳玻尔兹曼：</p>
-          <p>既然 Φ<sub>−t</sub> = R∘Φ<sub>t</sub>∘R，那把<b>所有粒子的速度同时取反</b>，系统就该沿原路倒回去，H 会一路<em>回升</em>。可逆的微观定律怎么可能蕴含单调的 dH/dt ≤ 0？</p>
-          <p>他说得对。在<b>「参数」</b>面板里按 <b>早期反演</b>：系统会重置、只跑一小会儿、然后整体反向。盯住 H 曲线——</p>
-          <p>它<b>真的会先爬回去</b>。下面那个「峰值回升」是<em>你这次运行当场量到的</em> H 最大值，每跑一次都会不一样，不是我事先填在页面里的数字。</p>
+       b:`<p class="lede">既然每个球都能原路返回，那把<b>所有</b>球的速度同时取反，H 就该一路爬回去。1876 年洛施密特当面这么问玻尔兹曼。</p>
+          <p>画面回到位置空间，而且我给十几个粒子挂上了<b>拖尾</b>——每条尾巴就是那颗球刚刚走过的路。</p>
+          <p class="watch">在「参数」里按 <b>早期反演</b>：系统会重置、只跑一小会儿、然后整体反向。<em>盯着那些尾巴。</em></p>
+          <button type="button" class="open-controls" data-open-controls>⏪ 打开反演按钮</button>
+          <p>你会看见它们<b>沿着自己刚画出来的那条线走回去</b>。这不是比喻，这就是第 1 章那个式子在 500 个粒子上照样成立。</p>
+          <p>同时 H 曲线<b>真的会爬升</b>。下面那个「峰值回升」是<em>你这次运行当场量到的</em> H 最大值，每跑一次都不一样，不是我事先填在页面里的数字。</p>
           <p>然后 H 会再次下降，原因有两个，得分清楚：</p>
           <ul>
-            <li><b>物理的</b>——反演后的态并非精确落在原轨道上（碰撞按格子顺序批量处理，不是精确的事件驱动），系统很快重新混合；</li>
-            <li><b>数值的</b>——硬球气体是 K 系统，李雅普诺夫指数为正。每碰一次，横向偏差大约被放大 λ/r 倍（本页 λ/r ≈ 10），所以双精度的 10<sup>−16</sup> 只要十几次碰撞就长到 O(1)。真实气体里这个放大倍数更大，反演在实验上根本做不到。</li>
+            <li><b>物理的</b>——反演后的态并没有精确落在原轨道上（本页碰撞是按格子分批处理的，不是精确的事件驱动），系统很快重新混合；</li>
+            <li><b>数值的</b>——硬球气体的轨道对初值极其敏感。每碰一次，横向偏差大约被放大 λ/r 倍（本页 λ/r ≈ 10），所以双精度的 10<sup>−16</sup> 只要十几次碰撞就长到 O(1)。</li>
           </ul>
-          <p>可是如果先让它跑到平衡，再按 <b>时间反演</b>，H 会<em>纹丝不动</em>。</p>
+          <p>换句话说：<b>反演在纸面上永远成立，在任何真实系统里都办不到。</b></p>
+          <p class="watch">现在做对照：先让它跑到平衡，再按 <b>时间反演</b>。H 会<em>纹丝不动</em>。</p>
           <p>区别不在定律，而在<b>初态在相空间里有多特殊</b>。反演后的那个态属于一个测度极小的集合；一旦系统忘了出身，反演就什么也换不回来。玻尔兹曼后来的回答正是这个：H 定理不是力学恒等式，而是<em>关于绝大多数初态</em>的陈述。</p>
           <span class="fml">可逆的定律 + 测度极小的初态 = 不可逆的世界</span>
-          <p style="color:#8f9aae;font-size:12.5px">顺带一提，策梅洛（Zermelo, 1896）从另一头进攻：庞加莱回归定理保证有限能量的有界系统迟早回到初态附近，所以 H 必然回升。玻尔兹曼的回答是算了个数——对 1 摩尔气体，回归时间约 10<sup>10<sup>19</sup></sup> 倍宇宙年龄。定理没错，只是与任何观测无关。</p>
+          <details class="deep"><summary>关于 λ/r 那个放大倍数，以及策梅洛的第二次进攻</summary>
+            <p>硬球碰撞是<b>散焦</b>的：两条几乎平行的轨道擦过同一个球面之后会张开，张开的角度由碰撞参数的偏差除以球半径决定。粒子在两次碰撞之间飞过 λ，于是位置偏差每碰一次大致乘上 λ/r 这个量级。这就是硬球系统被当作混沌动力系统研究的原因（Sinai 一系工作在环面情形下确立了遍历性与 K 性质；本页是盒壁反射，严格结论要弱一些，但正指数的定性图像相同）。</p>
+            <p>另一路反驳来自策梅洛（Zermelo, 1896）：庞加莱回归定理保证有限能量的有界系统迟早回到初态附近，所以 H 必然回升。玻尔兹曼的回答是算了个数——对 1 摩尔气体，回归时间约 10<sup>10<sup>19</sup></sup> 倍宇宙年龄。定理没错，只是与任何观测无关。</p>
+          </details>
           <div class="counterfactual-lab" data-counterfactual-lab>
             <div class="cf-head">
               <div><span>共享初态实验</span><strong>只改变反演时刻</strong></div>
@@ -1169,15 +1330,16 @@ const SC={
             </div>
             <div class="cf-verdict" data-cf-verdict aria-live="polite">两条轨道尚未运行。</div>
           </div>`,
-       en(){camTo(1.05,0.16,3.6,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;
-            GAS.reversed=0;}},
+       en(){camTo(1.05,0.16,3.5,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;
+            GAS.reversed=0;trSet(16,80);}},
 
       {id:'assumptions',t:'时间之矢到底是从哪一步冒出来的',
-       b:`<p>上一章的结论容易被误读成「时间之矢来自初始条件，讲完了」。更准确的说法是：<b>玻尔兹曼方程本身已经不是时间对称的了</b>——不对称是在<em>推导它的某一步</em>被放进去的。要看清是哪一步，得把这个方程依赖的假设一条条摊开。</p>
+       b:`<p class="lede">把上一章的结论说成「时间之矢来自初始条件」就太糙了。更准确的说法是：<b>玻尔兹曼方程本身已经不是时间对称的了</b>——不对称是在<em>推导它的某一步</em>被放进去的。</p>
+          <p>要看清是哪一步，得把这个方程依赖的假设一条条摊开，逐条问：<em>它对 t → −t 对称吗？</em></p>
           <div class="axioms">
             <div class="ax">
               <div class="ax-h"><span>A1</span><b>稀薄气体极限（Boltzmann–Grad）</b></div>
-              <p>N → ∞，r → 0，<b>N r² 固定</b>。于是 nr³ → 0（体积占比消失）而 nr² 有限（碰撞频率有限）：只有<em>二体</em>碰撞留下来，三体同时相碰的概率是高阶小量。</p>
+              <p>N → ∞，r → 0，<b>N r² 固定</b>。于是 nr³ → 0（体积占比消失）而 nr² 有限（碰撞频率有限）：只有<em>二体</em>碰撞留下来，三体同时相碰是高阶小量。</p>
               <p class="ax-v">时间对称 ✓ —— 它只是在说「哪些项可以扔」。</p>
             </div>
             <div class="ax">
@@ -1189,7 +1351,7 @@ const SC={
               <div class="ax-h"><span>A3</span><b>分子混沌（Stoßzahlansatz）</b></div>
               <p>即将相撞的两个粒子，速度<em>互不相关</em>：</p>
               <span class="axf">f<sub>2</sub>(<b>x</b>,<b>v</b>,<b>v</b><sub>*</sub>,t) = f(<b>x</b>,<b>v</b>,t)·f(<b>x</b>,<b>v</b><sub>*</sub>,t)</span>
-              <p><b>只对碰前（incoming）的一对成立</b>，碰后的那一对是相关的——它们刚刚交换过动量。</p>
+              <p><b>只对碰前的一对成立</b>，碰后那一对是相关的——它们刚刚交换过动量。</p>
               <p class="ax-v ax-break">时间对称 ✗ —— <b>不对称就是在这里进来的。</b></p>
             </div>
             <div class="ax">
@@ -1198,27 +1360,31 @@ const SC={
               <p class="ax-v">时间对称 ✗ —— 它是对<em>某一端</em>提的条件，不是对两端。</p>
             </div>
           </div>
-          <p><b>关键在 A3 那个「碰前」。</b>如果把同一条独立性假设改写在<em>碰后</em>的一对上，同样的推导会给出一个反玻尔兹曼方程，H 定理变成 <span class="v-H">dH/dt ≥ 0</span>——熵单调<em>减少</em>。两条路数学上一样干净。<b>是「碰前而非碰后」这个选择，而不是牛顿定律，定出了时间的方向。</b></p>
-          <p>所以问题被推到了下一层：凭什么是碰前？答案在 A4。碰撞会<em>制造</em>关联，关联随粒子四散出去、越摊越薄，不会自己聚回来。只要系统出发时是不相关的（A4），那么在任何后续时刻，「即将相撞」的一对就仍然近似不相关——而「刚刚撞完」的一对不是。</p>
-          <p>于是 A3 不该是一条独立假设，它<b>应该是 A1 + A2 + A4 的推论</b>。这正是数学上要证的东西，有个名字：</p>
+          <p><b>A3 就是第 5 章埋的那个伏笔。</b>「两个 f 相乘」这一步，用掉的正是它。</p>
+          <p>而关键全在「<em>碰前</em>」这两个字。如果把同一条独立性假设改写在<b>碰后</b>的一对上，同样的推导会给出一个反玻尔兹曼方程，H 定理变成 <span class="v-H">dH/dt ≥ 0</span>——熵单调<em>减少</em>。两条路数学上一样干净。</p>
+          <p><b>是「碰前而非碰后」这个选择，而不是牛顿定律，定出了时间的方向。</b></p>
+          <p>于是问题被推到下一层：凭什么是碰前？答案在 A4。碰撞会<em>制造</em>关联，关联随粒子四散出去、越摊越薄，不会自己聚回来。只要系统出发时是不相关的，那么在任何后续时刻，「即将相撞」的一对就仍然近似不相关——而「刚刚撞完」的一对不是。</p>
+          <p>所以 A3 不该是一条独立假设，它<b>应该是 A1 + A2 + A4 的推论</b>。这正是数学上要证的东西，有个名字：</p>
           <span class="fml">分子混沌的传播 (propagation of chaos)<br>f<sub>N</sub>(0) ≈ f<sub>0</sub><sup>⊗N</sup> ⟹ f<sub>N</sub>(t) ≈ f(t)<sup>⊗N</sup></span>
           <p>Lanford 1975 把它证到了 0.2τ。邓煜–Hani–马骁把它证到了任意长时间。<em>下一章先看看它是怎么坏掉的。</em></p>`,
        en(){camTo(0.95,0.20,3.7,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;}},
 
       {id:'recollision',t:'分子混沌是怎么坏掉的：重碰',
-       b:`<p>A3 说「即将相撞的一对速度无关」。有一种情形它一定不成立：<b>这一对刚才已经碰过一次</b>。</p>
-          <p>它们现在的速度正是上次碰撞的产物，彼此高度相关。这类事件叫<b>重碰</b>（recollision），它是分子混沌唯一真正的敌人，也是 Lanford 那个 0.2τ 的直接来源。</p>
-          <button type="button" class="open-charts" data-open-charts>📊 打开重碰率与分布演化图</button>
-          <p>读数栏里的 <b>重碰率</b> 是当场统计的：一对粒子在 3τ 之内再次相撞，就记一次。现在它大约是百分之几。</p>
-          <p><b>现在做那个决定性的实验。</b>在「参数」里打开 <b>Grad 标度锁</b>，然后把半径 r 往小拖：</p>
+       b:`<p class="lede">A3 说「即将相撞的一对速度无关」。有一种情形它一定不成立：<b>这一对刚才已经碰过一次。</b></p>
+          <p>它们现在的速度正是上次碰撞的产物，彼此高度相关。这类事件叫<b>重碰</b>（recollision），它是分子混沌唯一真正的敌人。</p>
+          <p class="watch">画面上现在每闪一下白光，就是一次重碰。<em>数一数，你会发现并不罕见。</em></p>
+          <p>读数里的 <b>重碰率</b> 是当场统计的：一对粒子在 3τ 之内再次相撞，就记一次。现在它大约是百分之几。</p>
+          <p class="subh">现在做那个决定性的实验</p>
+          <p>在「参数」里打开 <b>Grad 标度锁</b>，然后把半径 r 往小拖：</p>
+          <button type="button" class="open-controls" data-open-controls>🔒 打开 Grad 标度锁</button>
           <ul>
             <li>N 会自动增大，让 <b>N·r²</b> 保持不变——这正是 A1 的取极限方式；</li>
             <li>λ 和 τ 几乎不动，气体的宏观「性格」不变；</li>
-            <li>但<b>重碰率一路往下掉</b>。</li>
+            <li>但<b>闪光明显变稀</b>，重碰率一路往下掉。</li>
           </ul>
-          <p>这就是 Boltzmann–Grad 极限在做的事：它不是让气体变稀（λ 没变），而是让粒子<em>相对于自由程越来越小</em>，于是「碰完还能撞回同一个人」这种事越来越不可能。重碰率 → 0，A3 就从假设变成了结论。</p>
+          <p>这就是 Boltzmann–Grad 极限在做的事：它不是让气体变稀（λ 没变），而是让粒子<em>相对于自由程越来越小</em>，于是「碰完还能撞回同一个人」越来越不可能。重碰率 → 0，A3 就从假设变成了结论。</p>
           <p class="q">量级上：重碰要求第三个粒子把其中一个精准地弹回来，几何上被压制的因子大致正比于 r/λ。Grad 标度下 λ 不变而 r → 0，所以重碰率近似线性地趋零。</p>
-          <p>这条不用信我，本页的自检脚本按 N·r² = 1.05 扫过一遍，结果是：</p>
+          <p>这条不用信我，本页的自检脚本按 N·r² = 1.05 扫过一遍：</p>
           <div class="tbar">
             <div class="tbar-row"><span>r=0.062，N=280</span><div class="tt"><i style="width:100%"></i></div><span class="tv">6.4%</span></div>
             <div class="tbar-row"><span>r=0.045，N=520</span><div class="tt"><i style="width:79%"></i></div><span class="tv">5.1%</span></div>
@@ -1226,37 +1392,37 @@ const SC={
             <div class="tbar-row"><span>r=0.024，N=1820</span><div class="tt"><i class="full" style="width:31%"></i></div><span class="tv">2.0%</span></div>
             <div class="tcap">四组的 τ 分别是 0.454 / 0.464 / 0.468 / 0.466 —— 气体的「性格」没变，变的只有重碰。</div>
           </div>
-          <p>可惜「趋于零」不等于「可以忽略」。碰撞历史越长，可能的重碰构型越多，两者是赛跑关系。<em>时间一长，谁赢就不显然了。</em>这正是下面两章的全部内容。</p>`,
+          <p>可惜「趋于零」不等于「可以忽略」。碰撞历史越长，可能的重碰构型越多，两者是赛跑关系。<em>时间一长，谁赢就不显然了。</em>这正是最后两章的全部内容。</p>`,
        en(){camTo(0.6,0.22,3.2,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.03;
             GAS.running=true;}},
 
       {id:'fluid',t:'再退一步：流体',
-       b:`<p>把镜头拉远，把空间切成小格子，每格只记 f 的前几个矩：密度 ρ = ∫f d<b>v</b>、速度 <b>u</b> = ρ<sup>−1</sup>∫<b>v</b>f d<b>v</b>、温度 T ∝ ∫|<b>v</b>−<b>u</b>|²f d<b>v</b>。这就是流体力学的视角。</p>
-          <p>在「参数」里点 <b>冷热两半</b>：左热右冷，看热量扩散、温度抹平。</p>
-          <p>控制这一步的是<b>克努森数</b> Kn = λ/L（平均自由程比上宏观尺度）。把 Q(f,f) 除以 Kn，做 Hilbert / Chapman–Enskog 展开 f = f<sub>0</sub> + Kn·f<sub>1</sub> + …：</p>
-          <ul>
-            <li>取 Kn → 0 的领头阶，矩方程闭合成<b>可压缩欧拉方程</b>；</li>
-            <li>留到一阶，输运系数（黏度 μ、热导 κ）由碰撞算符的线性化给出，得到<b>纳维–斯托克斯–傅里叶方程</b>。</li>
-          </ul>
+       b:`<p class="lede">把镜头拉远，不再看单个球，只看每一小格的密度和温度。这就是流体力学的视角。</p>
+          <p>每格只记 f 的前几个矩：密度 ρ = ∫f d<b>v</b>、速度 <b>u</b> = ρ<sup>−1</sup>∫<b>v</b>f d<b>v</b>、温度 T ∝ ∫|<b>v</b>−<b>u</b>|²f d<b>v</b>。</p>
+          <p class="watch">在「参数」里点 <b>冷热两半</b>：左热右冷，看热量扩散、温度抹平。</p>
+          <p>控制这一步的是<b>克努森数</b> Kn = λ/L（平均自由程比上宏观尺度）。Kn → 0 时，矩方程闭合成流体方程：领头阶给出可压缩欧拉方程，留到一阶就得到<b>纳维–斯托克斯–傅里叶方程</b>。</p>
           <span class="fml">牛顿力学 —(Boltzmann–Grad)→ 玻尔兹曼方程 —(Kn→0)→ 流体方程</span>
           <p>注意这是<b>两个不同的极限</b>，箭头上的小字不一样。希尔伯特在 1900 年的第六问题里要求：把两支箭头都<b>严格地</b>补上。物理系的推导一直做得很顺，数学上的证明卡了 125 年。</p>
-
           <p class="subh">当场验一条傅里叶定律</p>
-          <p>右端那一步不必只当作口号。图表面板里多了一张 <b>温度剖面 T(x)</b>：把盒子沿 x 切成 16 条，各自统计局域温度。</p>
+          <p>右端那一步不必只当口号。图表面板里有一张 <b>温度剖面 T(x)</b>：把盒子沿 x 切成 16 条，各自统计局域温度。</p>
           <button type="button" class="open-charts" data-open-charts>🌡 打开温度剖面 T(x)</button>
-          <p>按下 <b>冷热两半</b> 的瞬间，剖面是一个<em>台阶</em>。松手之后你会看到台阶的棱角先被磨圆，再整体塌成一条平线——这正是热传导方程</p>
+          <p>按下 <b>冷热两半</b> 的瞬间，剖面是一个<em>台阶</em>。松手之后台阶的棱角先被磨圆，再整体塌成一条平线——这正是热传导方程</p>
           <span class="fml">∂<sub>t</sub>T = κ ∂<sub>x</sub>²T</span>
-          <p>在做的事。绝热壁下这个方程的本征模是 cos(nπ(x+L)/2L)，其中 <b>n=1 衰减最慢</b>，所以台阶很快就退化成一条余弦，之后整体按指数塌下去。图里的<b>对比度</b>就是这个第一模的振幅（除以平均温度）——实测它从 105% 掉到 7%，log 图上是一条直线。</p>
-          <p><em>没有人把热传导方程写进模拟</em>——里面只有硬球碰撞。傅里叶定律是从碰撞里长出来的，和第 3 章的麦氏分布一样。</p>
-          <p class="q">用第一模的投影而不是 T<sub>max</sub>−T<sub>min</sub>，是因为每格只有三十来个粒子，max−min 的散粒噪声就有 40%，足以把整个衰减盖掉。投影对 16 个格子求平均，噪声小 √16 倍。这类「换个统计量才看得见物理」的取舍，在数值实验里比公式推导更常遇到。</p>
-          <p class="q">这里也能看到 Kn 的意义：本页 λ ≈ 0.43，盒子尺度 L = 2，所以 Kn ≈ 0.2——不算小。真实空气在常温常压下 λ ≈ 68 nm，对厘米级的容器 Kn ≈ 10<sup>−5</sup>，那才是流体近似真正站得住的地方。<b>Kn 不够小的时候，纳维–斯托克斯就开始失效</b>（稀薄气体、微流控、再入大气层的飞行器都撞在这上面）。</p>`,
+          <p>在做的事。图里的<b>对比度</b>实测从 105% 掉到 7%，在 log 图上是一条直线。</p>
+          <p><em>没有人把热传导方程写进模拟</em>——里面只有硬球碰撞。傅里叶定律是从碰撞里长出来的，和麦氏分布一样。</p>
+          <details class="deep"><summary>两个技术细节：为什么是余弦模，以及 Kn 到底多大</summary>
+            <p>绝热壁下热传导方程的本征模是 cos(nπ(x+L)/2L)，其中 <b>n=1 衰减最慢</b>，所以台阶很快退化成一条余弦，之后整体按指数塌下去。图里的对比度就是这个第一模的振幅除以平均温度。</p>
+            <p>用第一模的投影而不是 T<sub>max</sub>−T<sub>min</sub>，是因为每格只有三十来个粒子，max−min 的散粒噪声就有 40%，足以把整个衰减盖掉。投影对 16 个格子求平均，噪声小 √16 倍。这类「换个统计量才看得见物理」的取舍，在数值实验里比公式推导更常遇到。</p>
+            <p>本页 λ ≈ 0.43，盒子尺度 L = 2，所以 Kn ≈ 0.2——<em>不算小</em>。真实空气在常温常压下 λ ≈ 68 nm，对厘米级容器 Kn ≈ 10<sup>−5</sup>，那才是流体近似真正站得住的地方。<b>Kn 不够小时纳维–斯托克斯就开始失效</b>：稀薄气体、微流控、再入大气层的飞行器都撞在这上面。</p>
+          </details>`,
        en(){camTo(0.85,0.35,4.3,0,0,0);GAS.mode='macro';GAS.single=false;CAM.spin=0.06;gasInit('hot');}},
 
-      {id:'deng',t:'邓煜：把 Lanford 的 1/5 变成永远',
-       b:`<p>先说清楚极限怎么取。玻尔兹曼方程不是 N→∞ 的任意极限，而是 <b>Boltzmann–Grad 标度</b>：</p>
+      {id:'lanford',t:'为什么卡了五十年',
+       b:`<p class="lede">前面九章搭好了舞台：唯一还没证的东西，是 A3 能撑多久。<b>1975 年 Lanford 撑到了 0.2 个自由时间，然后这个数字五十年没动过。</b></p>
+          <p>先说清楚极限怎么取。玻尔兹曼方程不是 N→∞ 的任意极限，而是 <b>Boltzmann–Grad 标度</b>：</p>
           <span class="fml">N → ∞，　r → 0，　N r² = const</span>
-          <p>这样总碰撞截面 Nr² 保持有限，平均自由程 λ ~ 1/(Nr²) 也保持有限。读数栏里的 <b>N·r²（Grad 不变量）</b>就是它——拖动 N 和 r 让它保持不变，你会看到画面变密变小，但气体的「性格」（λ、τ）几乎不动。</p>
-          <p>1975 年 <b>Lanford</b> 在这个标度下迈出第一步：硬球系统的 BBGKY 层级确实收敛到玻尔兹曼层级——但只在 |t| &lt; T 内成立，而 T 大约是<b>一个平均自由时间的五分之一</b>，粒子平均还没碰上一次。</p>
+          <p>读数里的 <b>N·r²（Grad 不变量）</b>就是它——上一章你已经亲手拖过。</p>
+          <p>1975 年 <b>Lanford</b> 迈出第一步：硬球系统的 BBGKY 层级确实收敛到玻尔兹曼层级——但只在 |t| &lt; T 内成立，而 T 大约是<b>一个平均自由时间的五分之一</b>，粒子平均还没碰上一次。</p>
           <div class="tbar">
             <div class="tbar-row"><span>Lanford 1975</span>
               <div class="tt"><i style="width:5%"></i></div><span class="tv">≈0.2 τ</span></div>
@@ -1265,72 +1431,98 @@ const SC={
             <div class="tcap">τ = 平均自由时间。本次模拟已跑到 <b id="tauNow">—</b>——早就越过 Lanford 能保证的范围了。</div>
           </div>
           <p class="srcnote"><b>「1/5」这个数从哪来：</b>Lanford 原文只说「充分短的时间」，没写这个分数。0.2τ 是后来文献复核他那个 Duhamel 级数收敛半径时给出的标准估计（Pulvirenti–Simonella；Uffink–Valente 的说法是「不超过平均自由时间的五分之一」）。邓煜–Hani–马骁自己的摘要里也只写 "sufficiently short time"。想核对的话，「资料」页给了这三条链接。</p>
-          <p><b>为什么会卡在一个自由时间以内？</b>要看清这一点，得看他用的是什么工具。</p>
 
-          <p class="subh">① 不封闭的层级：BBGKY</p>
-          <p>从 N 粒子刘维尔方程出发，把后 N−s 个粒子积掉，得到 s 粒子边缘分布 f<sup>(s)</sup> 的方程：</p>
-          <span class="fml">∂<sub>t</sub>f<sup>(s)</sup> + Σ<sub>i≤s</sub> <b>v</b><sub>i</sub>·∇<sub><b>x</b><sub>i</sub></sub>f<sup>(s)</sup> = C<sub>s,s+1</sub> f<sup>(s+1)</sup></span>
-          <p>右端把 f<sup>(s+1)</sup> 拽了进来：<em>1 个粒子的方程要问 2 个粒子，2 个要问 3 个</em>……这条<b>不封闭</b>的链就是 BBGKY 层级。玻尔兹曼方程相当于在第一层强行截断——用 A3 把 f<sup>(2)</sup> 换成 f<sup>(1)</sup>⊗f<sup>(1)</sup>。整个问题就是：<em>这一步截断合不合法。</em></p>
-
-          <p class="subh">② 碰撞树与 n! 爆炸</p>
-          <p>Lanford 不截断，而是把层级迭代展开（Duhamel）：f<sup>(1)</sup>(t) 写成一列积分之和，第 n 项是「恰好经历 n 次碰撞的所有历史」。这些历史可以画成一棵树——每次碰撞添一个新粒子做分支。</p>
+          <p class="subh">为什么会卡在一个自由时间以内</p>
+          <p>症结在于：<b>不封闭</b>。从 N 粒子刘维尔方程出发，写 1 个粒子的方程时右端会冒出 2 个粒子的分布，写 2 个的又会冒出 3 个的……这条链叫 BBGKY 层级。玻尔兹曼方程相当于在第一层强行截断——用 A3 把两粒子分布换成单粒子分布之积。整个问题就是：<em>这一步截断合不合法。</em></p>
+          <p>Lanford 不截断，而是把层级一路展开：f(t) 写成一列积分之和，第 n 项是「恰好经历 n 次碰撞的所有历史」。这些历史可以画成一棵树——每次碰撞添一个新粒子做分支。</p>
           <div class="treewrap"><canvas id="treeCv"></canvas></div>
-          <p>第 n 层的分支数按 <b>n!</b> 增长，而 n 重时间积分只给出 <b>t<sup>n</sup>/n!</b>。两者刚好抵消，于是级数的每一项都是 O((Ct)<sup>n</sup>)——<b>只有 t &lt; 1/C 才收敛</b>。把常数 C 算出来，就是那个约 0.2τ。这不是估计得不够仔细，而是这套展开方式的固有半径。</p>
+          <p>问题出在计数：第 n 层的分支数按 <b>n!</b> 增长，而 n 重时间积分只给出 <b>t<sup>n</sup>/n!</b>。两者刚好抵消，于是每一项都是 O((Ct)<sup>n</sup>)——<b>只有 t &lt; 1/C 才收敛</b>。把常数 C 算出来，就是那个约 0.2τ。这不是估计得不够仔细，而是这套展开方式的<em>固有半径</em>。</p>
 
-          <p class="subh">③ 真正的敌人：重碰</p>
-          <p>树上绝大多数分支对应「每次都撞上新粒子」的历史——这类项在 Grad 极限下正好收敛到玻尔兹曼层级，没有问题。出问题的是上图中<span style="color:#fc6255">红色</span>那类：<b>重碰分支</b>，两个已经碰过的粒子又撞回来。</p>
-          <p>单个重碰项的确是小量（上一章你亲手把它拖下去过，量级 ~ r/λ）。但树的分支数在涨。<em>时间越长，重碰构型越多</em>——小量乘以巨大的计数，逐项估计就顶不住了。这就是 50 年没人推进的原因：<b>不是不知道敌人是谁，是数不过来。</b></p>
+          <p class="subh">真正的敌人还是重碰</p>
+          <p>树上绝大多数分支对应「每次都撞上新粒子」的历史，这类项在 Grad 极限下正好收敛到玻尔兹曼层级，没有问题。出问题的是图中<span style="color:#fc6255">红色</span>那类：<b>重碰分支</b>。</p>
+          <p>单个重碰项确实是小量（第 9 章你亲手把它拖下去过，量级 ~ r/λ）。但树的分支数在涨。<em>时间越长，重碰构型越多</em>——小量乘以巨大的计数，逐项估计就顶不住了。这就是 50 年没人推进的原因：<b>不是不知道敌人是谁，是数不过来。</b></p>
 
-          <p class="subh">④ 邓煜–Hani–马骁做了什么</p>
-          <p>2024–2025 年三人的思路是<b>不再逐项取绝对值估计</b>，而是保留符号做相消。技术上是对碰撞史做<b>累积量展开（cumulant expansion）与重整化</b>：</p>
+          <p><em>下一章看他们是怎么绕过去的。</em></p>`,
+       en(){camTo(0.7,0.28,4.0,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.04;}},
+
+      {id:'deng',t:'邓煜–Hani–马骁：把符号找回来',
+       b:`<p class="lede">卡住五十年的不是几何，是<b>计数</b>。突破一句话就能说清：<em>逐项取绝对值，等于假定所有误差都朝同一个方向累加——而它们其实会互相抵消。</em></p>
+          <p>画面回到速度空间。第 3 章你看着这团点云从球壳塌成麦氏分布，那时它只是「模拟里发生的事」。<b>这一章之后，它是定理。</b></p>
+          <p>三人的做法是<b>不再逐项取绝对值估计</b>，而是保留符号做相消。技术上是对碰撞史做<b>累积量展开与重整化</b>：</p>
           <ul>
             <li>把展开项按碰撞树的<b>拓扑</b>分类，而不是按阶数；</li>
             <li>证明危险的那一类（带重碰的簇）之间存在<b>系统性相消</b>——它们成对地互相抵消，而不是各自都小；</li>
             <li>剩下的部分能被一个与 t 无关的界一致控制。</li>
           </ul>
-          <p>这套思路他们并不陌生：邓煜与 Hani 此前在<b>波湍流</b>（wave turbulence）里推导动理学方程时，面对的正是同一类「共振历史的组合爆炸」，用的也是同一族重整化工具。</p>
-          <p>结论就是上一章那个还没证完的命题：</p>
+          <p><b>把符号找回来，就是这五十年缺的那一步。</b></p>
+          <p>这套思路他们并不陌生：邓煜与 Hani 此前在<b>波湍流</b>里推导动理学方程时，面对的正是同一类「共振历史的组合爆炸」，用的也是同一族重整化工具。</p>
+          <p>结论就是第 8 章那个还没证完的命题：</p>
           <span class="fml">分子混沌对<b>任意长时间</b>传播<br>（只要玻尔兹曼方程的解还存在）</span>
           <p>换句话说，<b>A3 不再是假设，而是 A1 + A2 + A4 的定理</b>。时间之矢没有被凭空造出来，它被追溯回了唯一那个不对称的输入——初态。</p>
-
           <p class="srcnote"><b>说清楚它<em>没有</em>做到什么：</b>这不是「证明了熵增」。初态混沌（A4）依然是外加条件，而且它对 t &gt; 0 和 t &lt; 0 同样有效——从 t=0 的混沌初态往<em>过去</em>推，H 同样单调下降。为什么现实世界只有一个方向，那是宇宙初始低熵（past hypothesis）的问题，不在这篇论文的射程里。这篇论文做到的是：把「为什么可以用玻尔兹曼方程」从物理直觉变成了硬球势下的定理。</p>
           <p>随后他们把同一套控制接力用到 Kn → 0 的那一支，推出欧拉与纳维–斯托克斯–傅里叶方程。悬置 125 年的希尔伯特第六问题，核心部分就此解决。2026 年，邓煜获菲尔兹奖。</p>`,
-       en(){camTo(0.7,0.28,4.0,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.04;}}
+       en(){camTo(0.95,0.20,3.3,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.07;
+            vmixTo(1,1600,400);GAS.running=true;}}
     ],
     ctrl:`
-      <div class="row"><label>粒子数 N <b id="v_N"></b></label>
-        <input type="range" id="s_N" min="60" max="2600" step="20"></div>
-      <div class="row"><label>半径 r <b id="v_r"></b></label>
-        <input type="range" id="s_r" min="0.016" max="0.07" step="0.001"></div>
-      <div class="row"><label>时间倍速 <b id="v_sp"></b></label>
-        <input type="range" id="s_sp" min="0.1" max="4" step="0.1"></div>
-      <button class="btn wide" id="b_grad">Grad 标度锁：N·r² 固定</button>
-      <div class="sep"></div>
-      <div class="hd" style="margin-bottom:9px">低熵初态</div>
-      <div class="btns">
-        <button class="btn" id="b_corner">全挤在角落</button>
-        <button class="btn" id="b_beam">同向束流</button>
-        <button class="btn" id="b_same">同速率球壳</button>
-        <button class="btn" id="b_hot">冷热两半</button>
+      <div class="ckgrp" data-ck="vmix">
+        <div class="row"><label>位置 ⇄ 速度 <b id="v_vm"></b></label>
+          <input type="range" id="s_vm" min="0" max="1" step="0.01"></div>
+        <p class="ckhint">左端＝球在盒子里的位置，右端＝同一批球画在各自的速度上。中间是连续形变。</p>
       </div>
       <div class="sep"></div>
-      <div class="btns">
-        <button class="btn on" id="b_run">暂停</button>
-        <button class="btn" id="b_rev">时间反演</button>
-        <button class="btn wide" id="b_early">早期反演（观察 H 回升）</button>
-        <button class="btn" id="b_macro">宏观视角</button>
-        <button class="btn" id="b_spin2">自动旋转</button>
+      <div class="ckgrp" data-ck="gas">
+        <div class="row"><label>粒子数 N <b id="v_N"></b></label>
+          <input type="range" id="s_N" min="60" max="2600" step="20"></div>
+        <div class="row"><label>半径 r <b id="v_r"></b></label>
+          <input type="range" id="s_r" min="0.016" max="0.07" step="0.001"></div>
+        <button class="btn wide" id="b_grad">Grad 标度锁：N·r² 固定</button>
+      </div>
+      <div class="sep"></div>
+      <div class="ckgrp" data-ck="preset">
+        <div class="hd" style="margin-bottom:9px">低熵初态</div>
+        <div class="btns">
+          <button class="btn" id="b_corner">全挤在角落</button>
+          <button class="btn" id="b_beam">同向束流</button>
+          <button class="btn" id="b_same">同速率球壳</button>
+          <button class="btn" id="b_hot">冷热两半</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="ckgrp" data-ck="run">
+        <div class="row"><label>时间倍速 <b id="v_sp"></b></label>
+          <input type="range" id="s_sp" min="0.1" max="4" step="0.1"></div>
+        <div class="btns">
+          <button class="btn on" id="b_run">暂停</button>
+          <button class="btn" id="b_step">单步</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="ckgrp" data-ck="rev">
+        <div class="btns">
+          <button class="btn" id="b_rev">时间反演</button>
+          <button class="btn wide" id="b_early">早期反演（观察 H 回升）</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="ckgrp" data-ck="view">
+        <div class="btns">
+          <button class="btn" id="b_macro">宏观视角</button>
+          <button class="btn" id="b_spin2">自动旋转</button>
+        </div>
       </div>`
   }
 };
 
 /* ---- 演出编排：参数补间 + 定时拍点 ---- */
 const anims=[],beats=[];
-function anim(set,from,to,ms,delay){anims.push({set,from,to,ms,t0:performance.now()+(delay||0)});}
+/* key 只用来做一件事：手动拖滑块时，把同名的补间掐掉，
+   否则松手后动画会把你刚拖到的值抢回去 */
+function anim(set,from,to,ms,delay,key){anims.push({set,from,to,ms,t0:performance.now()+(delay||0),key});}
 function beat(delay,fn){beats.push({t:performance.now()+delay,fn});}
 function clearShow(){anims.length=0;beats.length=0;}
 /* 把某个对象属性平滑推到目标值 */
-function to(obj,key,val,ms,delay){anim(v=>obj[key]=v,obj[key],val,ms===undefined?600:ms,delay);}
+function to(obj,key,val,ms,delay){anim(v=>obj[key]=v,obj[key],val,ms===undefined?600:ms,delay,key);}
 function stepAnims(){
   const now=performance.now();
   for(let i=anims.length-1;i>=0;i--){
@@ -1387,7 +1579,15 @@ function gotoStep(i){
   $('#stbody').scrollTop=0;
   $('#prev').disabled=si===0;$('#next').disabled=si===S.length-1;
   markDots();
+  /* 视图状态集中复位。挂谷篇吃过亏：构型标志留在上一章的值上，
+     翻到后面几章画面就是错的。宁可每章从同一个零点重新出发。
+     只有 vmix 例外——它是连续形变，硬切回去就把「同一批粒子换个空间看」
+     这层意思弄丢了。所以让每章自己声明目标，没声明的才淡回位置空间。 */
+  trSet(0,0);
+  if(GAS.flash)GAS.flash.fill(0);
+  GAS.vmixSet=false;
   s.en&&s.en();
+  if(!GAS.vmixSet)to(GAS,'vmix',0,520);
   syncCtrl();
 }
 $('#prev').onclick=()=>gotoStep(si-1);
@@ -1428,7 +1628,23 @@ function bindCtrl(name){
     $('#b_beam').onclick=()=>{gasInit('beam');GAS.running=true;syncCtrl();};
     const ss=$('#s_sp');ss.value=GAS.speed;
     ss.oninput=()=>{GAS.speed=+ss.value;syncCtrl();};
+    /* 位置 ⇄ 速度：手动搓的时候不该被章节的补间抢走，所以直接写 vmix
+       并把 vmixSet 立起来（当前章节已经声明过目标，这里只是覆盖它）。 */
+    const sv=$('#s_vm');sv.value=GAS.vmix;
+    sv.oninput=()=>{
+      for(let i=anims.length-1;i>=0;i--)if(anims[i].key==='vmix')anims.splice(i,1);
+      GAS.vmix=+sv.value;syncCtrl();
+    };
     $('#b_run').onclick=()=>{GAS.running=!GAS.running;syncCtrl();};
+    /* 单步：暂停状态下推进一个固定小步长。想看清一次碰撞前后速度怎么换，
+       这是唯一办法——连续播放时它一帧就过去了。 */
+    $('#b_step').onclick=()=>{
+      GAS.running=false;
+      gasStep(0.016*GAS.speed);gasStats();
+      GAS.H.push(GAS.Hcur);if(GAS.H.length>420)GAS.H.shift();
+      qbStep();profStep();trPush();
+      syncCtrl();
+    };
     $('#b_rev').onclick=()=>{for(let i=0;i<GAS.N;i++){GAS.vx[i]*=-1;GAS.vy[i]*=-1;GAS.vz[i]*=-1;}
       GAS.reversed=performance.now();GAS.revH=GAS.Hcur;GAS.revPeak=GAS.Hcur;GAS.revIdx=GAS.H.length;
       GAS.running=true;syncCtrl();
@@ -1460,14 +1676,31 @@ function paintRange(el){
   const mn=+el.min,mx=+el.max;
   el.style.setProperty('--pct',((+el.value-mn)/(mx-mn)*100).toFixed(1)+'%');
 }
+/* 每章真正用得上的控件。面板一次摆十几个东西，读者不知道该碰哪个；
+   把本章相关的那组提亮，其余压暗（不是藏起来——想用随时能用）。 */
+/* 有图可看的章节 */
+const CHART_FROM=new Set(['relax','qop','htheorem','loschmidt','assumptions','recollision','fluid','lanford','deng']);
+const CK={
+  one:['run','view'], many:['gas','preset','run'],
+  vspace:['vmix','preset'], relax:['vmix','preset','run'],
+  qop:['vmix','preset','run'], htheorem:['vmix','preset','run'],
+  loschmidt:['rev','run'], assumptions:['preset','run'],
+  recollision:['gas','run'], fluid:['preset','view'],
+  lanford:['gas','view'], deng:['vmix','run']
+};
 function syncCtrl(){
   $$('#ctrlbody input[type=range]').forEach(paintRange);
   if(scene==='gas'){
     const e=id=>$(id);
+    const cid=(SC.gas.steps[si]||{}).id||'';
+    const hot=CK[cid]||[];
+    $$('#ctrlbody .ckgrp').forEach(g=>g.classList.toggle('ck-dim',hot.length>0&&!hot.includes(g.dataset.ck)));
     if(e('#v_N')){e('#v_N').textContent=GAS.N;e('#v_r').textContent=GAS.r.toFixed(3);
       e('#v_sp').textContent=GAS.speed.toFixed(1)+'×';}
     if(e('#s_N'))e('#s_N').value=GAS.N;
     if(e('#s_r'))e('#s_r').value=GAS.r;
+    if(e('#s_vm')){e('#s_vm').value=GAS.vmix;paintRange(e('#s_vm'));
+      e('#v_vm').textContent=GAS.vmix<0.02?'位置空间':GAS.vmix>0.98?'速度空间':(GAS.vmix*100).toFixed(0)+'% 速度';}
     if(e('#b_run')){e('#b_run').textContent=GAS.running?'暂停':'继续';e('#b_run').classList.toggle('on',GAS.running);}
     if(e('#b_macro'))e('#b_macro').classList.toggle('on',GAS.mode==='macro');
     if(e('#b_spin2'))e('#b_spin2').classList.toggle('on',!!CAM.spin);
@@ -1789,6 +2022,11 @@ function frame(now){
       GAS.H.push(GAS.Hcur);
       if(GAS.H.length>420){GAS.H.shift();if(GAS.revIdx>=0)GAS.revIdx--;}
       qbStep();profStep();
+      /* 重碰闪光按时间衰减（约 0.55 秒），和帧率无关 */
+      if(GAS.flash){const kf=Math.exp(-dt/0.55),fa=GAS.flash;
+        for(let i=0;i<GAS.N;i++)if(fa[i]>0.004)fa[i]*=kf;else fa[i]=0;}
+      /* 拖尾每 2 帧采一次：再密也看不出来，白烧带宽 */
+      if(GAS.tr&&(GAS.trTick=(GAS.trTick+1)%2)===0)trPush();
       /* 演化史每 3 帧记一行，150 行大约覆盖最近 7 秒 */
       if((wfTick=(wfTick+1)%3)===0){
         if(!GAS.wf.length)GAS.wfTop=Math.max(2.9*(GAS.vrms||1),0.001);
@@ -1808,20 +2046,20 @@ function frame(now){
       {k:'温度 T',v:((GAS.vrms||0)**2/3).toFixed(3),cls:'m-keep'},
       {k:'H 函数',v:(GAS.Hcur||0).toFixed(3),hi:true,cls:'m-keep'},
       {k:'碰撞 / 粒子',v:(2*GAS.collisions/Math.max(1,GAS.N)).toFixed(1),
-       cls:(id==='many'||id==='relax')?'m-keep':''},
+       cls:(id==='many'||id==='vspace'||id==='relax')?'m-keep':''},
       /* Q 的归一化失衡度：0 = 细致平衡（麦氏分布），越大离平衡越远 */
       {k:'|Q| 失衡度',v:(QB.net*100).toFixed(1),u:'%',
-       cls:(id==='relax'||id==='htheorem')?'notrans m-keep':'notrans'},
+       cls:(id==='qop'||id==='htheorem')?'notrans m-keep':'notrans'},
       /* 重碰率：破坏分子混沌的那类关联，Grad 极限下应当趋零 */
       {k:'重碰率',v:(GAS.recolRate*100).toFixed(1),u:'%',
-       cls:(id==='recollision'||id==='deng')?'m-keep':''},
+       cls:(id==='recollision'||id==='lanford')?'m-keep':''},
       {k:'温度不均匀度',v:(PROF.contrast*100).toFixed(0),u:'%',
        cls:id==='fluid'?'m-keep':''},
       {k:'N·r² (Grad 不变量)',v:(GAS.N*GAS.r*GAS.r).toFixed(2),
-       cls:(id==='recollision'||id==='deng')?'notrans m-keep':'notrans'}
+       cls:(id==='recollision'||id==='lanford')?'notrans m-keep':'notrans'}
     ]);
     /* 最后一章那句「本次模拟已跑到 X τ」——让 Lanford 的 0.2τ 有个当场的参照 */
-    if(id==='deng'){
+    if(id==='lanford'){
       const tn=document.getElementById('tauNow');
       if(tn)tn.textContent=K.tau>0?(GAS.t/K.tau).toFixed(1)+' τ':'—';
       if(treeTick++%30===0)drawTree();
@@ -1829,7 +2067,16 @@ function frame(now){
     /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0。
        图表都是统计量，20Hz 足够；手机上省下的这几毫秒都是 3D 那边的。
        面板被藏起来时（讲解档 / 参数档）完全不画。 */
-    if(si>=2){
+    /* 形变过程中滑块跟着走，否则读者拖完一次就发现刻度对不上了 */
+    {const sv=$('#s_vm');
+     if(sv&&Math.abs(+sv.value-GAS.vmix)>0.005){
+       sv.value=GAS.vmix;paintRange(sv);
+       const lb=$('#v_vm');
+       if(lb)lb.textContent=GAS.vmix<0.02?'位置空间':GAS.vmix>0.98?'速度空间':(GAS.vmix*100).toFixed(0)+'% 速度';
+     }}
+    /* 图表从「壳塌成麦氏分布」那一章起才有意义。按 id 判断，不按序号——
+       改章节顺序时序号会错位，id 不会。 */
+    if(CHART_FROM.has(id)){
       const box=$('#charts');
       box.classList.add('show');
       const visible=box.offsetParent!==null;
@@ -1861,6 +2108,14 @@ function frame(now){
     }
     if(id==='recollision'){
       GL2_.push({p:[0,1.28,0],t:`重碰率 ${(GAS.recolRate*100).toFixed(1)}% · r/λ = ${(GAS.r/K.mfp).toFixed(3)}`,c:'#fc6255',dot:1});
+    }
+    /* 速度空间要标清楚：不标的话读者只看到一团点，不知道半径代表什么。
+       圆圈就在 0.62 处（= 均方根速率），标签贴在圆上。 */
+    if(GAS.vmix>0.12&&GAS.mode!=='macro'){
+      const o=clamp((GAS.vmix-0.12)/0.5,0,1);
+      GL2_.push({p:[0,1.30,0],o,t:'速度空间：离原点越远＝跑得越快',c:'#6fb7ff',dot:1});
+      GL2_.push({p:[0.62,0,0],o:o*0.85,t:'均方根速率',c:'#6fb7ff',dot:1});
+      if(GAS.vmix<0.88)GL2_.push({p:[0,-1.32,0],o:o*(1-GAS.vmix),t:'同一批球，正在换一个空间',c:'#9aa5bd',dot:1});
     }
     if((id==='many'||id==='relax')&&GAS.preset==='corner'){
       const pctV=Math.round((GAS.occ||0.125)*100);
