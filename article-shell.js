@@ -396,5 +396,94 @@
       void ctrl.offsetWidth;
       ctrl.classList.add("flash");
     });
+
+    /* ── 先猜一下 ────────────────────────────────────────────
+       直觉不是看出来的，是「押一次、然后发现自己对不对」建立起来的。
+       读者在揭晓之前必须先掏一个答案出来；押错了那一下的意外感，
+       比读十遍正确结论都管用。
+       用法：<div class="predict"><p class="pq">问题</p>
+             <button data-pick data-why="解释">选项</button>（正确项加 data-right）
+             </div> */
+    const bindPredict = (root) => {
+      if (!root || root.dataset.bound) return;
+      root.dataset.bound = "1";
+      const picks = [...root.querySelectorAll("[data-pick]")];
+      let out = root.querySelector(".pans");
+      if (!out) {
+        out = document.createElement("div");
+        out.className = "pans";
+        out.setAttribute("aria-live", "polite");
+        root.appendChild(out);
+      }
+      picks.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (root.classList.contains("done")) return;
+          root.classList.add("done");
+          const right = btn.hasAttribute("data-right");
+          btn.classList.add(right ? "correct" : "wrong");
+          picks.forEach((other) => {
+            other.disabled = true;
+            if (!right && other.hasAttribute("data-right")) other.classList.add("correct");
+          });
+          const answer = root.querySelector("[data-right]");
+          out.innerHTML =
+            `<strong>${right ? "猜对了。" : "不是这个。"}</strong>` +
+            `<span>${answer ? answer.dataset.why || "" : ""}</span>`;
+          out.classList.add("show");
+        });
+      });
+    };
+
+    /* ── 这个初态到底有多特殊 ──────────────────────────────
+       正文里「测度极小的集合」是一句抽象的话，读者接不住。
+       让他自己拖 N，亲眼看着 (1/8)^N 掉进没有任何东西可以类比的量级——
+       那个数字本身就是时间之矢的全部答案。 */
+    /* 每一档配一个真能拿来比的东西。挑的是「读者手里有直觉的量」：
+       硬币 → 彩票 → 宇宙的秒数 → 宇宙的原子数 → 没得比了。
+       数值都可核对：双色球头奖 1/17,721,088 ≈ 5.6×10⁻⁸；
+       宇宙年龄 138 亿年 ≈ 4.35×10¹⁷ 秒；可观测宇宙原子数 ~10⁸⁰。
+       取「p 落在哪一档的下界之上」，所以阈值必须从大到小排。 */
+    const SCALES = [
+      [1e-3, "还挺常见 —— 相当于连抛几次硬币全是正面，多等一会儿总会碰上"],
+      [5.6e-8, "已经罕见到彩票的量级：双色球头奖约 1/1770 万，也就是 5.6×10⁻⁸"],
+      [2.3e-18, "比中一次彩票还要难得多。宇宙至今约 4×10¹⁷ 秒 —— 这已经接近「在宇宙的全部秒数里指定某一秒」"],
+      [1e-80, "可观测宇宙的原子总数约 10⁸⁰。这相当于在全宇宙的原子里，随手指中<b>指定的那一个</b>"],
+      [0, "到这里已经没有任何东西可以拿来打比方了。<b>这就是「不可逆」的全部含义</b>——定律允许它倒回去，只是那个初态在相空间里稀有到这种程度"]
+    ];
+    const fmtOdds = (n) => {
+      /* (1/8)^N 很快就下溢成 0，所以全程在对数上算 */
+      const log10 = -n * Math.log10(8);
+      if (log10 > -6) return { txt: "1 / " + Math.round(Math.pow(8, n)).toLocaleString("en-US"), log10 };
+      /* 用真正的减号 U+2212，ASCII 的连字符在上标里几乎看不见 */
+      return { txt: "10<sup>−" + Math.abs(Math.round(log10)) + "</sup>", log10 };
+    };
+    const bindOdds = (root) => {
+      if (!root || root.dataset.bound) return;
+      root.dataset.bound = "1";
+      const slider = root.querySelector("input[type=range]");
+      const nOut = root.querySelector("[data-odds-n]");
+      const pOut = root.querySelector("[data-odds-p]");
+      const cmp = root.querySelector("[data-odds-cmp]");
+      const paint = () => {
+        const n = +slider.value;
+        const { txt, log10 } = fmtOdds(n);
+        nOut.textContent = n;
+        pOut.innerHTML = txt;
+        const hit = SCALES.find((s) => Math.pow(10, log10) >= s[0]) || SCALES[SCALES.length - 1];
+        cmp.innerHTML = hit[1];
+        slider.style.setProperty("--pct", ((n - +slider.min) / (+slider.max - +slider.min) * 100).toFixed(1) + "%");
+      };
+      slider.addEventListener("input", paint);
+      paint();
+    };
+
+    /* 章节正文是整段换掉的，所以每次换章后重新挂一遍 */
+    const bindStoryWidgets = () => {
+      document.querySelectorAll(".predict").forEach(bindPredict);
+      document.querySelectorAll("[data-odds]").forEach(bindOdds);
+    };
+    bindStoryWidgets();
+    if (storyBody) new MutationObserver(bindStoryWidgets)
+      .observe(storyBody, { childList: true, subtree: false });
   }
 })();

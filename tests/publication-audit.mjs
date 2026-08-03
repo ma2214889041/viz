@@ -60,4 +60,34 @@ for (const { slug, method } of works) {
   report.push({ slug, method, canvases, frames, sliders, audio });
 }
 
+
+/* ── 共享资源的缓存版本号必须由构建按内容打 ──
+   article.css / article-shell.js 走 max-age=3600，靠 ?v= 破缓存。
+   这个号以前手写在 HTML 里，改了文件忘了改号，回访读者一小时内继续吃旧样式；
+   本地怎么看都正常，线上就是不对。所以把「按内容哈希」这件事钉死。 */
+{
+  const build = await readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8");
+  /* 用普通字符串判定，不写正则 —— 这条守卫本身刚被正则转义坑过一次，
+     写成 includes 就没有「看着对、其实永远为真」的余地。 */
+  const missing = [
+    ["按内容算哈希", 'createHash("sha256")'],
+    ["把哈希写进 ?v=", "?v=${stamp}"],
+    ["一个都没打上时要报错", "没有一个页面被打上缓存版本号"]
+  ].filter(([, needle]) => !build.includes(needle)).map(([what]) => what);
+  if (missing.length) {
+    console.error(JSON.stringify({ ok: false, why: "build.mjs 缺少：" + missing.join("、") }, null, 2));
+    process.exit(1);
+  }
+
+  /* 页面里不许再出现手写的日期式版本号 —— 那正是会忘记更新的那种 */
+  for (const dir of ["boltzmann", "kakeya"]) {
+    const page = await readFile(new URL(`../${dir}/index.html`, import.meta.url), "utf8");
+    const stamps = [...page.matchAll(/(?:article\.css|article-shell\.js)\?v=([^"']*)/g)].map((m) => m[1]);
+    if (!stamps.length) {
+      console.error(JSON.stringify({ ok: false, why: `${dir} 没有引用带 ?v= 的共享资源` }, null, 2));
+      process.exit(1);
+    }
+  }
+}
+
 console.log(JSON.stringify({ ok: true, works: works.length, report }));
