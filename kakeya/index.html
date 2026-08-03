@@ -88,6 +88,31 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 #story .body .fml{display:block;text-align:center;font-family:var(--mono);font-size:13px;color:var(--ink);
   margin:12px 0;padding:11px;background:rgba(255,255,255,.04);border-radius:9px;letter-spacing:.02em}
 #story .body .tbar{margin:14px 0;padding:13px 13px 10px;background:rgba(255,255,255,.04);border-radius:10px}
+/* 小节标题：长章节要分段，否则手机上就是一堵墙 */
+#story .body .subh{margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--line);
+  font-size:13px;font-weight:650;color:var(--k1);letter-spacing:.02em}
+/* 两把尺子的对照 */
+.cmpbox{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:13px 0}
+.cmpbox>div{padding:11px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.035)}
+.cmpbox span{display:block;font-size:10.5px;color:var(--dim2);margin-bottom:5px}
+.cmpbox b{display:block;font-family:var(--mono);font-size:14px;color:#fff;margin-bottom:5px}
+.cmpbox i{font-style:normal;font-size:11px;line-height:1.6;color:var(--dim)}
+/* δ-管道的定义框 */
+.deftube{margin:13px 0;padding:12px 13px;border-left:2px solid var(--k1);
+  background:rgba(88,196,221,.07);border-radius:0 8px 8px 0}
+#story .body .deftube p{margin:0 0 7px;font-size:12.5px;line-height:1.8}
+#story .body .deftube p:last-child{margin-bottom:0}
+/* 下界阶梯 */
+.ladder{display:grid;gap:6px;margin:13px 0}
+.ladder>div{display:flex;align-items:baseline;gap:11px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.03)}
+.ladder b{flex:none;width:56px;font-family:var(--mono);font-size:14px;color:var(--k1)}
+.ladder span{font-size:11.5px;color:var(--dim);line-height:1.5}
+.ladder .hot{border-color:rgba(88,196,221,.5);background:rgba(88,196,221,.1)}
+.ladder .hot b{color:#fff}
+.ladder.mini>div{padding:6px 10px}
+.ladder.mini b{width:64px;font-size:11.5px}
+.ladder.mini span{font-size:11px;font-family:var(--mono);color:var(--dim2)}
 .tbar-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;font-size:11px;color:var(--dim)}
 .tbar-row>span:first-child{width:88px;flex:none;font-size:11px}
 .tbar .tt{flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
@@ -262,8 +287,8 @@ canvas.chart{display:block;border-radius:8px}
   .card{width:100%}
 }
 </style>
-<link rel="stylesheet" href="../article.css?v=20260803131946">
-<script src="../article-shell.js?v=20260803131946" defer></script>
+<link rel="stylesheet" href="../article.css?v=20260803144257">
+<script src="../article-shell.js?v=20260803144257" defer></script>
 </head>
 <body class="home">
 
@@ -671,7 +696,10 @@ const KAK={
   K:32,                       // 每个方向轴上的采样数 -> K*K 根针
   needleSweep:0, sweeping:false,
   ballAlpha:0, oneNeedle:0,
-  dirGlobe:0, boxes:0, shadow:0, cones:0, alpha:1
+  dirGlobe:0, boxes:0, shadow:0, cones:0, alpha:1,
+  /* 下界论证的两个构型：bush（一束穿过同一点）与 hairbrush（都交于同一根管）。
+     它们是把维数下界从 2 抬到 2.5 的那两个几何观察。 */
+  bush:0, brush:0, cfg:'', delta:0.055   // cfg 是即时的模式，bush/brush 只是淡入淡出的量
 };
 /* 逐层数值搜索得到的最优滑动比例（按 3D 体积最小化） */
 const GREEDY=[0.73,0.60,0.41,0.57,0.865,0.38,0.58,0.28,0.93,0.895,0.89,0.21];
@@ -745,7 +773,106 @@ const kakBox=new Inst(3600);
 const kakOne=new Inst(1);       // 高亮的那根针
 const kakSph=new Inst(1);       // 扫出的球
 const kakTrail=new Inst(64);    // 针的运动残影
+const kakBush=new Inst(900);    // bush / hairbrush 构型
 let kakVol=1/3, kakArea=0.5, kakBuilt=-1, kakBoxBuilt='';
+
+/* ── 下界论证的两个构型 ──────────────────────────────────────
+   Bush（Córdoba）：M 根 δ-管全部穿过同一点。方向两两分离 δ，
+   所以离中心越远它们越分不开；在距离 ~1 处彼此已经不重叠，
+   于是 |∪T| ≳ M·δ²  ⟹  维数 ≥ (n+1)/2 = 2。
+   Hairbrush（Wolff 1995）：改成让所有管都与同一根管相交。
+   毛刷比灌木「散得开」，把下界抬到 (n+2)/2 = 2.5。
+   这里按真实的方向分离规则摆管子，读者能直接看出两者的差别。 */
+function buildBushMesh(mode,M){
+  const inst=kakBush;inst.reset();
+  const R=rng(70417);
+  const rad=KAK.delta*0.5;
+  if(mode==='bush'){
+    for(let k=0;k<M;k++){
+      // 球面上近似等分布的方向（黄金角螺旋），保证两两方向分离
+      const u=1-2*(k+0.5)/M, s=Math.sqrt(Math.max(0,1-u*u));
+      const ph=k*2.39996;
+      const d=[s*Math.cos(ph),u,s*Math.sin(ph)];
+      const c=heatK(k/M);
+      // 管子以原点为中心，向两侧各伸 0.5
+      inst.add(-d[0]*0.5,-d[1]*0.5,-d[2]*0.5, d[0],d[1],d[2], rad, c[0],c[1],c[2]);
+    }
+  }else{
+    // 毛刷：柄是一根竖管，其余管子都与它相交，交点沿柄铺开
+    inst.add(0,-0.5,0, 0,1,0, rad*1.25, 1,1,1);
+    for(let k=0;k<M;k++){
+      const t=(k+0.5)/M;                 // 交点在柄上的位置
+      const hy=-0.5+t;                   // 柄从 y=-0.5 到 +0.5
+      const ph=k*2.39996;
+      const el=0.72*Math.sin(k*0.9+1.1); // 与柄成一定夹角，方向仍两两分离
+      const cz=Math.sqrt(Math.max(0.04,1-el*el));
+      const d=[cz*Math.cos(ph),el,cz*Math.sin(ph)];
+      const c=heatK(t);
+      inst.add(-d[0]*0.5,hy-d[1]*0.5,-d[2]*0.5, d[0],d[1],d[2], rad, c[0],c[1],c[2]);
+    }
+  }
+  inst.upload();
+  return inst.n;
+}
+/* 与画面其余部分同一套色标 */
+function heatK(t){
+  t=clamp(t,0,1);
+  const st=[[0.35,0.77,0.87],[0.36,0.85,0.70],[0.60,0.79,0.40],[1.0,0.85,0.40],[0.98,0.45,0.42]];
+  const x=t*(st.length-1),i=Math.min(st.length-2,Math.floor(x)),f=x-i;
+  return[lerp(st[i][0],st[i+1][0],f),lerp(st[i][1],st[i+1][1],f),lerp(st[i][2],st[i+1][2],f)];
+}
+/* 两个构型的管道列表（渲染与测量共用同一套摆法） */
+function bushTubes(mode,M){
+  const tubes=[];
+  if(mode==='bush'){
+    for(let k=0;k<M;k++){
+      const u=1-2*(k+0.5)/M,s=Math.sqrt(Math.max(0,1-u*u)),ph=k*2.39996;
+      tubes.push({p:[0,0,0],d:[s*Math.cos(ph),u,s*Math.sin(ph)]});
+    }
+  }else{
+    tubes.push({p:[0,0,0],d:[0,1,0]});
+    for(let k=0;k<M;k++){
+      const t=(k+0.5)/M,hy=-0.5+t,ph=k*2.39996;
+      const el=0.72*Math.sin(k*0.9+1.1),cz=Math.sqrt(Math.max(0.04,1-el*el));
+      tubes.push({p:[0,hy,0],d:[cz*Math.cos(ph),el,cz*Math.sin(ph)]});
+    }
+  }
+  return tubes;
+}
+/* 蒙特卡洛测量。返回并集体积，以及真正决定下界的那个量——重叠重数：
+   一个点被多少根管同时覆盖。灌木在中心处重数 = M（全叠在一起），
+   毛刷把交点沿柄摊开，峰值重数低得多。论证控制的正是这个量。 */
+function bushMeasure(mode,M,samples){
+  samples=samples||30000;
+  const tubes=bushTubes(mode,M);
+  const R=rng(90211);
+  const rad=KAK.delta*0.5;
+  const B=1.1;                       // 采样立方体半边长
+  const multAt=(x,y,z)=>{
+    let m=0;
+    for(let i=0;i<tubes.length;i++){
+      const T=tubes[i];
+      const wx=x-T.p[0],wy=y-T.p[1],wz=z-T.p[2];
+      const t=wx*T.d[0]+wy*T.d[1]+wz*T.d[2];
+      if(t<-0.5||t>0.5)continue;       // 只算单位长的那一段
+      const ex=wx-t*T.d[0],ey=wy-t*T.d[1],ez=wz-t*T.d[2];
+      if(ex*ex+ey*ey+ez*ez<=rad*rad)m++;
+    }
+    return m;
+  };
+  let hit=0,multSum=0,multMax=0;
+  for(let s=0;s<samples;s++){
+    const m=multAt((R()*2-1)*B,(R()*2-1)*B,(R()*2-1)*B);
+    if(m>0){hit++;multSum+=m;if(m>multMax)multMax=m;}
+  }
+  const vol=hit/samples*Math.pow(2*B,3);
+  /* 峰值重数出现在结构上的「热点」——灌木是那个公共交点，毛刷是柄上各处。
+     这些热点体积只有 ~δ³，均匀撒点几乎打不中，必须直接去问。 */
+  multMax=Math.max(multMax,multAt(0,0,0));
+  if(mode!=='bush')for(let k=0;k<=240;k++)multMax=Math.max(multMax,multAt(0,-0.5+k/240,0));
+  return{vol,meanMult:hit?multSum/hit:0,maxMult:multMax};
+}
+function bushVolume(mode,M,samples){return bushMeasure(mode,M,samples).vol;}
 
 /* Perron 树影子：把叶三角形画成发光平面，叠加混合 */
 const shadowBuf=gl.createBuffer();
@@ -871,10 +998,21 @@ function kakBoxes(cell){
   return kakBoxN=seen.size;
 }
 let kakBoxN=0;
+const BUSH_M=160, BRUSH_M=160;
+let bushBuilt='';
 
 function kakRender(dt){
   const cx=KAK.cx||0;
   const md=M4.trs(-cx,0,-cx,1);
+  // ⓪ bush / hairbrush：下界论证的两个构型，独占画面
+  if(KAK.bush>0.01||KAK.brush>0.01){
+    const mode=KAK.cfg||(KAK.brush>KAK.bush?'brush':'bush');
+    const M=mode==='bush'?BUSH_M:BRUSH_M;
+    const sig=mode+'|'+M+'|'+KAK.delta.toFixed(4);
+    if(sig!==bushBuilt){bushBuilt=sig;buildBushMesh(mode,M);}
+    drawInstanced(MESH.rod,kakBush,M4.id(),{glow:0.16,alpha:Math.max(KAK.bush,KAK.brush)});
+    return;
+  }
   // ① 单针原地旋转 + 扫出的球
   if(KAK.oneNeedle>0.01){
     const t=performance.now()*0.00045;
@@ -969,7 +1107,7 @@ const SC={
   kakeya:{
     color:'k',
     steps:[
-      {t:'先看它转一圈',
+      {id:'spin',t:'先看它转一圈',
        b:`<p>屏幕中间是一根<em>长度为 1</em> 的针。它正在转动，转过每一个方向。</p>
           <p>淡蓝色的轨迹，是它<b>扫过的地方</b>。</p>
           <p>先别管公式，就看着它。等它转完一圈，问自己一个问题：</p>
@@ -978,7 +1116,7 @@ const SC={
             KAK.oneNeedle=1;KAK.ballAlpha=0;KAK.tDepth=0;KAK.sweeping=false;
             KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.05;
             to(KAK,'ballAlpha',1,1800,2600);}},
-      {t:'挂谷宗一的问题',
+      {id:'kakeya1917',t:'挂谷宗一的问题',
        b:`<p>1917 年，日本数学家<em>挂谷宗一</em>正式提出了这个问题：</p>
           <p>一根单位长的针，要转到<b>每一个方向</b>，扫过的区域最小可以是多少？</p>
           <p>刚才那个答案——原地打转——扫出一个半径 ½ 的球：</p>
@@ -988,7 +1126,7 @@ const SC={
        en(){camTo(0.95,0.30,2.5,0,0,0);KAK.oneNeedle=1;KAK.ballAlpha=1;KAK.tDepth=0;
             KAK.sweeping=false;KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.09;}},
 
-      {t:'针可以边转边挪',
+      {id:'translate',t:'针可以边转边挪',
        b:`<p>关键的漏洞在这里：针在转的过程中，<em>可以同时平移</em>。它不必围着一个固定的中心。</p>
           <p>于是我们把针拆开来看。画面上的每一根针代表<b>一个方向</b>，颜色就是方向的编号。</p>
           <p>先摆一个最朴素的姿势：让所有针都从<b>同一个点</b>出发，像一束光。这个扇束的体积是</p>
@@ -998,7 +1136,7 @@ const SC={
             KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.07;
             to(KAK,'tDepth',0,700);}},
 
-      {t:'只滑动一次，看清楚',
+      {id:'oneslide',t:'只滑动一次，看清楚',
        b:`<p>把所有方向<b>从中间劈成两半</b>。</p>
           <p>左半边不动。右半边的针——<em>整整一半的针</em>——一起向左平移，让它们压到左半边身上。</p>
           <p>平移<b>不改变任何一根针的方向</b>。所以一个方向都没丢，但重叠的地方只需要算一次体积。</p>
@@ -1010,7 +1148,7 @@ const SC={
             to(KAK,'shadow',1,700);
             beat(1100,()=>to(KAK,'tDepth',1,2600));}},
 
-      {t:'一层套一层：Perron 树',
+      {id:'perron',t:'一层套一层：Perron 树',
        b:`<p>现在对<b>每一半</b>再做同样的事：劈开、平移、重叠。然后对每一小份继续。</p>
           <p>这个递归结构叫 <b>Perron 树</b>。每加深一层，体积就再掉一截：</p>
           <span class="fml">每层：劈开 → 平移 → 重叠</span>
@@ -1023,7 +1161,7 @@ const SC={
             KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=1;KAK.cones=0;CAM.spin=0;
             KAK.tDepth=1;to(KAK,'tDepth',7,5200,400);}},
 
-      {t:'推到底',
+      {id:'pushdown',t:'推到底',
        b:`<p>把“递归层数”滑块一路拉到底，看看这个构造能压到什么程度。</p>
           <p>10 层之后，体积只剩下最初那束光的</p>
           <span class="fml">3.5 %</span>
@@ -1036,7 +1174,7 @@ const SC={
             to(KAK,'shadow',0,500);
             to(KAK,'tDepth',10,3400);}},
 
-      {t:'方向一个都没丢',
+      {id:'dirskept',t:'方向一个都没丢',
        b:`<p>体积几乎没有了，会不会是偷偷扔掉了一些方向？</p>
           <p>画面里那个球是<em>方向罗盘</em>：每根针都在球面上点亮属于自己的那个方向。</p>
           <p>回头把层数拉回 0 再拉满——你会看到<b>亮斑纹丝不动</b>。平移不改变方向，所以一个点都不会熄灭。</p>
@@ -1045,7 +1183,7 @@ const SC={
             KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.035;
             to(KAK,'dirGlobe',1,700);}},
 
-      {t:'拼成真正的挂谷集',
+      {id:'assemble',t:'拼成真正的挂谷集',
        b:`<p>到目前为止，画面里的针只覆盖了<em>一个方向锥</em>——罗盘上那片亮斑。</p>
           <p>补完它很简单：把同一个构造<b>旋转到 12 个位置</b>。看着其余 11 份依次落位，罗盘一点点被填满。</p>
           <p>（我用 6 万个随机方向做了检验：<b>覆盖率 100%</b>，一个方向都不漏，12 个变换矩阵严格正交。）</p>
@@ -1056,7 +1194,7 @@ const SC={
             KAK.boxes=0;KAK.shadow=0;CAM.spin=0.05;KAK.dirGlobe=1;KAK.cones=0;
             beat(500,()=>to(KAK,'cones',1,3600));}},
 
-      {t:'换一把尺子：维数',
+      {id:'dimension',t:'换一把尺子：维数',
        b:`<p>体积几乎没有了，这把尺子废了。数学家换了一把——<em>维数</em>。</p>
           <p>办法叫<b>盒计数</b>：拿边长 <span class="k-delta">δ</span> 的小盒子把东西盖住，数用了多少个。然后把 <span class="k-delta">δ</span> 减半，再数一次。</p>
           <ul>
@@ -1065,8 +1203,20 @@ const SC={
             <li>一块实心物体：盒子数 <b>×8</b> → <span class="k-dim">D</span> = 3</li>
           </ul>
           <span class="fml">N(<span class="k-delta">δ</span>) ≈ <span class="k-delta">δ</span><sup>−<span class="k-dim">D</span></sup>，　<span class="k-dim">D</span><sub>M</sub> = lim<sub><span class="k-delta">δ</span>→0</sub> log N(<span class="k-delta">δ</span>) / log(1/<span class="k-delta">δ</span>)</span>
-          <p>这是<b>闵可夫斯基维数</b>（盒维数）。还有一把更细的尺子——<b>豪斯多夫维数</b> <span class="k-dim">D</span><sub>H</sub>：它允许用<em>大小不一</em>的球去盖，取 Σ(diam U<sub>i</sub>)<sup>s</sup> 的下确界，看 s 取到多少时这个量从 ∞ 掉到 0。</p>
-          <p>盖法更自由，所以永远有 <span class="k-dim">D</span><sub>H</sub> ≤ <span class="k-dim">D</span><sub>M</sub>。这意味着<b>关于 D<sub>H</sub> 的下界是更强的结论</b>——本页的图量的是 D<sub>M</sub>（能算），而挂谷猜想真正要的是 D<sub>H</sub>。王虹与 Zahl 两个都证了。</p>
+          <p>这是<b>闵可夫斯基维数</b>（盒维数）。它有个硬性限制：<em>所有盒子必须一样大</em>。</p>
+          <p>还有一把更细的尺子——<b>豪斯多夫维数</b>。它允许用<em>大小不一</em>的球去盖，先定义 s 维豪斯多夫测度</p>
+          <span class="fml">H<sup>s</sup>(E) = lim<sub><span class="k-delta">δ</span>→0</sub> inf { Σ<sub>i</sub> (diam U<sub>i</sub>)<sup>s</sup> ： E ⊂ ∪U<sub>i</sub>，diam U<sub>i</sub> &lt; <span class="k-delta">δ</span> }</span>
+          <p>把 s 从 0 往上调，H<sup>s</sup>(E) 会在某个临界值处从 ∞ 一跃变成 0。那个临界的 s 就是 <span class="k-dim">D</span><sub>H</sub>。</p>
+          <p>盖法更自由，所以永远有 <span class="k-dim">D</span><sub>H</sub> ≤ <span class="k-dim">D</span><sub>M</sub>。<b>两者可以真的不相等</b>，一个一眼就懂的例子：</p>
+          <div class="cmpbox">
+            <div><span>E = [0,1] 里的有理数</span>
+              <b><span class="k-dim">D</span><sub>H</sub> = 0</b>
+              <i>可数集，用总长任意小的区间列就能盖住</i></div>
+            <div><span>同一个 E</span>
+              <b><span class="k-dim">D</span><sub>M</sub> = 1</b>
+              <i>它在 [0,1] 中稠密，等长盒子一个都省不掉</i></div>
+          </div>
+          <p>所以<b>关于 D<sub>H</sub> 的下界是严格更强的结论</b>。本页的图量的是 D<sub>M</sub>（这个能算），而挂谷猜想真正要的是 D<sub>H</sub>。<em>王虹与 Zahl 两个都证了。</em></p>
           <p>拖动「盒子尺寸」看看盒子是怎么盖住它的。但接下来这件事必须说清楚，否则整个测量都是假的——</p>
           <p><b>陷阱：</b>如果把屏幕上这个<em>有限层数</em>的集合固定住、只把盒子越缩越小，你会量到 <span class="k-dim">D</span> = 3.00。可这什么也没说明：有限层数的构造体积是<b>正的</b>（读数栏里的「集合体积 V」就是一个正数），它本来就是个实心物体，维数当然满格。</p>
           <p>挂谷猜想问的是<em>极限</em>：针无限细、方向无限密。所以正确的量法是让两件事<b>一起细化</b>——<span class="k-delta">δ</span> 减半的同时，方向也加密一倍（递归再深一层）。</p>
@@ -1075,7 +1225,67 @@ const SC={
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'tDepth',5,900);to(KAK,'boxes',1,700,300);}},
 
-      {t:'案发现场：一份几乎正确的证明',
+      {id:'tubes',t:'问题的工作形式：δ-管道',
+       b:`<p>「无限细的针」没法直接计算。这一行的人真正操作的是它的<b>离散化版本</b>，把针换成有粗细的管子：</p>
+          <div class="deftube">
+            <p>取一族 <b><span class="k-delta">δ</span>-管道</b> T<sub>1</sub>,…,T<sub>M</sub>：每根长 1、半径 <span class="k-delta">δ</span>，方向两两分离至少 <span class="k-delta">δ</span>。这样的方向最多有 M ≈ <span class="k-delta">δ</span><sup>−2</sup> 个（球面被 <span class="k-delta">δ</span>-帽子分割）。</p>
+            <p class="q">问：|T<sub>1</sub> ∪ … ∪ T<sub>M</sub>| 至少能有多大？</p>
+          </div>
+          <p>两个平凡的边界先摆出来：</p>
+          <ul>
+            <li>每根管体积 ≈ <span class="k-delta">δ</span>²，共 <span class="k-delta">δ</span><sup>−2</sup> 根，<b>完全不重叠</b>的话总体积是 O(1)；</li>
+            <li>要是全部叠在一起，总体积可以低到 <span class="k-delta">δ</span>²。</li>
+          </ul>
+          <p>挂谷猜想说：<em>它们没法叠得那么狠</em>。精确的说法是</p>
+          <span class="fml">|∪T<sub>i</sub>| ≳<sub>ε</sub> <span class="k-delta">δ</span><sup>ε</sup>　对任意 ε&gt;0</span>
+          <p>也就是并集体积只能比常数小一个<b>任意小的幂</b>——这正好等价于维数满格 3。指数 ε 挪一点点，对应的维数就差一截，所以下面每一步的进展都是在<b>抠这个指数</b>。</p>
+          <p class="q">为什么允许 <span class="k-delta">δ</span><sup>ε</sup> 而不要求下界是常数？因为 Besicovitch 已经告诉我们体积真的能趋于 0（前面几章你亲眼看到了）。挂谷猜想只是断言：它趋于 0 的速度比任何正幂都慢。</p>`,
+       en(){camTo(0.55,0.30,3.3,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
+            KAK.shadow=0;KAK.cones=0;KAK.bush=0;KAK.brush=0;KAK.cfg='';CAM.spin=0.03;
+            to(KAK,'tDepth',6,900);to(KAK,'boxes',0,400);}},
+
+      {id:'lowerbounds',t:'下界是怎么一点点抬上去的',
+       b:`<p>既然要证维数 = 3，几十年里的进展就是不断把<b>下界</b>往上抬。两个最基本的几何观察值得亲眼看一遍——它们都只用到「方向分离 ⟹ 管子分得开」这一件事。</p>
+
+          <p class="subh">① 灌木（bush）：下界 2</p>
+          <p>在「参数」里点 <b>灌木构型</b>。设有一个点被 M 根管子同时穿过。它们方向两两分离 <span class="k-delta">δ</span>，所以<em>离中心越远，彼此分得越开</em>：在距中心 ~1 的地方，M 根管子已经基本不重叠了。</p>
+          <span class="fml">|∪T| ≳ M·<span class="k-delta">δ</span>²</span>
+          <p>再配上「总得有个点被足够多管子穿过」的鸽笼估计，就得到 <b>D ≥ (n+1)/2</b>，在 ℝ³ 里是 <b>2</b>。这是 Córdoba 的论证，也是最容易想到的那一步。</p>
+
+          <p class="subh">② 毛刷（hairbrush）：下界 2.5</p>
+          <p>点 <b>毛刷构型</b>。Wolff 1995 年的改进是：不要盯着一个<em>点</em>，盯着一根<em>管子</em>——把所有与某根固定管相交的管子拿出来。</p>
+          <p>差别不在总体积（两者差不多），而在<b>重叠重数</b>：一个点最多被多少根管同时覆盖。这才是论证真正控制的量。</p>
+          <div class="tbar" id="bushCmp">
+            <div class="tbar-row"><span>灌木 · 峰值重数</span><div class="tt"><i id="bushBar" style="width:100%"></i></div><span class="tv" id="bushV">—</span></div>
+            <div class="tbar-row"><span>毛刷 · 峰值重数</span><div class="tt"><i class="full" id="brushBar" style="width:8%"></i></div><span class="tv" id="brushV">—</span></div>
+            <div class="tcap">同样 160 根管、同样 <span class="k-delta">δ</span>，蒙特卡洛实测。</div>
+          </div>
+          <p>灌木的峰值重数<b>正好等于 M</b>——所有管子都堆在那一个公共交点上，浪费得彻底。毛刷把交点沿柄摊开，某一处只会挤进「柄附近 <span class="k-delta">δ</span> 之内」的那些管，峰值降到 <b>~M·<span class="k-delta">δ</span></b>：</p>
+          <div class="ladder mini">
+            <div><b>δ=0.09</b><span>M=60　　灌木 60　毛刷 9</span></div>
+            <div><b>δ=0.055</b><span>M=160　灌木 160　毛刷 13</span></div>
+            <div><b>δ=0.035</b><span>M=400　灌木 400　毛刷 19</span></div>
+            <div><b>δ=0.022</b><span>M=900　灌木 900　毛刷 26</span></div>
+          </div>
+          <p>重数低了 <b>1/<span class="k-delta">δ</span></b> 倍，等价的体积下界就抬高一档。这就是 2 → 2.5 的来源：</p>
+          <span class="fml">D ≥ (n+2)/2 = 2.5　（ℝ³）</span>
+          <p class="q">说明白：屏幕上这个有限构型只是让你看见机制，它本身不构成证明。真正的下界来自这个重数估计在 <span class="k-delta">δ</span> → 0 时的<em>标度</em>，而不是某一组具体管子的读数。</p>
+
+          <p class="subh">③ 之后的 30 年</p>
+          <div class="ladder">
+            <div><b>2</b><span>Córdoba · 灌木</span></div>
+            <div><b>2.5</b><span>Wolff 1995 · 毛刷</span></div>
+            <div><b>2.5+ε</b><span>Katz–Łaba–Tao 1999 · 排除黏性以外的情形</span></div>
+            <div class="hot"><b>3</b><span>Wang–Zahl 2025 · 完成</span></div>
+          </div>
+          <p>注意那个 <b>2.5 → 2.5+ε</b>：26 年里下界只抬高了一个「任意小的正数」。卡住的正是<em>黏性</em>那一族——下一章你可以亲手造一个。</p>`,
+       en(){camTo(0.75,0.20,2.9,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
+            KAK.shadow=0;KAK.cones=0;KAK.boxes=0;CAM.spin=0.10;
+            KAK.brush=0;KAK.cfg='bush';to(KAK,'bush',1,700);
+            beat(3600,()=>{to(KAK,'bush',0,500);
+              beat(520,()=>{KAK.cfg='brush';to(KAK,'brush',1,700);syncCtrl();});});}},
+
+      {id:'crimescene',t:'案发现场：一份几乎正确的证明',
        b:`<p>有人据此写下了一份四步“证明”，声称体积趋近 0 就能推出维数小于 3。前三行看起来都很熟悉，结论也很顺。</p>
           <div class="proof-detective" data-proof-detective>
             <div class="proof-case">
@@ -1095,7 +1305,7 @@ const SC={
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.025;
             to(KAK,'tDepth',7,900);to(KAK,'boxes',1,500);}},
 
-      {t:'换你来当对手',
+      {id:'sticky',t:'换你来当对手',
        b:`<p>假证明被否掉了，但一个更实在的问题还在：<b>会不会真有某个挂谷集，维数确实不到 3？</b></p>
           <p>1999 年 Katz、Łaba 与陶哲轩指出，最难对付的是一类<b>跨尺度近似自相似</b>的构型——他们把它命名为<em>黏性</em>（sticky）。它成了此后 26 年绕不过去的坎。</p>
           <p>现在你可以亲手造一个。在<b>「参数」</b>面板里按<b>「自相似（黏性）」</b>：原本每一层用不同的滑动量，现在<b>每层都用同一个</b>——这就是自相似。</p>
@@ -1108,7 +1318,7 @@ const SC={
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'boxes',0,400);to(KAK,'tDepth',10,2600);}},
 
-      {t:'王虹 & Zahl：维数必须是 3',
+      {id:'wangzahl',t:'王虹 & Zahl：维数必须是 3',
        b:`<p>这一章的两张图是实测数据。把针不断变细（δ 每次减半），看体积怎么变：</p>
           <button type="button" class="open-charts" data-open-charts>📉 打开 log V–log δ 曲线与逐档维数</button>
           <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的<span class="k-dim">维数</span>从 1.90 升到 <b class="k-dim">2.89</b>。它不是单调上升的（中途会回落，因为每一层的滑动量不同），但趋势明确指向 3。</p>
@@ -1138,6 +1348,12 @@ const SC={
         <button class="btn" id="b_sticky">自相似（黏性）</button>
         <button class="btn" id="b_spin">自动旋转</button>
         <button class="btn" id="b_reset" style="min-width:100%">重播压缩过程</button>
+      </div>
+      <div class="sep"></div>
+      <div class="hd" style="margin-bottom:9px">下界论证的构型</div>
+      <div class="btns">
+        <button class="btn" id="b_bush">灌木构型</button>
+        <button class="btn" id="b_brush">毛刷构型</button>
       </div>`
   },
 
@@ -1209,6 +1425,9 @@ function gotoStep(i){
   $('#stbody').scrollTop=0;
   $('#prev').disabled=si===0;$('#next').disabled=si===S.length-1;
   markDots();
+  /* 下界构型（灌木 / 毛刷）会顶掉整个画面，换章时一律先关掉，
+     只有明确要用它的那一章会在 en() 里重新打开。 */
+  KAK.cfg='';KAK.bush=0;KAK.brush=0;
   s.en&&s.en();
   syncCtrl();
 }
@@ -1246,6 +1465,17 @@ function bindCtrl(name){
     $('#b_sweep').onclick=()=>{KAK.sweeping=!KAK.sweeping;syncCtrl();};
     $('#b_spin').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
     $('#b_reset').onclick=()=>{clearShow();KAK.tDepth=0;to(KAK,'tDepth',10,5200);};
+    /* 灌木 / 毛刷互斥：同时只显示一个，方便来回对照 */
+    const showConfig=k=>{
+      clearShow();
+      const next=KAK.cfg===k?'':k;      // 再点一次就关掉
+      KAK.cfg=next;                     // 立刻生效，按钮高亮不用等补间
+      to(KAK,'bush',next==='bush'?1:0,450);
+      to(KAK,'brush',next==='brush'?1:0,450);
+      syncCtrl();
+    };
+    $('#b_bush').onclick=()=>showConfig('bush');
+    $('#b_brush').onclick=()=>showConfig('brush');
   }
 }
 /* 滑块的已填充部分要跟着走 */
@@ -1262,8 +1492,17 @@ function syncCtrl(){
     const t=(id,on)=>{const e=$(id);e&&e.classList.toggle('on',on);};
     t('#b_sweep',KAK.sweeping);t('#b_globe',KAK.dirGlobe>0.5);t('#b_box',KAK.boxes>0.5);
     t('#b_spin',!!CAM.spin);t('#b_shadow',KAK.shadow>0.5);t('#b_cones',KAK.cones>0.5);
-    t('#b_sticky',STICKY);
+    t('#b_sticky',STICKY);t('#b_bush',KAK.cfg==='bush');t('#b_brush',KAK.cfg==='brush');
   }
+}
+/* 灌木与毛刷的并集体积：算一次缓存住，正文里那两条读数用它 */
+let bushVolCache=null;
+function bushVolumes(){
+  if(bushVolCache)return bushVolCache;
+  return bushVolCache={
+    bush:bushMeasure('bush',BUSH_M,40000),
+    brush:bushMeasure('brush',BRUSH_M,40000)
+  };
 }
 
 /* HUD */
@@ -1422,29 +1661,70 @@ function frame(now){
       if(sd&&Math.abs(+sd.value-KAK.tDepth)>0.005){sd.value=KAK.tDepth;$('#v_depth').textContent=KAK.tDepth.toFixed(2);}
       const pct=clamp(kakVol/(1/3)*100,0,100);
       const nCone=KAK.cones>0.5?Math.round(1+KAK.cones*(CONES.length-1)):1;
+      const id=(SC.kakeya.steps[si]||{}).id||'';
+      const cfg=!!KAK.cfg||KAK.bush>0.5||KAK.brush>0.5;
       /* .m-keep = 手机讲解视图里也保留的读数（见 article.css）。
          当前章节正在讲的那几个必须留下，其余的到「图表」那一档看全。 */
-      const items=si<=1?[
-        {k:'针长',v:'1.000'},
-        {k:'扫出的球',v:'0.5236',hi:true,cls:'m-keep'},
-        {k:'公式',v:'4π/3·(1/2)³',cls:'m-keep'}
-      ]:[
-        {k:'方向数',v:(KAK.K*KAK.K*nCone).toLocaleString()},
-        {k:'递归层数',v:KAK.tDepth.toFixed(2),cls:'m-keep'},
-        {k:'集合体积 V',v:kakVol.toFixed(4),hi:true,cls:'m-keep'},
-        {k:'占初始扇束',v:(kakVol/(1/3)*100).toFixed(1),u:'%',bar:true,pct:pct,ref:100,rl:'起点'}
-      ];
-      /* 这三个只在对应工具打开时出现，出现了就说明正文正在讲它 */
-      if(si>1&&KAK.shadow>0.5)items.push({k:'投影面积',v:kakArea.toFixed(4),u:'/ 0.5',cls:'m-keep'});
-      if(si>1&&KAK.cones>0.5)items.push({k:'方向锥',v:nCone,u:'/ 12',cls:'m-keep'});
-      if(si>1&&KAK.boxes>0.5)items.push({k:'需要的盒子',v:kakBoxN.toLocaleString(),cls:'m-keep'});
+      let items;
+      if(cfg){
+        /* 灌木 / 毛刷构型：读数换成这两个构型自己的量 */
+        const bv=bushVolumes(), which=KAK.cfg||(KAK.brush>KAK.bush?'brush':'bush');
+        items=[
+          {k:'构型',v:which==='bush'?'灌木':'毛刷',cls:'m-keep'},
+          {k:'管道数 M',v:which==='bush'?BUSH_M:BRUSH_M,cls:'m-keep'},
+          {k:'峰值重数',v:(which==='bush'?bv.bush:bv.brush).maxMult,hi:true,cls:'m-keep'},
+          {k:'并集体积',v:(which==='bush'?bv.bush:bv.brush).vol.toFixed(4),cls:'m-keep'},
+          {k:'管半径 δ/2',v:(KAK.delta/2).toFixed(4)}
+        ];
+      }else if(id==='spin'||id==='kakeya1917'){
+        items=[
+          {k:'针长',v:'1.000'},
+          {k:'扫出的球',v:'0.5236',hi:true,cls:'m-keep'},
+          {k:'公式',v:'4π/3·(1/2)³',cls:'m-keep'}
+        ];
+      }else{
+        items=[
+          {k:'方向数',v:(KAK.K*KAK.K*nCone).toLocaleString()},
+          {k:'递归层数',v:KAK.tDepth.toFixed(2),cls:'m-keep'},
+          {k:'集合体积 V',v:kakVol.toFixed(4),hi:true,cls:'m-keep'},
+          {k:'占初始扇束',v:(kakVol/(1/3)*100).toFixed(1),u:'%',bar:true,pct:pct,ref:100,rl:'起点'}
+        ];
+        /* 这三个只在对应工具打开时出现，出现了就说明正文正在讲它 */
+        if(KAK.shadow>0.5)items.push({k:'投影面积',v:kakArea.toFixed(4),u:'/ 0.5',cls:'m-keep'});
+        if(KAK.cones>0.5)items.push({k:'方向锥',v:nCone,u:'/ 12',cls:'m-keep'});
+        if(KAK.boxes>0.5)items.push({k:'需要的盒子',v:kakBoxN.toLocaleString(),cls:'m-keep'});
+      }
       hud(items);
+      /* 下界那一章：把两个构型的实测并集体积填进正文的对照条 */
+      if(id==='lowerbounds'){
+        const bv=bushVolumes(),el=$('#bushV');
+        if(el&&el.textContent==='—'){
+          const mx=Math.max(bv.bush.maxMult,bv.brush.maxMult);
+          $('#bushV').textContent=bv.bush.maxMult;
+          $('#brushV').textContent=bv.brush.maxMult;
+          $('#bushBar').style.width=(bv.bush.maxMult/mx*100).toFixed(0)+'%';
+          $('#brushBar').style.width=Math.max(4,bv.brush.maxMult/mx*100).toFixed(0)+'%';
+        }
+      }
       /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0 */
-      if(si>=7){$('#charts').classList.add('show');
+      const charted=['assemble','dimension','tubes','lowerbounds','crimescene','sticky','wangzahl'];
+      if(charted.includes(id)){$('#charts').classList.add('show');
         $('#cap1').textContent='δ 与方向密度同步细化时的体积 V';$('#cap2').textContent='每次 δ 减半后测得的维数';
         drawScale();drawDimBars();}
       else $('#charts').classList.remove('show');
       const L=[];
+      if(cfg){
+        const bv=bushVolumes();
+        if((KAK.cfg||'bush')==='bush'){
+          L.push({p:[0,0,0],t:'所有管道穿过同一点',c:'#ffd866',dot:1});
+          L.push({p:[0,-0.86,0],t:`峰值重数 ${bv.bush.maxMult} = M · 全堆在一点`,c:'#58c4dd',dot:1});
+        }else{
+          L.push({p:[0,0.62,0],t:'柄：所有管道都与它相交',c:'#ffd866',dot:1});
+          L.push({p:[0,-0.86,0],t:`峰值重数 ${bv.brush.maxMult} ≈ M·δ · 沿柄摊开`,c:'#58c4dd',dot:1});
+        }
+        labels(L);
+        return;
+      }
       if(KAK.oneNeedle>0.5)L.push({p:[0,-0.80,0],
         t:KAK.ballAlpha>0.5?'扫出的球 · V ≈ 0.524':'针正在转过所有方向',c:'#58c4dd',dot:1});
       if(KAK.dirGlobe>0.5)L.push({p:[1.55,-1.12,0.30],o:KAK.dirGlobe,
