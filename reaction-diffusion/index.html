@@ -14,9 +14,10 @@
 <meta property="og:url" content="https://viz.gopromp.com/reaction-diffusion/">
 <style>
 :root{
-  --bg:#0b0d11; --ink:#f2f4f8; --dim:#9aa2b4; --dim2:#5d6577;
-  --line:rgba(255,255,255,.10); --panel:rgba(16,19,25,.86);
-  --u:#5cd0b3; --v:#ef6a3a; --hot:#ffd166;
+  /* 培养皿：近黑底、化学橙与青、极简装饰，场铺到边 */
+  --bg:#07080a; --ink:#eef1f4; --dim:#8e97a4; --dim2:#565e6a;
+  --line:rgba(238,241,244,.09); --panel:rgba(10,12,15,.82);
+  --u:#3fb8a0; --v:#ff7a33; --hot:#ffc14d;
   --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,sans-serif;
   --serif:"Songti SC","Noto Serif SC",Georgia,serif;
   --mono:"SFMono-Regular",ui-monospace,Menlo,monospace;
@@ -31,27 +32,26 @@ a{color:inherit}
 
 #field{position:fixed;inset:0;width:100%;height:100%;display:block;
   image-rendering:auto;touch-action:none;cursor:crosshair;z-index:0}
-#vig{position:fixed;inset:0;z-index:1;pointer-events:none;
-  background:radial-gradient(120% 90% at 50% 45%,transparent 40%,rgba(6,8,11,.55) 100%)}
+#vig{display:none}
 
 #top{position:fixed;top:0;left:0;right:0;height:54px;z-index:20;display:flex;
   align-items:center;gap:16px;padding:0 18px;pointer-events:none}
 #brand{pointer-events:auto;display:inline-flex;align-items:center;gap:9px;
   text-decoration:none;font-size:17px;font-weight:650;letter-spacing:-.04em}
-#brand i{width:8px;height:8px;border-radius:50%;background:var(--v);box-shadow:6px 0 0 var(--u)}
+#brand i{width:7px;height:7px;border-radius:50%;background:var(--v);box-shadow:6px 0 0 var(--u)}
 #where{font-size:12px;color:var(--dim2)}
 #back{margin-left:auto;pointer-events:auto;font-size:12.5px;color:var(--dim);
   text-decoration:none;padding:8px 10px;border-radius:8px}
 #back:hover{color:var(--ink);background:rgba(255,255,255,.06)}
 
-.panel{position:fixed;z-index:20;background:var(--panel);backdrop-filter:blur(18px);
-  border:1px solid var(--line);border-radius:16px}
+.panel{position:fixed;z-index:20;background:var(--panel);backdrop-filter:blur(22px);
+  border:1px solid var(--line);border-radius:2px}
 
 #story{left:18px;top:70px;width:min(392px,calc(100vw - 36px));
   max-height:calc(100vh - 106px);padding:22px 22px 16px;display:flex;flex-direction:column}
 #stepno{font-family:var(--mono);font-size:11px;color:var(--dim2);letter-spacing:.08em}
-#sttitle{margin-top:9px;font-family:var(--serif);font-size:26px;font-weight:600;
-  line-height:1.24;letter-spacing:-.01em}
+#sttitle{margin-top:9px;font-family:var(--serif);font-size:25px;font-weight:600;
+  line-height:1.3;letter-spacing:0}
 #stbody{margin-top:13px;overflow-y:auto;flex:1;font-size:14px;color:#cbd2df;
   scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
 #stbody::-webkit-scrollbar{width:5px}
@@ -60,8 +60,11 @@ a{color:inherit}
 #stbody p.q{color:var(--dim);font-size:13px}
 #stbody b{color:var(--ink);font-weight:600}
 #stbody em{font-style:normal;color:var(--hot)}
-#stbody .fml{display:block;margin:13px 0;padding:11px 13px;background:rgba(255,255,255,.05);
-  border-left:2px solid var(--v);border-radius:0 8px 8px 0;
+/* 公式符号与场里的物质共用颜色 */
+.c-u{color:#3fb8a0;font-weight:650}
+.c-v{color:#ff7a33;font-weight:650}
+#stbody .fml{display:block;margin:13px 0;padding:11px 13px;background:rgba(255,255,255,.045);
+  border-left:2px solid var(--v);border-radius:0 2px 2px 0;
   font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre-wrap;color:#dfe4ee}
 #stbody ul{margin:10px 0 10px 17px;display:grid;gap:6px}
 #stbody li{line-height:1.75}
@@ -97,24 +100,24 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;heigh
 input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:rgba(255,255,255,.16)}
 input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--ink)}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
-.btn{padding:8px 9px;border:1px solid var(--line);border-radius:9px;
+.btn{padding:8px 9px;border:1px solid var(--line);border-radius:2px;
   background:rgba(255,255,255,.04);font-size:11.5px;cursor:pointer;transition:.16s;
   text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn:hover{background:rgba(255,255,255,.12)}
-.btn.on{background:var(--v);border-color:var(--v);color:#12141a;font-weight:600}
+.btn.on{background:var(--v);border-color:var(--v);color:#07080a;font-weight:600}
 .btn.wide{grid-column:1/-1}
-.btn.key{background:var(--ink);color:#12141a;border-color:var(--ink);font-weight:600}
+.btn.key{background:var(--ink);color:#07080a;border-color:var(--ink);font-weight:600}
 .btn.key:hover{background:#fff}
 .sep{height:1px;background:var(--line);margin:13px 0}
-#verdict{margin-top:11px;font-size:12px;line-height:1.6;padding:10px 11px;border-radius:9px;
+#verdict{margin-top:11px;font-size:12px;line-height:1.6;padding:10px 11px;border-radius:2px;
   background:rgba(255,255,255,.05);color:var(--dim);min-height:3.6em}
 #verdict.live{background:rgba(239,106,58,.14);color:#ffc6ae}
 #verdict.dead{background:rgba(90,100,120,.16);color:#a8b0c0}
 #verdict b{color:var(--ink)}
 
 #hud{position:fixed;left:18px;bottom:16px;z-index:20;display:flex;gap:0;
-  background:var(--panel);backdrop-filter:blur(18px);border:1px solid var(--line);
-  border-radius:14px;overflow:hidden;max-width:calc(100vw - 36px)}
+  background:var(--panel);backdrop-filter:blur(22px);border:1px solid var(--line);
+  border-radius:2px;overflow:hidden;max-width:calc(100vw - 36px)}
 .hcell{padding:9px 15px;border-right:1px solid var(--line)}
 .hcell:last-child{border-right:0}
 .hcell span{display:block;font-size:9.5px;color:var(--dim2);letter-spacing:.03em}
@@ -429,10 +432,10 @@ const CTRL_TH=`
 const CH=[
 {t:"什么也不会发生",
  c:CTRL_MAIN,
- b:`<p>屏幕上铺满的是一块<b>完全均匀</b>的化学场：处处 U = 1、V = 0。</p>
+ b:`<p>屏幕上铺满的是一块<b>完全均匀</b>的化学场：处处 <span class="c-u">U</span> = 1、<span class="c-v">V</span> = 0。</p>
     <p>把这两个数代回方程，六项——两个扩散、两个反应、补给、清除——<em>全部为零</em>。</p>
-    <span class="fml">∂u/∂t = Dᵤ∇²u − uv² + F(1−u)
-∂v/∂t = Dᵥ∇²v + uv² − (F+k)v</span>
+    <span class="fml">∂<span class="c-u">u</span>/∂t = Dᵤ∇²<span class="c-u">u</span> − <span class="c-u">u</span><span class="c-v">v</span>² + F(1−<span class="c-u">u</span>)
+∂<span class="c-v">v</span>/∂t = Dᵥ∇²<span class="c-v">v</span> + <span class="c-u">u</span><span class="c-v">v</span>² − (F+k)<span class="c-v">v</span></span>
     <p>所以这是一个<b>精确稳态</b>。它不是"暂时看不出变化"，是数学上一动不动。你可以一直等下去，什么都不会长出来。</p>
     <p class="q">下面的步数在涨，平均 V 始终是 0.000。</p>`,
  en(){makeUniform();running=true;stepsPerFrame=4;tool="add";
@@ -440,7 +443,7 @@ const CH=[
 
 {t:"一次足够大的搅动",
  c:CTRL_MAIN,
- b:`<p>现在往中央投一块 20 格见方的扰动：把那里的 U 压到 0.5、V 抬到 0.25。</p>
+ b:`<p>现在往中央投一块 20 格见方的扰动：把那里的 <span class="c-u">U</span> 压到 0.5、<span class="c-v">V</span> 抬到 0.25。</p>
     <p>没有剧本。接下来发生的一切，都只是同一套方程在每个格点上反复执行。</p>
     <p>它先鼓起来，然后<b>分裂</b>，再分裂，一直铺满整块场。</p>
     <p><em>你可以直接在画布上拖动</em>，在任何地方补一笔 V，看它怎么被卷进这个过程。</p>

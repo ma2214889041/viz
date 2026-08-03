@@ -15,10 +15,10 @@
 <style>
 :root{
   /* 配色取自 3Blue1Brown 的标准色板 */
-  --bg:#0a0e14; --bg2:#11161f;
+  --bg:#060911; --bg2:#0c1220;
   --ink:#f2f5fa; --dim:#9aa5bd; --dim2:#616c85;
-  --line:rgba(255,255,255,.10);
-  --glass:rgba(255,255,255,.045);
+  --line:rgba(180,214,255,.13);
+  --glass:rgba(120,170,255,.045);
   --b3b:#58c4dd;   /* BLUE_D */
   --teal:#5cd0b3;  /* TEAL */
   --grn:#83c167;   /* GREEN */
@@ -71,7 +71,7 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 
 /* ---------- 通用面板 ---------- */
 .panel{position:fixed;z-index:10;background:rgba(9,11,20,.72);border:1px solid var(--line);
-  border-radius:16px;backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  border-radius:2px;backdrop-filter:blur(20px) saturate(1.25);box-shadow:0 24px 60px rgba(0,0,0,.62)}
 .hd{font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:var(--dim2);text-transform:uppercase}
 
 /* 左：讲解 */
@@ -220,7 +220,7 @@ canvas.chart{display:block;border-radius:8px}
 .ev.hot .yr{color:var(--k1)}
 .ev.hot .ct h4{color:#fff}
 .bios{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:34px 0}
-.bio{padding:20px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.bio{padding:20px;border-radius:2px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
 .bio h4{font-family:var(--serif);font-size:20px;margin-bottom:3px}
 .bio .m{font-family:var(--mono);font-size:10.5px;color:var(--dim2);margin-bottom:13px;letter-spacing:.08em}
 .bio p{font-size:12.5px;color:var(--dim);line-height:1.9}
@@ -970,7 +970,7 @@ const SC={
        b:`<p>1917 年，日本数学家<em>挂谷宗一</em>正式提出了这个问题：</p>
           <p>一根单位长的针，要转到<b>每一个方向</b>，扫过的区域最小可以是多少？</p>
           <p>刚才那个答案——原地打转——扫出一个半径 ½ 的球：</p>
-          <span class="fml">V = 4π/3 · (1/2)³ ≈ 0.524</span>
+          <span class="fml"><span class="k-vol">V</span> = 4π/3 · (1/2)³ ≈ <span class="k-vol">0.524</span></span>
           <p>针总得转过去，这看起来已经是极限了。</p>
           <p>接下来发生的事，会让人不太舒服。</p>`,
        en(){camTo(0.95,0.30,2.5,0,0,0);KAK.oneNeedle=1;KAK.ballAlpha=1;KAK.tDepth=0;
@@ -980,7 +980,7 @@ const SC={
        b:`<p>关键的漏洞在这里：针在转的过程中，<em>可以同时平移</em>。它不必围着一个固定的中心。</p>
           <p>于是我们把针拆开来看。画面上的每一根针代表<b>一个方向</b>，颜色就是方向的编号。</p>
           <p>先摆一个最朴素的姿势：让所有针都从<b>同一个点</b>出发，像一束光。这个扇束的体积是</p>
-          <span class="fml">V = 1/3 ≈ 0.333</span>
+          <span class="fml"><span class="k-vol">V</span> = 1/3 ≈ <span class="k-vol">0.333</span></span>
           <p>已经比球小了。而这只是开始。</p>`,
        en(){camTo(0.5,0.26,3.0,0,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
             KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.07;
@@ -1045,17 +1045,17 @@ const SC={
 
       {t:'换一把尺子：维数',
        b:`<p>体积几乎没有了，这把尺子废了。数学家换了一把——<em>维数</em>。</p>
-          <p>办法叫<b>盒计数</b>：拿边长 δ 的小盒子把东西盖住，数用了多少个。然后把 δ 减半，再数一次。</p>
+          <p>办法叫<b>盒计数</b>：拿边长 <span class="k-delta">δ</span> 的小盒子把东西盖住，数用了多少个。然后把 <span class="k-delta">δ</span> 减半，再数一次。</p>
           <ul>
-            <li>一条线：盒子数 <b>×2</b> → D = 1</li>
-            <li>一张纸：盒子数 <b>×4</b> → D = 2</li>
-            <li>一块实心物体：盒子数 <b>×8</b> → D = 3</li>
+            <li>一条线：盒子数 <b>×2</b> → <span class="k-dim">D</span> = 1</li>
+            <li>一张纸：盒子数 <b>×4</b> → <span class="k-dim">D</span> = 2</li>
+            <li>一块实心物体：盒子数 <b>×8</b> → <span class="k-dim">D</span> = 3</li>
           </ul>
-          <span class="fml">N(δ) ≈ δ<sup>−D</sup></span>
+          <span class="fml">N(<span class="k-delta">δ</span>) ≈ <span class="k-delta">δ</span><sup>−<span class="k-dim">D</span></sup></span>
           <p>拖动“盒子尺寸”看看盒子是怎么盖住它的。但接下来这件事必须说清楚，否则整个测量都是假的——</p>
-          <p><b>陷阱：</b>如果把屏幕上这个<em>有限层数</em>的集合固定住、只把盒子越缩越小，你会量到 D = 3.00。可这什么也没说明：有限层数的构造体积是<b>正的</b>（左下角读数就是一个正数），它本来就是个实心物体，维数当然满格。</p>
-          <p>挂谷猜想问的是<em>极限</em>：针无限细、方向无限密。所以正确的量法是让两件事<b>一起细化</b>——δ 减半的同时，方向也加密一倍（递归再深一层）。</p>
-          <p>这叫<b>离散化的挂谷问题</b>。它问的不是“这个物体多大”，而是“当针细到 δ 时，要装下所有方向<em>至少</em>得占多少地方”。下一章右下角那张图，做的就是这件事。</p>`,
+          <p><b>陷阱：</b>如果把屏幕上这个<em>有限层数</em>的集合固定住、只把盒子越缩越小，你会量到 <span class="k-dim">D</span> = 3.00。可这什么也没说明：有限层数的构造体积是<b>正的</b>（左下角读数就是一个正数），它本来就是个实心物体，维数当然满格。</p>
+          <p>挂谷猜想问的是<em>极限</em>：针无限细、方向无限密。所以正确的量法是让两件事<b>一起细化</b>——<span class="k-delta">δ</span> 减半的同时，方向也加密一倍（递归再深一层）。</p>
+          <p>这叫<b>离散化的挂谷问题</b>。它问的不是“这个物体多大”，而是“当针细到 <span class="k-delta">δ</span> 时，要装下所有方向<em>至少</em>得占多少地方”。下一章右下角那张图，做的就是这件事。</p>`,
        en(){camTo(0.5,0.40,3.5,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'tDepth',5,900);to(KAK,'boxes',1,700,300);}},
@@ -1095,7 +1095,7 @@ const SC={
 
       {t:'王虹 & Zahl：维数必须是 3',
        b:`<p>右下角是实测数据。把针不断变细（δ 每次减半），看体积怎么变：</p>
-          <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的维数从 1.90 升到 <b>2.89</b>。它不是单调上升的（中途会回落，因为每一层的滑动量不同），但趋势明确指向 3。</p>
+          <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的<span class="k-dim">维数</span>从 1.90 升到 <b class="k-dim">2.89</b>。它不是单调上升的（中途会回落，因为每一层的滑动量不同），但趋势明确指向 3。</p>
           <p>而上一章你自己试过：把构造改成自相似，维数直接顶到 <b>3.00</b>。<em>两条路都通向 3</em>。</p>
           <p><b>挂谷猜想</b>断言：ℝⁿ 中任何挂谷集，不管体积多小，维数必定是满的 n。二维情形 1971 年由 Davies 解决；三维卡了半个多世纪，是调和分析里最硬的骨头之一。</p>
           <p>2025 年 2 月 24 日，<b>王虹</b>与 <b>Joshua Zahl</b> 用一篇 127 页的论文把它解决了。Nets Katz 称之为“百年一遇”。</p>

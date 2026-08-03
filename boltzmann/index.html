@@ -14,18 +14,21 @@
 <meta property="og:url" content="https://viz.gopromp.com/boltzmann/">
 <style>
 :root{
-  /* 配色取自 3Blue1Brown 的标准色板 */
-  --bg:#0a0e14; --bg2:#11161f;
-  --ink:#f2f5fa; --dim:#9aa5bd; --dim2:#616c85;
-  --line:rgba(255,255,255,.10);
-  --glass:rgba(255,255,255,.045);
-  --b3b:#58c4dd;   /* BLUE_D */
-  --teal:#5cd0b3;  /* TEAL */
-  --grn:#83c167;   /* GREEN */
-  --yel:#ffd866;   /* YELLOW */
-  --org:#f0ac5f;   /* GOLD */
-  --red:#fc6255;   /* RED */
-  --pur:#9a72ac;   /* PURPLE */
+  /* 热力学读数台：炭黑机身、琥珀读数、冷暖速率色标 */
+  --bg:#0d0b09; --bg2:#17130f;
+  --ink:#f6f1e8; --dim:#b3a794; --dim2:#7d7264;
+  --line:rgba(246,241,232,.12);
+  --glass:rgba(246,241,232,.045);
+  --amber:#ffb547;   /* 主读数 */
+  --hot:#fc6255;     /* 快 / 热 */
+  --cold:#58c4dd;    /* 慢 / 冷 */
+  --teal:#5cd0b3;
+  --grn:#83c167;
+  --yel:#ffd866;
+  --org:#f0ac5f;
+  --red:#fc6255;
+  --pur:#9a72ac;
+  --b3b:#58c4dd;
   --k1:#58c4dd; --k2:#9a72ac;      /* 王虹 · 挂谷 */
   --g1:#ffd866; --g2:#fc6255;      /* 邓煜 · 玻尔兹曼 */
   --ok:#5cd0b3;
@@ -71,7 +74,7 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 
 /* ---------- 通用面板 ---------- */
 .panel{position:fixed;z-index:10;background:rgba(9,11,20,.72);border:1px solid var(--line);
-  border-radius:16px;backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  border-radius:4px;backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 24px 60px rgba(0,0,0,.55)}
 .hd{font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:var(--dim2);text-transform:uppercase}
 
 /* 左：讲解 */
@@ -113,7 +116,7 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 .nbtn:disabled{opacity:.28;cursor:default}
 
 /* 右：控制 + 图表（同一列，永不重叠） */
-#right{position:fixed;right:22px;top:74px;bottom:20px;width:274px;z-index:10;
+#right{position:fixed;right:22px;top:74px;bottom:20px;width:330px;z-index:10;
   display:flex;flex-direction:column;gap:12px;pointer-events:none}
 #right>*{pointer-events:auto}
 #ctrl{position:relative;right:auto;top:auto;width:100%;padding:16px 18px 18px;flex:none}
@@ -165,10 +168,23 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
   color:var(--dim2);font-family:var(--mono);white-space:nowrap}
 
 /* 图表 */
-#charts{position:relative;right:auto;bottom:auto;padding:12px 14px 10px;display:none;margin-top:auto}
+#charts{position:relative;right:auto;bottom:auto;padding:15px 15px 11px;display:none;
+  order:-1;flex:none;
+  background:linear-gradient(180deg,rgba(23,19,15,.94),rgba(13,11,9,.94));
+  border:1px solid var(--line);border-radius:4px;
+  box-shadow:0 18px 40px -22px rgba(0,0,0,.9)}
 #charts.show{display:block}
-canvas.chart{display:block;border-radius:8px}
-.chartcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim2);margin:8px 0 4px;text-transform:uppercase}
+canvas.chart{display:block;border-radius:3px;width:100%;
+  background:rgba(0,0,0,.30);border:1px solid rgba(246,241,232,.07)}
+.chartcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--amber);
+  margin:10px 0 5px;text-transform:uppercase}
+.chartcap:first-child{margin-top:0}
+/* 公式里的符号与曲线共用颜色 */
+.v-hot{color:#fc6255;font-weight:650}
+.v-cold{color:#58c4dd;font-weight:650}
+.v-amber{color:#ffb547;font-weight:650}
+.v-H{color:#ffd866;font-weight:650}
+.chip{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 
 /* 提示 */
 #hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10;font-size:11px;
@@ -220,7 +236,7 @@ canvas.chart{display:block;border-radius:8px}
 .ev.hot .yr{color:var(--k1)}
 .ev.hot .ct h4{color:#fff}
 .bios{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:34px 0}
-.bio{padding:20px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.bio{padding:20px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
 .bio h4{font-family:var(--serif);font-size:20px;margin-bottom:3px}
 .bio .m{font-family:var(--mono);font-size:10.5px;color:var(--dim2);margin-bottom:13px;letter-spacing:.08em}
 .bio p{font-size:12.5px;color:var(--dim);line-height:1.9}
@@ -850,11 +866,11 @@ const SC={
             CAM.spin=0.05;gasInit('same');GAS.running=true;}},
 
       {t:'统计的涌现：麦克斯韦–玻尔兹曼分布',
-       b:`<p>看右下角的直方图——横轴是速率 v，柱子高度是“速率为 v 的球有多少”。</p>
+       b:`<p>看右边的直方图——横轴是速率 <span class="v-amber">v</span>，柱子高度是“速率为 <span class="v-amber">v</span> 的球有多少”。柱子的颜色就是画面上球的颜色。</p>
           <p>一开始它是一根孤零零的尖峰。可平均每个球只碰上两三次，尖峰就<em>自己</em>塌了下来，稳稳铺成这条曲线：</p>
-          <span class="fml">f(v) ∝ v² · e<sup>−mv²/2kT</sup></span>
+          <span class="fml">f(<span class="v-amber">v</span>) ∝ <span class="v-amber">v</span>² · e<sup>−m<span class="v-amber">v</span>²/2kT</sup></span>
           <p>红线是理论曲线，柱子是实测。<b>没有人安排它</b>——它是从纯粹的碰撞里长出来的。</p>
-          <p>画面上的颜色也从单一变得冷暖交杂：慢的偏蓝，快的偏红。</p>
+          <p>画面上的颜色也从单一变得冷暖交杂：<span class="v-cold">慢的偏蓝</span>，<span class="v-hot">快的偏红</span>——直方图的横轴 <span class="v-amber">v</span> 用的是同一套色标，所以柱子的位置和球的颜色是对应的。</p>
           <p>这就是<b>麦克斯韦–玻尔兹曼分布</b>。玻尔兹曼方程描述的正是这条曲线随时间的演化。</p>
           <p>问题是：它<em>真的</em>能从牛顿定律推出来吗？</p>`,
        en(){camTo(0.7,0.24,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.04;
@@ -862,8 +878,8 @@ const SC={
 
       {t:'时间之箭从哪来',
        b:`<p>玻尔兹曼定义了一个量 <b>H</b>（本质上就是负的熵），并证明它<em>只减不增</em>——这就是 <b>H 定理</b>。</p>
-          <p>右下那条曲线就是 H(t)：一路下滑，到达平衡后躺平，再也不回头。</p>
-          <span class="fml">dH/dt ≤ 0</span>
+          <p>右边那条<span class="v-H">黄色曲线</span>就是 <span class="v-H">H(t)</span>：一路下滑，到达平衡后躺平，再也不回头。</p>
+          <span class="fml"><span class="v-H">dH/dt</span> ≤ 0</span>
           <p>于是<b>时间有了方向</b>。你能分清哪一帧在前、哪一帧在后了。</p>
           <p>可是等一下——底层的牛顿定律明明是<em>完全可逆</em>的。方向是从哪冒出来的？</p>`,
        en(){camTo(0.9,0.18,3.6,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.03;}},
@@ -1123,17 +1139,22 @@ function drawMB(){
   const X=v=>10+(v/GAS.top)*(W-16), Y=p=>H-18-(p/top)*(H-28);
   x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
   x.beginPath();x.moveTo(10,H-18);x.lineTo(W-6,H-18);x.stroke();
-  x.fillStyle='rgba(255,196,87,.30)';
+  /* 每根柱子用「该速率的粒子」在画面上的颜色 —— 直方图因此是屏幕颜色的普查，
+     柱子的位置、颜色与球的颜色由同一个色标决定。 */
+  const vs=GAS.vrms||1;
   for(let i=0;i<NB;i++){
     const p=h[i]/N;if(p<=0)continue;
+    const v=(i+0.5)*bw;
+    const c=heat(clamp(v/(vs*1.85),0,1));
+    x.fillStyle=`rgba(${Math.round(c[0]*255)},${Math.round(c[1]*255)},${Math.round(c[2]*255)},.72)`;
     const x0=X(i*bw),x1_=X((i+1)*bw);
     x.fillRect(x0,Y(p),Math.max(1,x1_-x0-1),H-18-Y(p));
   }
-  x.strokeStyle='#ff6b6b';x.lineWidth=1.8;x.beginPath();
+  x.strokeStyle='#ffb547';x.lineWidth=1.8;x.beginPath();
   for(let i=0;i<=120;i++){const v=i/120*GAS.top;const p=cur[i];
     i?x.lineTo(X(v),Y(p)):x.moveTo(X(v),Y(p));}
   x.stroke();
-  x.fillStyle='rgba(255,107,107,.9)';x.font='9px ui-monospace,monospace';
+  x.fillStyle='rgba(255,181,71,.95)';x.font='9px ui-monospace,monospace';
   x.fillText('麦克斯韦–玻尔兹曼',W-104,16);
   x.fillStyle='rgba(152,162,189,.75)';
   x.fillText('速率 v →',W-52,H-5);
@@ -1154,7 +1175,7 @@ function drawH(){
     x.fillStyle='rgba(255,216,102,.9)';x.font='9px ui-monospace,monospace';
     x.fillText('反演',Math.min(rx+3,W-30),20);
   }
-  const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#ffd866');g.addColorStop(1,'#fc6255');
+  const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#ffd866');g.addColorStop(1,'#ffb547');
   x.strokeStyle=g;x.lineWidth=1.8;x.beginPath();
   A.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.stroke();
   x.fillStyle='rgba(154,165,189,.8)';x.font='9px ui-monospace,monospace';

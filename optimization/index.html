@@ -14,9 +14,11 @@
 <meta property="og:url" content="https://viz.gopromp.com/optimization/">
 <style>
 :root{
-  --bg:#080a0e; --ink:#f2f4f8; --dim:#98a0b2; --dim2:#5b6376;
-  --line:rgba(255,255,255,.10); --panel:rgba(14,17,23,.87);
-  --up:#ff8a5c; --down:#5a8cff; --ball:#ffd166; --ok:#4fd1a5;
+  /* 地形测绘：石板底、纸面板、地图墨线 */
+  --bg:#171a1c; --paper:#e9e5db; --ink:#1d2226; --ink2:#4a5560;
+  --dim:#6f7d88; --dim2:#93a1ab;
+  --rule:#c4bdae; --rule2:rgba(29,34,38,.14);
+  --min:#2f7d5e; --sad:#c25a2b; --max:#9b2f45; --mark:#1d2226;
   --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",-apple-system,BlinkMacSystemFont,sans-serif;
   --serif:"Songti SC","Noto Serif SC",Georgia,serif;
   --mono:"SFMono-Regular",ui-monospace,Menlo,monospace;
@@ -27,113 +29,126 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 button,input{font:inherit;color:inherit}
 a{color:inherit}
-:where(a,button,input):focus-visible{outline:2px solid var(--ball);outline-offset:2px}
+:where(a,button,input):focus-visible{outline:2px solid var(--sad);outline-offset:2px}
 
 #land{position:fixed;inset:0;width:100%;height:100%;display:block;
   touch-action:none;cursor:grab;z-index:0}
 #land:active{cursor:grabbing}
 #vig{position:fixed;inset:0;z-index:1;pointer-events:none;
-  background:radial-gradient(135% 100% at 50% 40%,transparent 40%,rgba(3,4,7,.62) 100%)}
+  box-shadow:inset 0 0 0 1px rgba(233,229,219,.10), inset 0 0 140px rgba(10,12,14,.55)}
 
 #top{position:fixed;top:0;left:0;right:0;height:54px;z-index:20;display:flex;
   align-items:center;gap:16px;padding:0 18px;pointer-events:none}
-#brand{pointer-events:auto;display:inline-flex;align-items:center;gap:9px;
+#brand{pointer-events:auto;display:inline-flex;align-items:center;gap:9px;color:var(--paper);
   text-decoration:none;font-size:17px;font-weight:650;letter-spacing:-.04em}
-#brand i{width:8px;height:8px;border-radius:50%;background:var(--down);box-shadow:6px 0 0 var(--up)}
-#where{font-size:12px;color:var(--dim2)}
-#back{margin-left:auto;pointer-events:auto;font-size:12.5px;color:var(--dim);
+#brand i{width:8px;height:8px;border-radius:50%;background:var(--sad);box-shadow:6px 0 0 var(--min)}
+#where{font-size:12px;color:var(--dim2);letter-spacing:.06em}
+#back{margin-left:auto;pointer-events:auto;font-size:12.5px;color:var(--dim2);
   text-decoration:none;padding:8px 10px;border-radius:8px}
-#back:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+#back:hover{color:var(--paper);background:rgba(233,229,219,.08)}
 
-.panel{position:fixed;z-index:20;background:var(--panel);backdrop-filter:blur(18px);
-  border:1px solid var(--line);border-radius:16px}
+.panel{position:fixed;z-index:20;background:var(--paper);color:var(--ink);
+  border:1px solid var(--rule);border-radius:3px;
+  box-shadow:0 10px 34px -14px rgba(0,0,0,.7)}
 
 #story{left:18px;top:70px;width:min(392px,calc(100vw - 36px));
   max-height:calc(100vh - 106px);padding:22px 22px 16px;display:flex;flex-direction:column}
-#stepno{font-family:var(--mono);font-size:11px;color:var(--dim2);letter-spacing:.08em}
-#sttitle{margin-top:9px;font-family:var(--serif);font-size:26px;font-weight:600;
-  line-height:1.24;letter-spacing:-.01em}
-#stbody{margin-top:13px;overflow-y:auto;flex:1;font-size:14px;color:#c9d0de;
-  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+#stepno{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.16em}
+#sttitle{margin-top:8px;font-family:var(--serif);font-size:25px;font-weight:600;
+  line-height:1.28;letter-spacing:0;color:var(--ink)}
+#stbody{margin-top:12px;overflow-y:auto;flex:1;font-size:13.8px;color:var(--ink2);
+  scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
 #stbody::-webkit-scrollbar{width:5px}
-#stbody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:3px}
+#stbody::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
 #stbody p{margin-bottom:11px;line-height:1.82}
-#stbody p.q{color:var(--dim);font-size:13px}
-#stbody b{color:var(--ink);font-weight:600}
-#stbody em{font-style:normal;color:var(--ball)}
-#stbody .fml{display:block;margin:13px 0;padding:11px 13px;background:rgba(255,255,255,.05);
-  border-left:2px solid var(--down);border-radius:0 8px 8px 0;
-  font-family:var(--mono);font-size:12.5px;line-height:1.8;white-space:pre-wrap;color:#dde3ee}
-#stbody .big{display:block;margin:14px 0;padding:15px;border-radius:11px;
-  background:rgba(255,138,92,.13);border:1px solid rgba(255,138,92,.3);
-  font-family:var(--mono);font-size:16px;text-align:center;color:#ffcdb6;line-height:1.7}
+#stbody p.q{color:var(--dim);font-size:12.6px;padding-left:11px;border-left:2px solid var(--rule)}
+#stbody b{color:var(--ink);font-weight:650}
+#stbody em{font-style:normal;background:linear-gradient(transparent 60%,#f2d9a8 60%);color:var(--ink)}
+#stbody .fml{display:block;margin:13px 0;padding:12px 13px;background:rgba(29,34,38,.045);
+  border:1px solid var(--rule);border-radius:3px;
+  font-family:var(--mono);font-size:12.5px;line-height:1.9;white-space:pre-wrap;color:var(--ink)}
+/* 公式里的符号与画面上的对象共用颜色 —— 不靠文字解释就把符号和它指的东西绑起来 */
+.t-min{color:var(--min);font-weight:650}
+.t-sad{color:var(--sad);font-weight:650}
+.t-max{color:var(--max);font-weight:650}
+.t-amp{color:#8a6a2f;font-weight:650}
+.t-x{color:#2f6f8f;font-weight:650}
+.t-y{color:#7a4a8f;font-weight:650}
+.chip{display:inline-block;width:9px;height:9px;border-radius:2px;
+  margin-right:5px;vertical-align:-1px}
+#stbody .big{display:block;margin:14px 0;padding:14px;border-radius:3px;
+  background:rgba(194,90,43,.09);border:1px solid rgba(194,90,43,.32);
+  font-family:var(--mono);font-size:15px;text-align:center;color:var(--ink);line-height:1.75}
 #stbody ul{margin:10px 0 10px 17px;display:grid;gap:6px}
-#nav{margin-top:14px;padding-top:13px;border-top:1px solid var(--line);
+#nav{margin-top:14px;padding-top:13px;border-top:1px solid var(--rule);
   display:flex;align-items:center;gap:9px}
 #dots{display:flex;gap:5px;flex:1;min-width:0}
-#dots i{flex:1 1 0;min-width:6px;max-width:26px;height:3px;border-radius:2px;
-  background:rgba(255,255,255,.15);cursor:pointer;transition:.3s}
-#dots i:hover{background:rgba(255,255,255,.34)}
-#dots i.on{background:var(--up)}
-.navb{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);
-  background:rgba(255,255,255,.04);cursor:pointer;display:grid;place-items:center;
-  font-size:14px;transition:.18s}
-.navb:hover:not(:disabled){background:rgba(255,255,255,.12)}
+#dots i{flex:1 1 0;min-width:6px;max-width:26px;height:3px;border-radius:1px;
+  background:var(--rule);cursor:pointer;transition:.3s}
+#dots i:hover{background:var(--dim)}
+#dots i.on{background:var(--sad)}
+.navb{width:30px;height:30px;border-radius:3px;border:1px solid var(--rule);
+  background:transparent;cursor:pointer;display:grid;place-items:center;
+  font-size:14px;transition:.18s;color:var(--ink2)}
+.navb:hover:not(:disabled){background:rgba(29,34,38,.07)}
 .navb:disabled{opacity:.28;cursor:default}
 
 #ctrl{right:18px;top:70px;width:min(308px,calc(100vw - 36px));padding:16px}
-#ctrl h4{font-size:10.5px;letter-spacing:.14em;color:var(--dim2);margin-bottom:12px}
+#ctrl h4{font-size:10px;letter-spacing:.2em;color:var(--dim);margin-bottom:12px;
+  padding-bottom:8px;border-bottom:1px solid var(--rule)}
 .knob{margin-bottom:13px}
 .knob-head{display:flex;justify-content:space-between;align-items:baseline;
   font-size:12px;margin-bottom:5px}
-.knob-head b{font-family:var(--mono);font-size:12px;color:var(--ball);font-weight:500;
-  font-variant-numeric:tabular-nums;background:rgba(255,209,102,.1);padding:1px 7px;border-radius:5px}
+.knob-head b{font-family:var(--mono);font-size:12px;color:var(--sad);font-weight:600;
+  font-variant-numeric:tabular-nums}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:none;cursor:grab}
 input[type=range]:active{cursor:grabbing}
-input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:rgba(255,255,255,.16)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;
-  margin-top:-6px;border-radius:50%;background:var(--ink);box-shadow:0 1px 5px rgba(0,0,0,.5)}
-input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:rgba(255,255,255,.16)}
-input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--ink)}
+input[type=range]::-webkit-slider-runnable-track{height:2px;border-radius:1px;background:var(--rule)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;
+  margin-top:-5.5px;border-radius:2px;background:var(--ink);box-shadow:none}
+input[type=range]::-moz-range-track{height:2px;border-radius:1px;background:var(--rule)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:2px;background:var(--ink)}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
-.btn{padding:8px 9px;border:1px solid var(--line);border-radius:9px;
-  background:rgba(255,255,255,.04);font-size:11.5px;cursor:pointer;transition:.16s;text-align:center}
-.btn:hover{background:rgba(255,255,255,.12)}
-.btn.on{background:var(--up);border-color:var(--up);color:#080a0e;font-weight:600}
+.btn{padding:7px 9px;border:1px solid var(--rule);border-radius:3px;
+  background:transparent;font-size:11.5px;cursor:pointer;transition:.16s;text-align:center;color:var(--ink2)}
+.btn:hover{background:rgba(29,34,38,.07);color:var(--ink)}
+.btn.on{background:var(--sad);border-color:var(--sad);color:var(--paper);font-weight:600}
 .btn.wide{grid-column:1/-1}
-.btn.key{background:var(--ink);color:#080a0e;border-color:var(--ink);font-weight:600}
-.btn.key:hover{background:#fff}
-.sep{height:1px;background:var(--line);margin:13px 0}
-#verdict{margin-top:11px;font-size:12px;line-height:1.62;padding:10px 11px;border-radius:9px;
-  background:rgba(255,255,255,.05);color:var(--dim);min-height:3.8em}
-#verdict.saddle{background:rgba(255,138,92,.15);color:#ffcdb6}
-#verdict.min{background:rgba(79,209,165,.13);color:#b6ead8}
+.btn.key{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.btn.key:hover{background:#000}
+.sep{height:1px;background:var(--rule);margin:13px 0}
+#verdict{margin-top:12px;font-size:12px;line-height:1.66;padding:10px 11px;border-radius:3px;
+  background:rgba(29,34,38,.05);border:1px solid var(--rule);color:var(--ink2);min-height:3.8em}
+#verdict.saddle{background:rgba(194,90,43,.09);border-color:rgba(194,90,43,.4)}
+#verdict.min{background:rgba(47,125,94,.09);border-color:rgba(47,125,94,.4)}
 #verdict b{color:var(--ink)}
 
 #hud{position:fixed;left:18px;bottom:16px;z-index:20;display:flex;
-  background:var(--panel);backdrop-filter:blur(18px);border:1px solid var(--line);
-  border-radius:14px;overflow:hidden;max-width:calc(100vw - 36px)}
-.hcell{padding:9px 15px;border-right:1px solid var(--line)}
+  background:var(--paper);border:1px solid var(--rule);
+  border-radius:3px;overflow:hidden;max-width:calc(100vw - 36px);
+  box-shadow:0 10px 30px -16px rgba(0,0,0,.75)}
+.hcell{padding:8px 15px;border-right:1px solid var(--rule)}
 .hcell:last-child{border-right:0}
-.hcell span{display:block;font-size:9.5px;color:var(--dim2);letter-spacing:.03em}
-.hcell b{display:block;margin-top:3px;font-family:var(--mono);font-size:17px;font-weight:500;
-  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.hcell.g b{color:var(--ball)} .hcell.n b{color:var(--up)} .hcell.p b{color:var(--ok)}
+.hcell span{display:block;font-size:9.5px;color:var(--dim);letter-spacing:.06em}
+.hcell b{display:block;margin-top:2px;font-family:var(--mono);font-size:17px;font-weight:600;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.hcell.g b{color:var(--ink)} .hcell.n b{color:var(--sad)} .hcell.p b{color:var(--min)}
 
 #chart{position:fixed;right:18px;bottom:16px;z-index:20;width:min(308px,calc(100vw - 36px));
   padding:12px 14px 10px;display:none}
 #chart.show{display:block}
-#chart h5{font-size:10.5px;letter-spacing:.12em;color:var(--dim2);margin-bottom:8px}
+#chart h5{font-size:10px;letter-spacing:.16em;color:var(--dim);margin-bottom:8px;
+  padding-bottom:7px;border-bottom:1px solid var(--rule)}
 #cv2{display:block;width:100%;height:122px}
-#chart .cap{margin-top:6px;font-size:10.5px;color:var(--dim2);line-height:1.5}
+#chart .cap{margin-top:6px;font-size:10.5px;color:var(--dim);line-height:1.5}
 
 #hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:15;
-  font-size:11px;color:var(--dim2);pointer-events:none;white-space:nowrap}
+  font-size:11px;color:var(--dim2);pointer-events:none;white-space:nowrap;letter-spacing:.04em}
 
 #loader{position:fixed;inset:0;z-index:60;background:var(--bg);display:grid;
   place-items:center;transition:opacity .55s}
 #loader.hide{opacity:0;pointer-events:none}
-#loader div{font-family:var(--serif);font-size:19px;color:var(--dim)}
+#loader div{font-family:var(--serif);font-size:19px;color:var(--dim2)}
 
 @media(max-width:900px){
   #story{left:10px;right:10px;top:60px;width:auto;max-height:42vh;padding:16px 16px 12px}
@@ -145,9 +160,9 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   body.pm-ctrl #story{display:none}
   body.pm-story #ctrl{display:none}
   #switch{position:fixed;top:58px;right:10px;z-index:25;display:flex;gap:5px}
-  #switch button{padding:5px 11px;font-size:11px;border-radius:20px;
-    border:1px solid var(--line);background:var(--panel);cursor:pointer}
-  #switch button.on{background:var(--up);color:#080a0e;border-color:var(--up)}
+  #switch button{padding:5px 11px;font-size:11px;border-radius:3px;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink2);cursor:pointer}
+  #switch button.on{background:var(--sad);color:var(--paper);border-color:var(--sad)}
 }
 @media(min-width:901px){#switch{display:none}}
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
@@ -322,10 +337,11 @@ function proj(x,y,z){
 }
 /* 地形配色：谷深 → 蓝，脊高 → 暖 */
 function terrainColor(f,shade){
-  const t=clamp((f+1.6)/6.2,0,1);          /* 0 = 谷底，1 = 高处 */
-  const r=Math.round((38+196*t*t)*shade);
-  const g=Math.round((66+104*t)*shade);
-  const b=Math.round((124-52*t)*shade);
+  /* 地形图配色：低地偏绿，高处偏棕黄 —— 与图例上的高度条一致 */
+  const t=clamp((f+1.1)/4.6,0,1);
+  const r=Math.round((58+168*Math.pow(t,1.1))*shade);
+  const g=Math.round((92+74*t)*shade);
+  const b=Math.round((72+30*t-38*t*t)*shade);
   return`rgb(${r},${g},${b})`;
 }
 function drawLand(){
@@ -358,23 +374,22 @@ function drawCriticals(){
   const cs=criticals();
   const FONT=getComputedStyle(document.body).fontFamily;
   cx.font=`${10.5*DPR}px ${FONT}`;cx.textAlign="center";cx.textBaseline="bottom";
-  const col={min:"rgba(79,209,165,.95)",saddle:"rgba(255,138,92,.95)",max:"rgba(232,90,110,.95)"};
+  const col={min:"#2f7d5e",saddle:"#c25a2b",max:"#9b2f45"};
   const best=cs[0];
   for(const c of cs){
     const p=proj(c.x,c.y,zOf(c.x,c.y));
     const r=(c===best?7:5)*DPR;
     cx.beginPath();cx.arc(p[0],p[1],r,0,7);
     cx.fillStyle=col[c.type];cx.fill();
-    cx.strokeStyle="rgba(0,0,0,.55)";cx.lineWidth=1.3*DPR;cx.stroke();
+    cx.strokeStyle="rgba(233,229,219,.85)";cx.lineWidth=1.4*DPR;cx.stroke();
     if(c===best&&S.showLabels){
-      cx.fillStyle="rgba(150,240,210,.98)";
-      cx.fillText("全局最优",p[0],p[1]-10*DPR);
+      cx.fillStyle="#e9e5db";cx.fillText("全局最优",p[0],p[1]-11*DPR);
     }
   }
 }
 function drawTraj(){
   if(S.traj.length<2)return;
-  cx.lineWidth=2.4*DPR;cx.strokeStyle="rgba(255,209,102,.9)";
+  cx.lineWidth=2.2*DPR;cx.strokeStyle="rgba(233,229,219,.9)";
   cx.beginPath();
   for(let i=0;i<S.traj.length;i++){
     const t=S.traj[i],p=proj(t[0],t[1],zOf(t[0],t[1])+.03);
@@ -385,9 +400,9 @@ function drawTraj(){
 function drawBall(){
   const p=proj(S.x,S.y,zOf(S.x,S.y)+.055);
   const g=cx.createRadialGradient(p[0]-2*DPR,p[1]-2*DPR,1,p[0],p[1],8*DPR);
-  g.addColorStop(0,"#fff8e0");g.addColorStop(1,"#ffc233");
+  g.addColorStop(0,"#fdfaf2");g.addColorStop(1,"#d8c9a4");
   cx.beginPath();cx.arc(p[0],p[1],8*DPR,0,7);cx.fillStyle=g;cx.fill();
-  cx.strokeStyle="rgba(0,0,0,.45)";cx.lineWidth=1.4*DPR;cx.stroke();
+  cx.strokeStyle="#1d2226";cx.lineWidth=1.6*DPR;cx.stroke();
   /* 负曲率方向：鞍点处指出「往哪儿才是下坡」 */
   if(S.showEscape){
     const h=hAt(S.x);
@@ -412,18 +427,18 @@ function drawCompass(){
   const x=CENX+Math.min(W,H)*.30, y0=CENY-Math.min(W,H)*.13, y1=CENY+Math.min(W,H)*.13;
   if(x>W-40*DPR)return;
   const g=cx.createLinearGradient(0,y0,0,y1);
-  g.addColorStop(0,"rgba(232,150,96,.85)");
-  g.addColorStop(1,"rgba(70,110,190,.85)");
+  g.addColorStop(0,"#b9924f");
+  g.addColorStop(1,"#2f7d5e");
   cx.strokeStyle=g;cx.lineWidth=3*DPR;cx.lineCap="round";
   cx.beginPath();cx.moveTo(x,y0);cx.lineTo(x,y1);cx.stroke();
   const a=8*DPR;
   cx.beginPath();cx.moveTo(x,y1+2*DPR);
   cx.lineTo(x-a*.6,y1-a);cx.lineTo(x+a*.6,y1-a);cx.closePath();
-  cx.fillStyle="rgba(70,110,190,.95)";cx.fill();
+  cx.fillStyle="#2f7d5e";cx.fill();
   cx.font=`${11*DPR}px ${FONT}`;cx.textAlign="left";
-  cx.fillStyle="rgba(232,170,130,.95)";cx.textBaseline="top";
+  cx.fillStyle="#d8bc86";cx.textBaseline="top";
   cx.fillText("损失高",x+9*DPR,y0);
-  cx.fillStyle="rgba(130,170,240,.95)";cx.textBaseline="bottom";
+  cx.fillStyle="#6fc0a0";cx.textBaseline="bottom";
   cx.fillText("损失低 · 优化方向",x+9*DPR,y1);
 }
 function render(){
@@ -508,7 +523,7 @@ function hud(){
 
 /* ══════════ 控件模板 ══════════ */
 const C_LAND=`
-  <div class="knob"><div class="knob-head"><label for="sA">地形起伏 A</label><b id="vA"></b></div>
+  <div class="knob"><div class="knob-head"><label for="sA">地形起伏 <span class="t-amp">A</span></label><b id="vA"></b></div>
     <input type="range" id="sA" min="0" max="1.6" step="0.01"></div>
   <div class="btns">
     <button class="btn key wide" id="b_drop">随机放一个球</button>
@@ -516,7 +531,7 @@ const C_LAND=`
     <button class="btn" id="b_rough">A = 1.3</button>
   </div>`;
 const C_TYPE=`
-  <div class="knob"><div class="knob-head"><label for="sA">地形起伏 A</label><b id="vA"></b></div>
+  <div class="knob"><div class="knob-head"><label for="sA">地形起伏 <span class="t-amp">A</span></label><b id="vA"></b></div>
     <input type="range" id="sA" min="0.2" max="1.6" step="0.01"></div>
   <div class="btns">
     <button class="btn key wide" id="b_saddle">把球放到一个鞍点上</button>
@@ -538,14 +553,14 @@ const C_BASIN=`
 const CH=[
 {t:"一个变量时，导数为零就够了",c:C_LAND,chart:false,
  b:`<p>先说清楚这篇在讲什么：<em>不是梯度下降怎么调参</em>。球滚下坡只是一个<b>探针</b>，用来把我们带到梯度为零的地方。真正的问题是——<b>到了之后，你怎么知道那是什么？</b></p>
-    <p>把「地形起伏 A」拖到 <b>0</b>：地形退化成一个碗，只有一个临界点。球滚到底，梯度为零，那确实是最低点。</p>
+    <p>把「地形起伏 <span class="t-amp">A</span>」拖到 <b>0</b>：地形退化成一个碗，只有一个临界点。球滚到底，梯度为零，那确实是最低点。</p>
     <p>一元微积分教给我们的规矩就是这条：<em>导数为零 ⟹ 极值</em>。在碗上它没问题。</p>
     <p class="q">地形是 f = A·sin(1.6x)·cos(1.4y) + 0.08(x²+y²)。A 决定它有多崎岖；一阶与二阶导数全部解析可写，所以每个临界点的类型都是<b>算</b>出来的，不是看图猜的。</p>`,
  en(){S.amp=0;S.showTypes=true;S.showLabels=true;
       resetBall(3.2,2.4);camTo(-.66,.34,1);}},
 
 {t:"两个变量，地形就不是碗了",c:C_LAND,chart:false,
- b:`<p>把 A 拉起来。地形立刻不再是一个碗——它长出了山脊、盆地和一道道垭口。</p>
+ b:`<p>把 <span class="t-amp">A</span> 拉起来。地形立刻不再是一个碗——它长出了山脊、盆地和一道道垭口。</p>
     <p>这才是一般情况。真实模型的损失面比它还乱得多，只是画不出来。</p>
     <p>多按几次<b>「随机放一个球」</b>。每次它都会停在某个梯度为零的地方，但<em>停的位置各不相同</em>。</p>
     <p>屏幕上那些彩色圆点，就是这片地形<b>全部</b>的临界点——用牛顿法从网格逐个求出来的，每个点上 |∇f| &lt; 10⁻⁸。</p>
@@ -555,11 +570,14 @@ const CH=[
 
 {t:"梯度为零的地方，有三种",c:C_TYPE,chart:false,
  b:`<p>梯度为零只说明「此处没有下坡方向<em>可言</em>」，不说明四周更高。要分辨，得看<b>二阶</b>信息——Hessian 的两个特征值：</p>
+    <span class="fml">H = [ ∂²f/∂x²   ∂²f/∂x∂y ]
+    [ ∂²f/∂x∂y  ∂²f/∂y² ]   →   特征值 <span class="t-min">λ₁</span>, <span class="t-min">λ₂</span></span>
     <ul>
-      <li><span style="color:#4fd1a5">■</span> 两个都为正 → <b>极小</b></li>
-      <li><span style="color:#ff8a5c">■</span> 一正一负 → <b>鞍点</b></li>
-      <li><span style="color:#e85a6e">■</span> 两个都为负 → <b>极大</b></li>
+      <li><i class="chip" style="background:#2f7d5e"></i><span class="t-min">两个都为正</span> → <b>极小</b></li>
+      <li><i class="chip" style="background:#c25a2b"></i><span class="t-sad">一正一负</span> → <b>鞍点</b></li>
+      <li><i class="chip" style="background:#9b2f45"></i><span class="t-max">两个都为负</span> → <b>极大</b></li>
     </ul>
+    <p class="q">地图上每个点的颜色、左下角两个 λ 的颜色、上面这三行的颜色——是同一套。看到橙色就是"有一个方向在往下"。</p>
     <p>按<b>「把球放到一个鞍点上」</b>。球停住，左下角 <b>|∇f| 变成 0</b>——可它周围明明有更低的地方。看那两个曲率：一正一负。</p>
     <span class="big" id="countBig"></span>
     <p><em>连在这片二维小地形上，鞍点都明显多于极小。</em>而这只是二维——真正的问题在维数上。</p>`,
@@ -672,19 +690,22 @@ function syncCtrl(){
   }
   hud();
   const g=gAt(S.x,S.y),gn=Math.hypot(g[0],g[1]),e=eig(hessAt(S.x,S.y));
+  /* 特征值按符号着色：负=鞍点橙，正=极小绿。与地图上的标记、
+     公式里的 λ 用的是同一套颜色，符号和它指的东西因此对上号。 */
+  const ev=v=>`<span class="${v<0?"t-sad":"t-min"}">${v>=0?"+":""}${v.toFixed(2)}</span>`;
   if(gn>1e-3){
     say(`滚动中：|∇f| = ${gn.toFixed(4)}，f = ${fAt(S.x,S.y).toFixed(4)}。`,"");
   }else{
     const t=classify(e);
     if(t==="saddle")
-      say(`<b>停住了，但这不是最低点。</b>|∇f| = ${gn.toFixed(6)}，特征值 (${e[0].toFixed(2)}, ${e[1].toFixed(2)})——<b>一正一负</b>，沿负的那个方向还能继续下降。`,"saddle");
+      say(`<b>停住了，但这不是最低点。</b>|∇f| = ${gn.toFixed(6)}，特征值 (${ev(e[0])}, ${ev(e[1])})——<b>一正一负</b>，沿负的那个方向还能继续下降。`,"saddle");
     else if(t==="max")
-      say(`<b>停在了极大点。</b>特征值 (${e[0].toFixed(2)}, ${e[1].toFixed(2)}) 都为负，四周全是下坡。`,"saddle");
+      say(`<b>停在了极大点。</b>特征值 (${ev(e[0])}, ${ev(e[1])}) 都为负，四周全是下坡。`,"saddle");
     else{
       const cs=criticals(),best=cs[0],here=fAt(S.x,S.y);
       const isBest=best&&Math.abs(here-best.f)<1e-6;
       say(isBest
-        ?`<b>到达全局最优。</b>特征值 (${e[0].toFixed(2)}, ${e[1].toFixed(2)}) 都为正，f = ${here.toFixed(4)}，是全场最低。`
+        ?`<b>到达全局最优。</b>特征值 (${ev(e[0])}, ${ev(e[1])}) 都为正，f = ${here.toFixed(4)}，是全场最低。`
         :`<b>到达一个局部最优。</b>特征值都为正，f = ${here.toFixed(4)}；但全局最优是 ${best.f.toFixed(4)}，还差 ${(here-best.f).toFixed(4)}。`,
         "min");
     }
