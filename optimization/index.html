@@ -47,12 +47,23 @@ a{color:inherit}
   text-decoration:none;padding:8px 10px;border-radius:8px}
 #back:hover{color:var(--paper);background:rgba(233,229,219,.08)}
 
-.panel{position:fixed;z-index:20;background:var(--paper);color:var(--ink);
+
+/* ══ 网格骨架：面板占格子，结构上不可能重叠 ══ */
+#shell{position:fixed;inset:54px 18px 16px;z-index:20;display:grid;
+  grid-template-columns:minmax(0,392px) minmax(0,1fr) minmax(0,320px);
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:12px;pointer-events:none}
+#shell>*{min-height:0;min-width:0}
+#shell .col-l{grid-column:1;grid-row:1;display:flex;pointer-events:auto}
+#shell .col-l>*{flex:1 1 auto}
+#shell .col-r{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:12px;
+  pointer-events:auto;align-items:stretch}
+#shell .row-b{grid-column:1/-1;grid-row:2;pointer-events:auto;display:flex}
+.panel{z-index:20;background:var(--paper);color:var(--ink);
   border:1px solid var(--rule);border-radius:3px;
   box-shadow:0 10px 34px -14px rgba(0,0,0,.7)}
 
-#story{left:18px;top:70px;width:min(392px,calc(100vw - 36px));
-  max-height:calc(100vh - 106px);padding:22px 22px 16px;display:flex;flex-direction:column}
+#story{padding:20px 20px 14px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 #stepno{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.16em}
 #sttitle{margin-top:8px;font-family:var(--serif);font-size:25px;font-weight:600;
   line-height:1.28;letter-spacing:0;color:var(--ink)}
@@ -93,7 +104,7 @@ a{color:inherit}
 .navb:hover:not(:disabled){background:rgba(29,34,38,.07)}
 .navb:disabled{opacity:.28;cursor:default}
 
-#ctrl{right:18px;top:70px;width:min(308px,calc(100vw - 36px));padding:16px}
+#ctrl{padding:15px;min-height:0;overflow-y:auto;flex:0 1 auto}
 #ctrl h4{font-size:10px;letter-spacing:.2em;color:var(--dim);margin-bottom:12px;
   padding-bottom:8px;border-bottom:1px solid var(--rule)}
 .knob{margin-bottom:13px}
@@ -123,9 +134,8 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radiu
 #verdict.min{background:rgba(47,125,94,.09);border-color:rgba(47,125,94,.4)}
 #verdict b{color:var(--ink)}
 
-#hud{position:fixed;left:18px;bottom:16px;z-index:20;display:flex;
-  background:var(--paper);border:1px solid var(--rule);
-  border-radius:3px;overflow:hidden;max-width:calc(100vw - 36px);
+#hud{display:flex;background:var(--paper);border:1px solid var(--rule);
+  border-radius:3px;overflow-x:auto;justify-self:start;
   box-shadow:0 10px 30px -16px rgba(0,0,0,.75)}
 .hcell{padding:8px 15px;border-right:1px solid var(--rule)}
 .hcell:last-child{border-right:0}
@@ -134,8 +144,7 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radiu
   letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
 .hcell.g b{color:var(--ink)} .hcell.n b{color:var(--sad)} .hcell.p b{color:var(--min)}
 
-#chart{position:fixed;right:18px;bottom:16px;z-index:20;width:min(308px,calc(100vw - 36px));
-  padding:12px 14px 10px;display:none}
+#chart{padding:11px 13px 9px;display:none;flex:0 0 auto}
 #chart.show{display:block}
 #chart h5{font-size:10px;letter-spacing:.16em;color:var(--dim);margin-bottom:8px;
   padding-bottom:7px;border-bottom:1px solid var(--rule)}
@@ -160,10 +169,13 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radiu
 #loader div{font-family:var(--serif);font-size:19px;color:var(--dim2)}
 
 @media(max-width:900px){
-  #story{left:10px;right:10px;top:60px;width:auto;max-height:42vh;padding:16px 16px 12px}
+  #shell{inset:54px 10px 10px;grid-template-columns:minmax(0,1fr);gap:10px}
+  #shell .col-l,#shell .col-r{grid-column:1;grid-row:1}
+  #shell .row-b{grid-column:1;grid-row:2}
+  #story{padding:15px 15px 11px}
   #sttitle{font-size:21px}#stbody{font-size:13.5px}
-  #ctrl{left:10px;right:10px;width:auto;top:calc(42vh + 68px);max-height:44vh;overflow-y:auto}
-  #hud{left:10px;right:10px;bottom:10px;max-width:none;overflow-x:auto}
+
+
   #chart{display:none!important}
   #hint{display:none}
   body.pm-ctrl #story{display:none}
@@ -187,12 +199,13 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radiu
   <span id="where">优化 × 可探索论文</span>
   <a id="back" href="../">全部文章 ↗</a>
 </div>
-
 <div id="switch">
   <button type="button" data-panel="story" class="on">讲解</button>
   <button type="button" data-panel="ctrl">参数</button>
 </div>
 
+<div id="shell">
+  <div class="col-l">
 <section class="panel" id="story" aria-live="polite">
   <div id="stepno"></div>
   <h1 id="sttitle"></h1>
@@ -203,25 +216,28 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radiu
     <button class="navb" id="next" aria-label="下一章">›</button>
   </div>
 </section>
-
+  </div>
+  <div class="col-r">
 <section class="panel" id="ctrl">
   <h4>控 制</h4>
   <div id="ctrlbody"></div>
   <div id="verdict"></div>
 </section>
-
+<section class="panel" id="chart">
+  <h5 id="chTitle">随机对称矩阵中「全部特征值为正」的比例</h5>
+  <canvas id="cv2"></canvas>
+  <div class="cap" id="chCap"></div>
+</section>
+  </div>
+  <div class="row-b">
 <div id="hud">
   <div class="hcell g"><span>梯度大小 |∇f|</span><b id="mG">—</b></div>
   <div class="hcell"><span>当前损失 f</span><b id="mF">—</b></div>
   <div class="hcell n"><span>特征值 λ₁</span><b id="mH1">—</b></div>
   <div class="hcell p"><span>特征值 λ₂</span><b id="mH2">—</b></div>
 </div>
-
-<section class="panel" id="chart">
-  <h5 id="chTitle">随机对称矩阵中「全部特征值为正」的比例</h5>
-  <canvas id="cv2"></canvas>
-  <div class="cap" id="chCap"></div>
-</section>
+  </div>
+</div>
 
 <div id="live" aria-live="off"></div>
 <div id="hint">拖动旋转地形 · 滚轮缩放 · ← → 翻章</div>
@@ -466,8 +482,15 @@ function updateLive(){
   el.style.top=(p[1]/DPR+18)+"px";
   el.classList.add("show");
 }
+function syncHudH(){
+  const h=$("hud");
+  if(!h)return;
+  const v=Math.round(h.getBoundingClientRect().height);
+  if(v>0)document.documentElement.style.setProperty("--hudH",v+"px");
+}
 function render(){
   fit();
+  syncHudH();
   const c=centerXY();CENX=c[0]*DPR;CENY=c[1]*DPR;
   cx.fillStyle="#080a0e";cx.fillRect(0,0,W,H);
   drawLand();drawTraj();drawCriticals();drawBall();drawCompass();updateLive();

@@ -44,11 +44,24 @@ a{color:inherit}
   text-decoration:none;padding:8px 10px;border-radius:8px}
 #back:hover{color:var(--ink);background:rgba(255,255,255,.06)}
 
-.panel{position:fixed;z-index:20;background:var(--panel);backdrop-filter:blur(22px);
+
+/* ══ 网格骨架：面板占格子，结构上不可能重叠 ══
+   行：顶栏 / 中间 / 底部读数；列：讲解 / 舞台 / 控制。
+   面板在格内自行滚动，视口再矮也不会互相压。 */
+#shell{position:fixed;inset:54px 18px 16px;z-index:20;display:grid;
+  grid-template-columns:minmax(0,392px) minmax(0,1fr) minmax(0,320px);
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:12px;pointer-events:none}
+#shell>*{min-height:0;min-width:0}
+#shell .col-l{grid-column:1;grid-row:1;display:flex;pointer-events:auto}
+#shell .col-r{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:12px;
+  pointer-events:auto;align-items:stretch}
+#shell .row-b{grid-column:1/-1;grid-row:2;pointer-events:auto;display:flex}
+#shell .col-l>*{flex:1 1 auto}
+.panel{z-index:20;background:var(--panel);backdrop-filter:blur(22px);
   border:1px solid var(--line);border-radius:2px}
 
-#story{left:18px;top:70px;width:min(392px,calc(100vw - 36px));
-  max-height:calc(100vh - 106px);padding:22px 22px 16px;display:flex;flex-direction:column}
+#story{padding:20px 20px 14px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 #stepno{font-family:var(--mono);font-size:11px;color:var(--dim2);letter-spacing:.08em}
 #sttitle{margin-top:9px;font-family:var(--serif);font-size:25px;font-weight:600;
   line-height:1.3;letter-spacing:0}
@@ -81,7 +94,7 @@ a{color:inherit}
 .navb:hover:not(:disabled){background:rgba(255,255,255,.12)}
 .navb:disabled{opacity:.28;cursor:default}
 
-#ctrl{right:18px;top:70px;width:min(304px,calc(100vw - 36px));padding:16px}
+#ctrl{padding:15px;min-height:0;overflow-y:auto;flex:0 1 auto}
 #ctrl h4{font-size:10.5px;letter-spacing:.14em;color:var(--dim2);margin-bottom:12px}
 .knob{margin-bottom:13px}
 .knob-head{display:flex;justify-content:space-between;align-items:baseline;
@@ -115,9 +128,8 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 #verdict.dead{background:rgba(90,100,120,.16);color:#a8b0c0}
 #verdict b{color:var(--ink)}
 
-#hud{position:fixed;left:18px;bottom:16px;z-index:20;display:flex;gap:0;
-  background:var(--panel);backdrop-filter:blur(22px);border:1px solid var(--line);
-  border-radius:2px;overflow:hidden;max-width:calc(100vw - 36px)}
+#hud{display:flex;gap:0;background:var(--panel);backdrop-filter:blur(22px);
+  border:1px solid var(--line);border-radius:2px;overflow-x:auto;justify-self:start}
 .hcell{padding:9px 15px;border-right:1px solid var(--line)}
 .hcell:last-child{border-right:0}
 .hcell span{display:block;font-size:9.5px;color:var(--dim2);letter-spacing:.03em}
@@ -125,8 +137,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .hcell.v b{color:var(--v)} .hcell.u b{color:var(--u)}
 
-#inspect{position:fixed;right:18px;bottom:16px;z-index:20;width:min(352px,calc(100vw - 36px));
-  padding:14px;display:none}
+#inspect{padding:13px;display:none;min-height:0;overflow-y:auto;flex:1 1 auto}
 #inspect.show{display:block}
 #inspect h5{font-size:10.5px;letter-spacing:.12em;color:var(--dim2);margin-bottom:10px}
 .eqhead{font-size:11px;color:var(--dim);margin-bottom:9px;padding-bottom:8px;
@@ -162,12 +173,16 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 #loader div{font-family:var(--serif);font-size:19px;color:var(--dim)}
 
 @media(max-width:900px){
-  #story{left:10px;right:10px;top:60px;width:auto;max-height:44vh;padding:16px 16px 12px}
+  #shell{inset:54px 10px 10px;grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) auto;gap:10px}
+  #shell .col-l{grid-column:1;grid-row:1}
+  #shell .col-r{grid-column:1;grid-row:1}
+  #shell .row-b{grid-column:1;grid-row:2}
+  #story{padding:15px 15px 11px}
   #sttitle{font-size:21px}
   #stbody{font-size:13.5px}
-  #ctrl{left:10px;right:10px;top:auto;bottom:auto;width:auto;
-    max-height:46vh;overflow-y:auto;top:calc(44vh + 68px)}
-  #hud{left:10px;right:10px;bottom:10px;max-width:none;overflow-x:auto}
+
+
   #inspect{display:none!important}
   #hint{display:none}
   body.panelmode-ctrl #story{display:none}
@@ -191,13 +206,14 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   <span id="where">非线性系统 × 数学</span>
   <a id="back" href="../">全部文章 ↗</a>
 </div>
-
 <div id="switch">
   <button type="button" data-panel="story" class="on">讲解</button>
   <button type="button" data-panel="ctrl">参数</button>
 </div>
 
-<section class="panel" id="story" aria-live="polite">
+<div id="shell">
+  <div class="col-l">
+    <section class="panel" id="story" aria-live="polite">
   <div id="stepno"></div>
   <h1 id="sttitle"></h1>
   <div id="stbody"></div>
@@ -207,24 +223,26 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     <button class="navb" id="next" aria-label="下一章">›</button>
   </div>
 </section>
-
-<section class="panel" id="ctrl">
+  </div>
+  <div class="col-r">
+    <section class="panel" id="ctrl">
   <h4>控 制</h4>
   <div id="ctrlbody"></div>
   <div id="verdict"></div>
 </section>
-
-<div id="hud">
-  <div class="hcell"><span>步数</span><b id="mSteps">0</b></div>
-  <div class="hcell v"><span>平均 V</span><b id="mMean">0.000</b></div>
-  <div class="hcell v"><span>活跃格</span><b id="mActive">0.0%</b></div>
-  <div class="hcell"><span>F / k</span><b id="mFk">—</b></div>
-</div>
-
-<section class="panel" id="inspect">
+    <section class="panel" id="inspect">
   <h5>这一格的下一步</h5>
   <div id="insBody"></div>
 </section>
+  </div>
+  <div class="row-b">
+    <div id="hud">
+      <div class="hcell"><span>步数</span><b id="mSteps">0</b></div>
+      <div class="hcell v"><span>平均 V</span><b id="mMean">0.000</b></div>
+      <div class="hcell v"><span>活跃格</span><b id="mActive">0.0%</b></div>
+      <div class="hcell"><span>F / k</span><b id="mFk">—</b></div>
+    </div>
+</div>
 
 <div id="hint">拖动画布可加入 V · 章节里可切换为擦除或检查</div>
 
@@ -373,8 +391,16 @@ function hud(){
 
 /* ══════════ 逐格检查面板 ══════════ */
 function drawInspect(){
-  if(tool!=="inspect"){$("inspect").classList.remove("show");return;}
+  if(tool!=="inspect"){
+    $("inspect").classList.remove("show");
+    document.body.classList.remove("inspecting");
+    return;
+  }
   $("inspect").classList.add("show");
+  document.body.classList.add("inspecting");
+  /* 把检查器实际高度写回 CSS 变量，控制面板据此收缩，避免重叠 */
+  const ih=$("inspect").getBoundingClientRect().height;
+  if(ih>0)document.documentElement.style.setProperty("--insH",Math.round(ih)+"px");
   const t=termData(selected.x,selected.y);
   /* 不再显示抽象的条形表，而是把方程本身写出来，
      每一项当场填入这一格的真实数值，并按物质着色。

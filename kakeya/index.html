@@ -75,8 +75,10 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 .hd{font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:var(--dim2);text-transform:uppercase}
 
 /* 左：讲解 */
-#story{left:22px;top:74px;width:352px;max-height:calc(100vh - 250px);padding:20px 20px 18px;
-  display:flex;flex-direction:column;overflow:hidden}
+/* 上下双向锚定：下边界固定留出左下角 HUD 的高度（约 68px）加间距。
+   纯 CSS，不依赖任何测量或主循环 —— 视口再矮也压不到读数上。 */
+#story{left:22px;top:74px;bottom:112px;width:min(352px,calc(48vw - 30px));
+  padding:20px 20px 18px;display:flex;flex-direction:column;overflow:hidden}
 #story .step{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--dim2);margin-bottom:9px}
 #story h2{font-family:var(--serif);font-size:26px;line-height:1.28;font-weight:600;margin-bottom:12px;letter-spacing:.01em}
 #story .body{font-size:13.5px;line-height:1.85;color:#c3cbe0;overflow-y:auto;flex:1;padding-right:6px}
@@ -113,10 +115,13 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 .nbtn:disabled{opacity:.28;cursor:default}
 
 /* 右：控制 + 图表（同一列，永不重叠） */
-#right{position:fixed;right:22px;top:74px;bottom:20px;width:274px;z-index:10;
+/* 两栏宽度随视口收缩，保证永远不会横向相撞 */
+#right{position:fixed;right:22px;top:74px;bottom:20px;width:min(274px,calc(48vw - 30px));z-index:10;
   display:flex;flex-direction:column;gap:12px;pointer-events:none}
-#right>*{pointer-events:auto}
-#ctrl{position:relative;right:auto;top:auto;width:100%;padding:16px 18px 18px;flex:none}
+#right>*{pointer-events:auto;min-height:0}
+/* 右栏在矮视口下必须能自己收缩并滚动，否则会溢出到视口外 */
+#ctrl{position:relative;right:auto;top:auto;width:100%;padding:16px 18px 18px;
+  flex:0 1 auto;min-height:0;overflow-y:auto}
 #ctrl .hd{margin-bottom:14px}
 .row{margin-bottom:17px}
 .row label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim);margin-bottom:9px}
@@ -1404,7 +1409,15 @@ function resize(){
   const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
   if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
 }
+function syncHudH(){
+  const h=document.getElementById('hud');
+  if(!h)return;
+  const v=Math.round(h.getBoundingClientRect().height);
+  if(v>0&&v!==syncHudH.last){syncHudH.last=v;
+    document.documentElement.style.setProperty('--hudH',v+'px');}
+}
 function frame(now){
+  syncHudH();
   requestAnimationFrame(frame);
   if(document.hidden||(scene!=='kakeya'&&scene!=='gas')){last=now;return;}
   const dt=Math.min(0.05,(now-last)/1000);last=now;
