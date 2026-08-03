@@ -30,7 +30,10 @@ const GAS = {
   macroN: 7, single: false,
   wf: [], WFMAX: 150, wfTop: 1,
   pairLast: new Map(), recol: 0, recolRecent: 0, colRecent: 0, recolRate: 0,
-  recolWin: 1.5, gradLock: false
+  recolWin: 1.5, gradLock: false,
+  vmix: 0, vRef: 1,
+  tr: null, trN: 0, trK: 0, trHead: 0, trFill: 0, trTick: 0,
+  flash: null
 };
 let cellIdx = null, cellStart = null, cellItems = null, cellFill = null, lastGN = -1;
 
@@ -41,11 +44,12 @@ const PROF = { NX: 16, T: new Float64Array(16), n: new Float64Array(16),
                hist: [], HMAX: 90, contrast: 1, tick: 0 };
 
 const src = [grab("gasInit"), grab("gasStep"), grab("gasStats"), grab("kinetics"),
-             grab("wfPush"), grab("qbReset"), grab("qbStep"), grab("profStep")].join("\n");
+             grab("wfPush"), grab("qbReset"), grab("qbStep"), grab("profStep"),
+             grab("trSet"), grab("trReset"), grab("trPush")].join("\n");
 const make = new Function("GAS", "clamp", "rng", "QB", "PROF", `
   let cellIdx=null,cellStart=null,cellItems=null,cellFill=null,lastGN=-1;
   ${src}
-  return {gasInit,gasStep,gasStats,kinetics,wfPush,qbReset,qbStep,profStep};
+  return {gasInit,gasStep,gasStats,kinetics,wfPush,qbReset,qbStep,profStep,trSet,trReset,trPush};
 `);
 const M = make(GAS, clamp, rng, QB, PROF);
 
@@ -359,12 +363,319 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   check("短时反演可回溯", worst < 0.05, `最大位移偏差 ${worst.toFixed(5)}`);
 }
 
+/* ── 10b. 速度空间那一章正文声称的形状 ──
+   「同速率球壳＝一层空心壳」「同向束流＝一个点」「冷热两半＝两层同心壳」
+   「全挤在角落＝在 v 空间里还是那层壳」。这四句都是可测的，逐条量。 */
+{
+  const shape = () => {
+    const N = GAS.N;
+    let mx = 0, my = 0, mz = 0, sp = [];
+    for (let i = 0; i < N; i++) {
+      mx += GAS.vx[i]; my += GAS.vy[i]; mz += GAS.vz[i];
+      sp.push(Math.hypot(GAS.vx[i], GAS.vy[i], GAS.vz[i]));
+    }
+    mx /= N; my /= N; mz /= N;
+    const mean = sp.reduce((a, b) => a + b, 0) / N;
+    let vr = 0, blob = 0;
+    for (let i = 0; i < N; i++) {
+      vr += (sp[i] - mean) ** 2;
+      // 点云相对自身质心的散布：束流应当近乎为 0，各向同性壳层应当 ~1
+      blob += (GAS.vx[i] - mx) ** 2 + (GAS.vy[i] - my) ** 2 + (GAS.vz[i] - mz) ** 2;
+    }
+    return {
+      speedSpread: Math.sqrt(vr / N) / mean,          // 壳「厚不厚」
+      cloudSpread: Math.sqrt(blob / N) / mean          // 是不是缩成一个点
+    };
+  };
+  const seen = {};
+  for (const p of ["same", "beam", "hot", "corner"]) { M.gasInit(p); M.gasStats(); seen[p] = shape(); }
+
+  check("同速率球壳：壳很薄", seen.same.speedSpread < 0.01, `厚度 ${seen.same.speedSpread.toFixed(4)}`);
+  check("同速率球壳：不是一个点（方向各向同性）", seen.same.cloudSpread > 0.9,
+    `散布 ${seen.same.cloudSpread.toFixed(3)}`);
+  check("同向束流：在 v 空间缩成一个点", seen.beam.cloudSpread < 0.06,
+    `散布 ${seen.beam.cloudSpread.toFixed(4)}（球壳是 ${seen.same.cloudSpread.toFixed(2)}）`);
+  check("冷热两半：壳明显变厚（两层）", seen.hot.speedSpread > 0.3,
+    `厚度 ${seen.hot.speedSpread.toFixed(3)}`);
+  check("全挤在角落：v 空间仍是那层薄壳", seen.corner.speedSpread < 0.01,
+    `厚度 ${seen.corner.speedSpread.toFixed(4)}`);
+
+  /* 弛豫之后壳应当摊成麦氏分布。麦氏速率分布的 std/mean = √(3−8/π)/(2√(2/π)) ≈ 0.422 */
+  run("same", 26);
+  const relaxed = shape();
+  check("弛豫后壳厚趋于麦氏值 0.422", Math.abs(relaxed.speedSpread - 0.422) < 0.05,
+    `实测 ${relaxed.speedSpread.toFixed(3)}`);
+
+  /* 正文那个「坑」：F(v) = 4πv²·f(v)。直接量一遍，看两条曲线的峰值确实不在同一处。 */
+  {
+    const NBv = 30, top = 2.9 * GAS.vrms, bw = top / NBv;
+    const cnt = new Float64Array(NBv);
+    for (let i = 0; i < GAS.N; i++) {
+      const b = Math.floor(Math.hypot(GAS.vx[i], GAS.vy[i], GAS.vz[i]) / bw);
+      if (b >= 0 && b < NBv) cnt[b]++;
+    }
+    let peakF = 0, peakf = 0, bestF = -1, bestf = -1;
+    for (let b = 0; b < NBv; b++) {
+      const v = (b + 0.5) * bw;
+      const F = cnt[b];                       // 速率分布
+      const f = cnt[b] / (4 * Math.PI * v * v);  // 除掉壳面积 = 速度分布
+      if (F > peakF) { peakF = F; bestF = v; }
+      if (f > peakf) { peakf = f; bestf = v; }
+    }
+    check("速率分布 F(v) 的峰不在 v=0", bestF > 0.5 * GAS.vrms, `峰在 v=${bestF.toFixed(3)}`);
+    check("速度分布 f(v) 的峰在最小的那一格（v→0）", bestf < bestF,
+      `f 峰 ${bestf.toFixed(3)} 应当小于 F 峰 ${bestF.toFixed(3)}`);
+    console.log("速度空间形状:", JSON.stringify({
+      shell: +seen.same.speedSpread.toFixed(4), beam: +seen.beam.cloudSpread.toFixed(4),
+      hot: +seen.hot.speedSpread.toFixed(3), relaxed: +relaxed.speedSpread.toFixed(3),
+      peakF: +bestF.toFixed(3), peakf: +bestf.toFixed(3)
+    }));
+  }
+}
+
+/* ── 10c. 拖尾缓冲：环形写入不越界，且满了以后长度不再涨 ── */
+{
+  M.gasInit("same");
+  M.trSet(16, 80);
+  check("拖尾缓冲大小正确", GAS.tr.length === 16 * 80 * 3, `${GAS.tr && GAS.tr.length}`);
+  for (let i = 0; i < 500; i++) { M.gasStep(0.005); M.trPush(); }
+  check("拖尾环形缓冲不越界", GAS.trFill === 80 && GAS.trHead < 80,
+    `fill=${GAS.trFill} head=${GAS.trHead}`);
+  let bad = 0;
+  for (let i = 0; i < GAS.tr.length; i++) if (!isFinite(GAS.tr[i]) || Math.abs(GAS.tr[i]) > GAS.L + 0.01) bad++;
+  check("拖尾里的点都在盒子内", bad === 0, `${bad} 个越界样本`);
+  M.trSet(0, 0);
+  check("关掉拖尾后不再占内存", GAS.tr === null, `${GAS.tr}`);
+}
+
+/* ── 10d. 重碰闪光：确实有事件被标记，且只标记重碰 ── */
+{
+  GAS.N = 520; GAS.r = 0.045;
+  M.gasInit("same");
+  GAS.recolWin = 1.5;
+  /* 闪光的衰减在渲染循环里（时间常数 0.55 秒），gasStep 只负责点亮。
+     这里把衰减照搬过来，测的才是屏幕上真正的稳态亮度——
+     不衰减地跑下去，迟早每个粒子都被点过一次，那个数没有意义。 */
+  const dt = 0.005, decay = Math.exp(-dt / 0.55);
+  let lit = 0, peak = 0;
+  for (let i = 0; i < 2400; i++) {
+    M.gasStep(dt);
+    for (let k = 0; k < GAS.N; k++) if (GAS.flash[k] > 0.004) GAS.flash[k] *= decay; else GAS.flash[k] = 0;
+    if (i > 400) { let c = 0; for (let k = 0; k < GAS.N; k++) if (GAS.flash[k] > 0.25) c++; peak = Math.max(peak, c); }
+  }
+  for (let i = 0; i < GAS.N; i++) if (GAS.flash[i] > 0.25) lit++;
+  check("重碰会点亮粒子", peak > 0, `整段最多同时亮 ${peak} 个`);
+  /* 稳态亮着的比例应当和重碰率同量级（百分之几），不该糊成一片 */
+  check("屏幕上是零星闪光，不是一片白", lit < GAS.N * 0.15,
+    `稳态亮 ${lit}/${GAS.N}，重碰率 ${(GAS.recolRate * 100).toFixed(1)}%`);
+  console.log("重碰闪光:", JSON.stringify({ lit, peak, N: GAS.N, recolRate: +(GAS.recolRate * 100).toFixed(1) }));
+}
+
+/* ── 10d2. 直接跑 gasRender，看它到底把球画在哪 ──
+   浏览器面板在这个环境里永远是隐藏的，WebGL 一帧都不画，所以画面没法靠截图验。
+   办法是把 gasRender 原样抽出来，用桩替掉所有 GL 调用，直接看它产出的实例坐标。
+   测的是线上那份代码本身，不是我另写的一份等价实现。 */
+{
+  const drawn = { lines: [], inst: null, mesh: "" };
+  class StubInst {
+    constructor() { this.pts = []; this.n = 0; }
+    reset() { this.pts = []; this.n = 0; }
+    add(ox, oy, oz, ax, ay, az, rad, r, g, b) { this.pts.push({ ox, oy, oz, rad, r, g, b }); this.n++; }
+    upload() {}
+  }
+  const gasInst = new StubInst(), gasCube = new StubInst(), trInst = new StubInst();
+  const stubGl = new Proxy({}, { get: () => () => {} });
+  const env = {
+    GAS, clamp, lerp: (a, b, t) => a + (b - a) * t,
+    heat: (t) => [t, 0.5, 1 - t],
+    M4: { id: () => "ID", trs: (x, y, z, s) => ({ scale: s }) },
+    drawLines: (vbo, count, model, col) => drawn.lines.push({ vbo, count, model, alpha: col[3] }),
+    drawInstanced: (mesh, inst, model, opt) => { drawn.inst = inst; drawn.mesh = mesh; drawn.opt = opt; },
+    gasMacro: () => {}, gasInst, gasCube, trInst,
+    MESH: { ball: "ball", ballHi: "ballHi", cube: "cube" },
+    gl: stubGl, gasBoxVBO: "BOX", vGuideVBO: "GUIDE", V_GUIDE_N: 438
+  };
+  const keys = Object.keys(env);
+  const render = new Function(...keys, `${grab("gasRender")}\nreturn gasRender;`)(...keys.map(k => env[k]));
+
+  GAS.N = 520; GAS.r = 0.045; GAS.single = false; GAS.mode = "micro";
+  M.gasInit("same"); M.gasStats();
+
+  const shot = (vmix) => {
+    GAS.vmix = vmix; drawn.lines = [];
+    render();
+    const p = drawn.inst.pts;
+    let rmin = Infinity, rmax = 0, nan = 0;
+    for (const q of p) {
+      const d = Math.hypot(q.ox, q.oy, q.oz);
+      if (!isFinite(d) || !isFinite(q.rad)) nan++;
+      rmin = Math.min(rmin, d); rmax = Math.max(rmax, d);
+    }
+    return { n: p.length, rmin, rmax, rad: p[0].rad, nan,
+             box: drawn.lines.find(l => l.vbo === "BOX"), guide: drawn.lines.find(l => l.vbo === "GUIDE") };
+  };
+
+  const atX = shot(0), atMid = shot(0.5), atV = shot(1);
+  check("渲染出全部粒子", atX.n === GAS.N && atV.n === GAS.N, `${atX.n} / ${atV.n}`);
+  check("坐标里没有 NaN", atX.nan === 0 && atMid.nan === 0 && atV.nan === 0,
+    `${atX.nan}/${atMid.nan}/${atV.nan}`);
+  // 位置空间：球在边长 2 的盒子里，到原点最远 √3
+  check("位置空间下球在盒子里", atX.rmax <= Math.SQRT2 * Math.SQRT2 + 0.1, `最远 ${atX.rmax.toFixed(3)}`);
+  check("位置空间不画速度坐标系", !atX.guide || atX.guide.alpha === 0, `${atX.guide && atX.guide.alpha}`);
+  check("位置空间画盒子", !!atX.box && atX.box.alpha > 0.1, `${atX.box && atX.box.alpha}`);
+  // 速度空间：同速率球壳 ⇒ 所有点落在同一个半径上，且那个半径就是标尺 0.62
+  const shellW = atV.rmax - atV.rmin;
+  check("速度空间下球壳是一层薄壳", shellW < 0.01, `厚度 ${shellW.toFixed(5)}`);
+  check("球壳落在均方根速率的圆上（0.62）", Math.abs(atV.rmax - 0.62) < 0.01, `半径 ${atV.rmax.toFixed(4)}`);
+  check("速度空间画坐标系不画盒子", atV.guide && atV.guide.alpha > 0.1 && (!atV.box || atV.box.alpha < 0.01),
+    `guide=${atV.guide && atV.guide.alpha} box=${atV.box && atV.box.alpha}`);
+  check("速度坐标系缩放到 0.62", atV.guide.model.scale === 0.62, `${atV.guide.model.scale}`);
+  check("速度空间下球缩小成点", atV.rad < atX.rad, `${atV.rad} vs ${atX.rad}`);
+  // 中间态：两套参照系都半透明，球在两个位置之间
+  check("形变中途盒子与坐标系同时半透明",
+    atMid.box.alpha > 0 && atMid.box.alpha < 0.13 && atMid.guide.alpha > 0 && atMid.guide.alpha < 0.30,
+    `box=${atMid.box.alpha.toFixed(3)} guide=${atMid.guide.alpha.toFixed(3)}`);
+
+  /* 束流在速度空间必须缩成一个点 —— 正文第 3 章就是这么说的 */
+  M.gasInit("beam"); M.gasStats();
+  const beamV = shot(1);
+  check("同向束流在速度空间缩成一点", beamV.rmax - beamV.rmin < 0.05,
+    `跨度 ${(beamV.rmax - beamV.rmin).toFixed(4)}`);
+
+  /* 拖尾：开了就该有实例，关了就不该有 */
+  M.gasInit("same");
+  GAS.vmix = 0; M.trSet(16, 80);
+  for (let i = 0; i < 200; i++) { M.gasStep(0.005); M.trPush(); }
+  drawn.inst = null; render();
+  check("拖尾开启时确实提交了轨迹实例", trInst.n === 16 * 80, `${trInst.n}`);
+  trInst.reset(); M.trSet(0, 0); render();
+  check("拖尾关闭后不提交实例", trInst.n === 0, `${trInst.n}`);
+
+  console.log("渲染实测:", JSON.stringify({
+    xSpaceMax: +atX.rmax.toFixed(3), vShellR: +atV.rmax.toFixed(4),
+    shellWidth: +shellW.toFixed(5), beamSpread: +(beamV.rmax - beamV.rmin).toFixed(4),
+    radX: +atX.rad.toFixed(4), radV: +atV.rad.toFixed(4)
+  }));
+  GAS.vmix = 0;
+}
+
+/* ── 10d3. Inst.add 的参数个数 ──
+   签名是 (ox,oy,oz, ax,ay,az, rad, r,g,b) 共 10 个。少传一个不会报错，
+   只会让半径位被颜色顶掉、蓝通道变 undefined —— 屏幕上是一堆巨大的错色球，
+   而 JS 一声不吭。这类错误只能靠数参数抓，所以在这里数。 */
+{
+  const bad = [];
+  const re = /\b(?:ins|ti|inst)\.add\(/g;
+  let m;
+  while ((m = re.exec(html))) {
+    let i = m.index + m[0].length, depth = 1, args = 1, s = "";
+    for (; i < html.length && depth > 0; i++) {
+      const c = html[i];
+      if (c === "(" || c === "[") depth++;
+      else if (c === ")" || c === "]") { depth--; if (depth === 0) break; }
+      else if (c === "," && depth === 1) args++;
+      s += c;
+    }
+    if (args !== 10) bad.push(`${args} 个参数: ${s.replace(/\s+/g, " ").slice(0, 70)}`);
+  }
+  check("Inst.add 一律传 10 个参数", bad.length === 0, bad.join(" | "));
+  check("确实检查到了 add 调用", (html.match(re) || []).length >= 2,
+    `只找到 ${(html.match(re) || []).length} 处`);
+}
+
+/* ── 10e. 位置 ⇄ 速度的补间 ──
+   浏览器里 rAF 在后台标签页是冻结的，动画没法在那边验；补间逻辑本身
+   是纯函数，抽出来跑更靠谱。验三件事：章节声明能把 vmix 推到 1、
+   没声明的会被拉回 0、手动拖滑块时同名补间会被掐掉（否则松手会被抢回去）。 */
+{
+  const G = { vmix: 0, vmixSet: false };
+  const anims = [];
+  const ease = k => k * k * (3 - 2 * k);
+  const lerp2 = (a, b, t) => a + (b - a) * t;
+  let clock = 0;
+  const anim = (set, from, to, ms, delay, key) => anims.push({ set, from, to, ms, t0: clock + (delay || 0), key });
+  const to = (obj, key, val, ms, delay) => anim(v => obj[key] = v, obj[key], val, ms === undefined ? 600 : ms, delay, key);
+  const vmixTo = (v, ms, delay) => { G.vmixSet = true; to(G, "vmix", v, ms === undefined ? 1100 : ms, delay); };
+  const advance = (ms) => {
+    clock += ms;
+    for (let i = anims.length - 1; i >= 0; i--) {
+      const a = anims[i];
+      if (clock < a.t0) continue;
+      const k = Math.min(1, Math.max(0, (clock - a.t0) / a.ms));
+      a.set(lerp2(a.from, a.to, ease(k)));
+      if (k >= 1) anims.splice(i, 1);
+    }
+  };
+  // 进入速度空间那一章
+  anims.length = 0; G.vmixSet = false;
+  vmixTo(1, 1400, 260);
+  advance(200);
+  check("补间起步前 vmix 还没动", G.vmix < 0.01, `${G.vmix.toFixed(3)}`);
+  advance(900);
+  check("补间中途 vmix 在两端之间", G.vmix > 0.15 && G.vmix < 0.95, `${G.vmix.toFixed(3)}`);
+  advance(1400);
+  check("补间结束落在速度空间", Math.abs(G.vmix - 1) < 1e-6, `${G.vmix.toFixed(6)}`);
+
+  // 翻到没声明 vmix 的章节：应当淡回位置空间
+  anims.length = 0; G.vmixSet = false;
+  if (!G.vmixSet) to(G, "vmix", 0, 520);
+  advance(700);
+  check("未声明的章节淡回位置空间", Math.abs(G.vmix) < 1e-6, `${G.vmix.toFixed(6)}`);
+
+  // 手动拖滑块：同名补间必须被掐掉，否则松手后动画把值抢回去
+  anims.length = 0; G.vmix = 0; G.vmixSet = false;
+  vmixTo(1, 1400, 0);
+  advance(300);
+  for (let i = anims.length - 1; i >= 0; i--) if (anims[i].key === "vmix") anims.splice(i, 1);
+  G.vmix = 0.5;
+  advance(2000);
+  check("手动拖动后补间不再抢值", Math.abs(G.vmix - 0.5) < 1e-9, `${G.vmix}`);
+  check("掐补间用的 key 在页面里确实传了", /function to\(obj,key,val,ms,delay\)\{anim\([^)]*,key\)/.test(html.replace(/\s+/g, "")) || html.includes("delay,key);}"),
+    "to() 没把 key 传给 anim()，掐补间会失效");
+}
+
+/* ── 10f. 分层阅读的结构契约 ──
+   每章必须有一句话导语（.lede）。这是这次改版的核心约定：
+   读者能只读导语走完全篇，公式推导收在 details 里按需展开。 */
+{
+  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*b:`([\s\S]*?)`,\s*\n\s*en\(\)/g)];
+  check("能解析出全部章节正文", bodies.length === 12, `解析到 ${bodies.length} 章`);
+  const noLede = bodies.filter(m => !m[2].includes('class="lede"')).map(m => m[1]);
+  check("每章都有一句话导语", noLede.length === 0, `缺导语：${noLede.join(", ")}`);
+  const tooLong = bodies.filter(m => {
+    const lede = (m[2].match(/class="lede">([\s\S]*?)<\/p>/) || [, ""])[1].replace(/<[^>]+>/g, "");
+    return lede.length > 90;
+  }).map(m => m[1]);
+  check("导语保持在一句话以内（≤90 字）", tooLong.length === 0, `过长：${tooLong.join(", ")}`);
+  const noFml = bodies.filter(m => {
+    const lede = (m[2].match(/class="lede">([\s\S]*?)<\/p>/) || [, ""])[1];
+    return /class="fml"|<sub>|∫|⊗/.test(lede);
+  }).map(m => m[1]);
+  check("导语里不出现公式", noFml.length === 0, `含公式：${noFml.join(", ")}`);
+  const deep = bodies.filter(m => m[2].includes('details class="deep"')).length;
+  check("重推导确实被收进可展开块", deep >= 6, `只有 ${deep} 章有 details.deep`);
+  console.log("分层阅读:", JSON.stringify({ chapters: bodies.length, withDeep: deep }));
+}
+
+/* ── 10g. 图表按章节 id 开关，不按序号 ── */
+{
+  check("图表开关不再用序号硬编码", !/if\(si>=\d\)\{[\s\S]{0,60}#charts/.test(html), "仍存在 si>=N 的图表判断");
+  const m = html.match(/const CHART_FROM=new Set\(\[([^\]]+)\]\)/);
+  check("CHART_FROM 存在", !!m, "找不到 CHART_FROM");
+  if (m) {
+    const set = m[1].split(",").map(s => s.trim().replace(/'/g, ""));
+    check("有图的章节从 relax 开始", set[0] === "relax", JSON.stringify(set));
+    check("没数据的前三章不画图", !set.includes("one") && !set.includes("many") && !set.includes("vspace"),
+      JSON.stringify(set));
+  }
+}
+
 /* ── 11. 章节结构与正文引用的 id 一致 ── */
 {
   const ids = [...html.matchAll(/\{id:'([a-z]+)',t:'/g)].map(m => m[1]);
-  const want = ["one","many","relax","htheorem","loschmidt","assumptions","recollision","fluid","deng"];
+  const want = ["one","many","vspace","relax","qop","htheorem","loschmidt","assumptions","recollision","fluid","lanford","deng"];
   check("章节 id 齐全且顺序正确", JSON.stringify(ids) === JSON.stringify(want), JSON.stringify(ids));
-  for (const id of ["deng","recollision","fluid","loschmidt","many","relax"]) {
+  for (const id of ["lanford","recollision","fluid","loschmidt","many","vspace"]) {
     check(`帧循环引用了 ${id}`, html.includes(`id==='${id}'`) || html.includes(`id==='${id}'`), "未引用");
   }
   /* 章节内容逻辑必须按 id 走。si===0 / si===S.length-1 是翻页按钮的边界判断，允许保留。 */

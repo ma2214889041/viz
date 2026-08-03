@@ -161,11 +161,42 @@ const check = (name, cond, detail) => { if (!cond) fail.push(`${name}: ${detail}
   console.log("bush/brush 峰值重数:", JSON.stringify(measured));
 }
 
+/* ── 7b. 分层阅读的结构契约（与玻尔兹曼篇同一套约定） ── */
+{
+  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*\n?\s*b:`([\s\S]*?)`,\s*\n\s*en\(\)/g)];
+  check("能解析出全部章节正文", bodies.length === 15, `解析到 ${bodies.length} 章`);
+  const noLede = bodies.filter(m => !m[2].includes('class="lede"')).map(m => m[1]);
+  check("每章都有一句话导语", noLede.length === 0, `缺导语：${noLede.join(", ")}`);
+  const tooLong = bodies.filter(m => {
+    const lede = (m[2].match(/class="lede">([\s\S]*?)<\/p>/) || [, ""])[1].replace(/<[^>]+>/g, "");
+    return lede.length > 90;
+  }).map(m => m[1]);
+  check("导语保持在一句话以内（≤90 字）", tooLong.length === 0, `过长：${tooLong.join(", ")}`);
+  const deep = bodies.filter(m => m[2].includes('details class="deep"')).length;
+  check("重推导收进了可展开块", deep >= 4, `只有 ${deep} 章有 details.deep`);
+  /* 正文长度的爬坡：前八章是入门段，不该出现 800 字以上的大块 */
+  const early = bodies.slice(0, 8).map(m => ({ id: m[1], n: m[2].replace(/<[^>]+>/g, "").length }));
+  const fat = early.filter(e => e.n > 800).map(e => `${e.id}(${e.n})`);
+  check("入门八章保持轻量", fat.length === 0, `过重：${fat.join(", ")}`);
+  console.log("分层阅读:", JSON.stringify({ chapters: bodies.length, withDeep: deep,
+    early: early.map(e => e.n) }));
+}
+
+/* ── 7c. 盒子尺寸换章要复位 ──
+   有一章会把 cellSize 动画着缩下去；不复位就会污染后面的章节，
+   挂谷篇在灌木/毛刷上已经吃过一次这种亏。 */
+{
+  check("gotoStep 复位 cellSize", /KAK\.cfg='';KAK\.bush=0;KAK\.brush=0;cellSize=/.test(html),
+    "换章时没把 cellSize 复位");
+  check("动画改的是 cellSize 而不是 KAK.delta", !/to\(KAK,'delta'/.test(html),
+    "动画在改 KAK.delta，会污染灌木/毛刷的实测");
+}
+
 /* ── 8. 章节结构 ── */
 {
   const ids = [...html.matchAll(/\{id:'([a-zA-Z0-9]+)',t:'/g)].map(m => m[1]);
   const want = ["spin","kakeya1917","translate","oneslide","perron","pushdown","dirskept",
-                "assemble","dimension","tubes","lowerbounds","crimescene","sticky","wangzahl"];
+                "assemble","dimension","dimtrap","tubes","lowerbounds","crimescene","sticky","wangzahl"];
   check("章节 id 齐全且顺序正确", JSON.stringify(ids) === JSON.stringify(want), JSON.stringify(ids));
   const badIdx = [...html.matchAll(/si===(\d+)/g)].map(m => m[1]).filter(d => d !== "0");
   check("章节内容不再按序号硬编码", badIdx.length === 0, `仍存在 si===${badIdx.join(", si===")}`);

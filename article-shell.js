@@ -326,7 +326,7 @@
     if (charts && rightColumn) {
       const empty = document.createElement("p");
       empty.className = "charts-empty";
-      empty.textContent = "速率分布与 H 曲线从第 3 章开始出现。先往下读一章，再回来看这里。";
+      empty.textContent = "速率分布、Q(f,f) 与 H 曲线要等分布开始变形才有内容。先往下读一章，再回来看这里。";
       rightColumn.appendChild(empty);
     }
 
@@ -378,6 +378,23 @@
       charts.classList.remove("flash");
       void charts.offsetWidth;
       charts.classList.add("flash");
+    });
+
+    /* 同理的「打开参数」按钮。正文里说「在参数面板里按某个键」的地方，
+       手机上得先切到那一档才找得到，电脑上闪一下控制栏就够了。 */
+    const ctrl = document.getElementById("ctrl");
+    document.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-open-controls]");
+      if (!trigger) return;
+      event.preventDefault();
+      if (matchMedia("(max-width:900px)").matches) {
+        setPanel("controls");
+        return;
+      }
+      if (!ctrl) return;
+      ctrl.classList.remove("flash");
+      void ctrl.offsetWidth;
+      ctrl.classList.add("flash");
     });
   }
 })();
