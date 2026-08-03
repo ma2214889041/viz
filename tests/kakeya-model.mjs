@@ -163,7 +163,7 @@ const check = (name, cond, detail) => { if (!cond) fail.push(`${name}: ${detail}
 
 /* ── 7b. 分层阅读的结构契约（与玻尔兹曼篇同一套约定） ── */
 {
-  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*\n?\s*b:`([\s\S]*?)`,\s*\n\s*en\(\)/g)];
+  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*\n?\s*b:`([\s\S]*?)`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)/g)];
   check("能解析出全部章节正文", bodies.length === 15, `解析到 ${bodies.length} 章`);
   const noLede = bodies.filter(m => !m[2].includes('class="lede"')).map(m => m[1]);
   check("每章都有一句话导语", noLede.length === 0, `缺导语：${noLede.join(", ")}`);
@@ -182,6 +182,47 @@ const check = (name, cond, detail) => { if (!cond) fail.push(`${name}: ${detail}
     early: early.map(e => e.n) }));
 }
 
+/* ── 7b2. 图表面板的可读性（与玻尔兹曼篇同一套约定） ──
+   用户看着右栏问「这几个图像分别是什么」，说明图注失职。约定是：
+   每张图自带一个大白话问句标题 + 一行「怎么读」，标题里不出现公式，
+   图上方不许再挂活公式，且一章最多两张。 */
+{
+  const cards = [...html.matchAll(/<section class="ckd" data-chart="(\w+)"[^>]*>\s*<h4>([^<]+)<\/h4>\s*<p class="ckd-how">([^<]+)</g)];
+  check("每张图都是一张带标题的卡片", cards.length === 2, `解析到 ${cards.length} 张`);
+  const noQ = cards.filter(c => !/[？?]/.test(c[2])).map(c => c[1]);
+  check("图表标题写成一个问句", noQ.length === 0, `不是问句：${noQ.join(", ")}`);
+  const hasFml = cards.filter(c => /δ|N\(|log|<sub>|≈/.test(c[2])).map(c => c[1]);
+  check("图表标题里不出现公式", hasFml.length === 0, `含公式：${hasFml.join(", ")}`);
+  const noHow = cards.filter(c => !/横轴|纵轴/.test(c[3])).map(c => c[1]);
+  check("每张图都说明了怎么读", noHow.length === 0, `没说明：${noHow.join(", ")}`);
+  check("图表上方的公式墙已移除", !html.includes("liveeq") && !html.includes("updateLiveK"),
+    "liveeq / updateLiveK 仍在");
+  check("旧的一行式图注已移除", !html.includes("chartcap"), "chartcap 仍在");
+
+  const m = html.match(/const CHARTS=\{([\s\S]*?)\n\};/);
+  check("CHARTS 映射存在", !!m, "找不到 CHARTS");
+  if (m) {
+    const map = {};
+    for (const line of m[1].split("\n")) {
+      const g = line.match(/(\w+):\[([^\]]*)\]/);
+      if (g) map[g[1]] = g[2] ? g[2].split(",").map(s => s.trim().replace(/'/g, "")) : [];
+    }
+    const fat = Object.entries(map).filter(([, v]) => v.length > 2).map(([k]) => k);
+    check("一章最多两张图", fat.length === 0, `过多：${fat.join(", ")}`);
+    const known = new Set(cards.map(c => c[1]));
+    const unknown = Object.values(map).flat().filter(k => !known.has(k));
+    check("引用的图都真实存在", unknown.length === 0, `未知图表：${unknown.join(", ")}`);
+    const ids = [...html.matchAll(/\{id:'(\w+)',t:'/g)].map(x => x[1]);
+    const stray = Object.keys(map).filter(k => !ids.includes(k));
+    check("CHARTS 的键都是真章节", stray.length === 0, `不存在的章节：${stray.join(", ")}`);
+    /* 前八章是「看针怎么转」的入门段，摆维数图只会分散注意力 */
+    const early = ids.slice(0, 8).filter(id => (map[id] || []).length);
+    check("入门八章不摆图表", early.length === 0, `过早出图：${early.join(", ")}`);
+    console.log("每章图表:", JSON.stringify(map));
+  }
+  console.log("图表卡片:", JSON.stringify(cards.map(c => `${c[1]}｜${c[2]}`)));
+}
+
 /* ── 7c. 盒子尺寸换章要复位 ──
    有一章会把 cellSize 动画着缩下去；不复位就会污染后面的章节，
    挂谷篇在灌木/毛刷上已经吃过一次这种亏。 */
@@ -190,6 +231,25 @@ const check = (name, cond, detail) => { if (!cond) fail.push(`${name}: ${detail}
     "换章时没把 cellSize 复位");
   check("动画改的是 cellSize 而不是 KAK.delta", !/to\(KAK,'delta'/.test(html),
     "动画在改 KAK.delta，会污染灌木/毛刷的实测");
+}
+
+/* ── 先猜一下：结构契约 ──
+   直觉是「押一次、发现自己对不对」建立起来的，不是读出来的。
+   每个 predict 必须恰好有一个正确项，每个选项都要带解释——
+   押错的人拿不到解释，这个组件就白做了。 */
+{
+  const blocks = [...html.matchAll(/<div class="predict">([\s\S]*?)<\/div>/g)].map(m => m[1]);
+  check("正文里有「先猜一下」环节", blocks.length >= 1, `只有 ${blocks.length} 处`);
+  blocks.forEach((b, i) => {
+    const picks = [...b.matchAll(/data-pick/g)].length;
+    const right = [...b.matchAll(/data-right/g)].length;
+    const why = [...b.matchAll(/data-why="/g)].length;
+    check(`第 ${i + 1} 个预测有 2–4 个选项`, picks >= 2 && picks <= 4, `${picks} 个`);
+    check(`第 ${i + 1} 个预测恰有一个正确项`, right === 1, `${right} 个 data-right`);
+    check(`第 ${i + 1} 个预测每个选项都带解释`, why === picks, `${why} 条解释 / ${picks} 个选项`);
+    check(`第 ${i + 1} 个预测有问句`, /class="pq">[\s\S]*?[？?][\s\S]*?<\/p>/.test(b), "问题不是问句");
+  });
+  console.log("先猜一下:", blocks.length + " 处");
 }
 
 /* ── 8. 章节结构 ── */

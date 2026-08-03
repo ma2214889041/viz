@@ -149,8 +149,16 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
   display:flex;flex-direction:column;gap:12px;pointer-events:none}
 #right>*{pointer-events:auto;min-height:0}
 /* 右栏在矮视口下必须能自己收缩并滚动，否则会溢出到视口外 */
+/* 右栏是一个高度固定的 flex 列（top:74px 到 bottom:20px）。
+   两块面板必须各自可收缩、各自内部滚动，否则图表一长就把控制面板
+   挤出视口 —— 底部那几个按钮会被整个截掉。
+   控制面板给一个下限，保证它永远不会被压没。 */
 #ctrl{position:relative;right:auto;top:auto;width:100%;padding:16px 18px 18px;
-  flex:0 1 auto;min-height:0;overflow-y:auto}
+  flex:0 1 auto;min-height:min(190px,42vh);overflow-y:auto;
+  overscroll-behavior:contain}
+/* 只有图表也在场时才给控制面板封顶；本章没图就让它独占整列，
+   不然明明有空位，按钮却还要滚才够得到。 */
+body.has-charts #ctrl{max-height:56%}
 #ctrl .hd{margin-bottom:14px}
 .row{margin-bottom:17px}
 .row label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim);margin-bottom:9px}
@@ -200,14 +208,18 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
 
 /* 图表 */
 #charts{position:relative;right:auto;bottom:auto;padding:12px 14px 10px;display:none;margin-top:auto}
-#charts.show{display:block}
-canvas.chart{display:block;border-radius:8px}
-.liveeq{font-family:var(--mono);font-size:11.5px;line-height:1.9;color:var(--dim);
-  padding:9px 10px;margin-bottom:10px;border:1px solid var(--line);border-radius:2px;
-  background:rgba(0,0,0,.26)}
-.liveeq b{color:var(--ink);font-weight:600}
-.liveeq .lb{font-size:9.5px;letter-spacing:.14em;color:var(--dim2);display:block;margin-bottom:4px}
-.chartcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim2);margin:8px 0 4px;text-transform:uppercase}
+#charts.show{display:flex;flex-direction:column}
+/* 图表拿走控制面板之外的全部高度，内部自己滚 */
+#charts{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+canvas.chart{display:block;border-radius:8px;width:100%}
+/* 图表卡片：标题是一个大白话问题，副题说怎么读，底下一行是当下的读数。
+   每张图有自己的强调色（--ac），免得它们变成一排认不出谁是谁的深色矩形。 */
+.ckd{margin-bottom:18px;padding-left:11px;border-left:2px solid var(--ac,#5ee7ff)}
+.ckd:last-child{margin-bottom:2px}
+.ckd h4{margin:0 0 4px;font:600 14px/1.45 var(--sans);color:var(--ink);letter-spacing:.01em}
+.ckd .ckd-how{margin:0 0 8px;font:400 11px/1.6 var(--sans);color:var(--dim2)}
+.ckd .ckd-now{margin:7px 0 0;font:500 11.5px/1.6 var(--sans);color:var(--ac,#5ee7ff);
+  opacity:.92;min-height:1.6em}
 
 /* 提示 */
 #hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10;font-size:11px;
@@ -347,12 +359,21 @@ canvas.chart{display:block;border-radius:8px}
     <div class="hd">控制</div>
     <div id="ctrlbody"></div>
   </aside>
+  <!-- 每张图是一张卡片：标题是一个大白话问题，副题说怎么读，
+       底下一行是当下的读数。原来那面公式墙已经拆掉。 -->
   <aside id="charts" class="panel">
-    <div class="liveeq" id="liveK"></div>
-    <div class="chartcap" id="cap1"></div>
-    <canvas class="chart" id="ch1" width="520" height="300"></canvas>
-    <div class="chartcap" id="cap2"></div>
-    <canvas class="chart" id="ch2" width="520" height="180"></canvas>
+    <section class="ckd" data-chart="vol" style="--ac:#5ee7ff">
+      <h4>针越细，它占的地方缩得有多快？</h4>
+      <p class="ckd-how">横轴：针越往右越细　·　纵轴：它占的地方　·　虚线＝一张纸该有的缩法</p>
+      <canvas class="chart" id="ch1" width="520" height="300"></canvas>
+      <p class="ckd-now" id="now_vol"></p>
+    </section>
+    <section class="ckd" data-chart="dim" style="--ac:#a78bfa">
+      <h4>那把叫「维数」的尺子读出多少？</h4>
+      <p class="ckd-how">横轴：每根柱子是一次「针再细一半」　·　柱越高维数越大　·　虚线是 3</p>
+      <canvas class="chart" id="ch2" width="520" height="180"></canvas>
+      <p class="ckd-now" id="now_dim"></p>
+    </section>
   </aside>
 </div>
 
@@ -1136,6 +1157,12 @@ const SC={
        b:`<p class="lede">1917 年，挂谷宗一把这个问题写了下来。<b>他自己也想不到答案会是什么。</b></p>
           <p>问题是这样的：</p>
           <p>一根单位长的针，要转到<b>每一个方向</b>，扫过的区域最小可以是多少？</p>
+          <div class="predict">
+            <p class="pq">先押一个答案，再往下读：一根长度为 1 的针要转过每一个方向，它扫过的地方最小可以是多少？</p>
+            <button type="button" data-pick data-why="答案是<b>可以任意接近 0</b>。1919 年 Besicovitch 证明了这件事，而且后面几章你会亲手把它做出来。诀窍只有一条：针在转的时候<em>可以同时平移</em>。平移不改变方向，所以一个方向都不会丢，但挪过去之后大量针段可以互相重叠，重叠的部分只算一次面积。">不可能比那个球更小了</button>
+            <button type="button" data-pick data-why="答案是<b>可以任意接近 0</b>。1919 年 Besicovitch 证明了这件事，而且后面几章你会亲手把它做出来。诀窍只有一条：针在转的时候<em>可以同时平移</em>。平移不改变方向，所以一个方向都不会丢，但挪过去之后大量针段可以互相重叠，重叠的部分只算一次面积。">能小到那个球的几分之一</button>
+            <button type="button" data-pick data-right data-why="答案是<b>可以任意接近 0</b>。1919 年 Besicovitch 证明了这件事，而且后面几章你会亲手把它做出来。诀窍只有一条：针在转的时候<em>可以同时平移</em>。平移不改变方向，所以一个方向都不会丢，但挪过去之后大量针段可以互相重叠，重叠的部分只算一次面积。">可以小到<b>任意接近 0</b></button>
+          </div>
           <p>刚才那个答案——原地打转——扫出一个半径 ½ 的球：</p>
           <span class="fml"><span class="k-vol">V</span> = 4π/3 · (1/2)³ ≈ <span class="k-vol">0.524</span></span>
           <p>针总得转过去，这看起来已经是极限了。</p>
@@ -1642,21 +1669,10 @@ window.vizReadKakeyaEvidence=()=>{
     scene:'kakeya',kind:'kakeya-dimension',dimension
   }}));
 };
-function updateLiveK(){
-  const el=document.getElementById('liveK');
-  if(!el)return;
-  const pts=getScaleData();
-  const i=pts.length-1;
-  const D=3-Math.log2(pts[i-1][1]/pts[i][1]);
-  el.innerHTML=
-    `<span class="lb">盒计数 · 最细一档实测</span>`+
-    `N(<span class="k-delta">δ</span>) ≈ <span class="k-delta">δ</span><sup>−<span class="k-dim">D</span></sup>，`+
-    `<span class="k-delta">δ</span> = <b>${pts[i][0].toExponential(1)}</b><br>`+
-    `<span class="k-vol">V</span> = <b>${pts[i][1].toFixed(4)}</b>　`+
-    `<span class="k-dim">D</span> = <b class="k-dim">${D.toFixed(2)}</b>`;
-}
+/* 图上方原本挂着一块「N(δ) ≈ δ^−D，δ=…，V=…，D=…」的活公式。
+   用户的原话是「图像上面公式有必要吗」——没有。正文里已经讲过，
+   堆在这儿只会让下面那两张图更认不出来。换成每张图自己的一行大白话读数。 */
 function drawScale(){
-  updateLiveK();
   const W=chartW(),H=clamp(W*0.54,132,190),x=fitChart(c1,W,H);
   const pts=getScaleData();
   const lx=pts.map(p=>Math.log2(p[0])),ly=pts.map(p=>Math.log2(p[1]));
@@ -1676,19 +1692,19 @@ function drawScale(){
   x.stroke();
   x.fillStyle='#5ee7ff';
   pts.forEach(p=>{x.beginPath();x.arc(X(Math.log2(p[0])),Y(Math.log2(p[1])),2.6,0,7);x.fill();});
-  x.fillStyle='rgba(152,162,189,.8)';x.font='9px ui-monospace,monospace';
-  x.fillText('← 针更细',20,H-6);x.fillText('log δ',W-34,H-6);
-  x.save();x.translate(10,H/2);x.rotate(-Math.PI/2);x.fillText('log V',-14,0);x.restore();
-  x.fillStyle='rgba(152,162,189,.55)';x.fillText('虚线：二维物体应有的斜率',34,14);
-  x.fillStyle='rgba(94,231,255,.9)';x.fillText('实测：几乎变平 = 维数→3',34,25);
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(152,162,189,.75)';
+  x.fillText('针粗',20,H-6);x.fillText('针细 →',W-52,H-6);
+  x.save();x.translate(11,H/2);x.rotate(-Math.PI/2);x.fillText('占地方 ↑',-24,0);x.restore();
+  x.fillStyle='rgba(152,162,189,.6)';x.fillText('虚线：如果它只是一张纸',36,14);
+  x.fillStyle='rgba(94,231,255,.92)';x.fillText('实测：缩得慢得多',36,26);
 }
 function drawDimBars(){
   const W=chartW(),H=clamp(W*0.31,76,120),x=fitChart(c2,W,H);
   const pts=getScaleData(),rows=[];
   for(let i=1;i<pts.length;i++)rows.push(3-Math.log2(pts[i-1][1]/pts[i][1]));
   const bw=(W-20)/rows.length;
-  x.fillStyle='rgba(152,162,189,.75)';x.font='9px ui-monospace,monospace';
-  x.fillText('每次 δ 减半后测得的维数 →',10,11);
+  x.font='10px ui-monospace,monospace';
   rows.forEach((d,i)=>{
     const hgt=clamp((d-1)/2.2,0,1)*(H-32);
     const gx=10+i*bw;
@@ -1706,6 +1722,14 @@ function drawDimBars(){
 /* =====================================================================
    6. 主循环
    ===================================================================== */
+/* 每章显示哪几张图。原则和玻尔兹曼篇一致：一章一张主图，最多再配一张。 */
+const CHARTS={
+  dimension:['vol'],
+  dimtrap:['vol'],
+  tubes:['vol'],
+  sticky:['vol','dim'],
+  wangzahl:['vol','dim']
+};
 let last=performance.now(), acc=0;
 function resize(){
   const dpr=Math.min(2,devicePixelRatio||1);
@@ -1792,11 +1816,27 @@ function frame(now){
         }
       }
       /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0 */
-      const charted=['assemble','dimension','tubes','lowerbounds','crimescene','sticky','wangzahl'];
-      if(charted.includes(id)){$('#charts').classList.add('show');
-        $('#cap1').textContent='δ 与方向密度同步细化时的体积 V';$('#cap2').textContent='每次 δ 减半后测得的维数';
-        drawScale();drawDimBars();}
-      else $('#charts').classList.remove('show');
+      /* 每章显示哪几张图。以前七章都把两张一起摆着，谁也认不出谁是干什么的。 */
+      const want=CHARTS[id]||[];
+      if(want.length){$('#charts').classList.add('show');document.body.classList.add('has-charts');
+        $$('#charts .ckd').forEach(s=>{
+          const k=want.indexOf(s.dataset.chart);
+          s.style.display=k<0?'none':'';s.style.order=k;
+        });
+        const pts=getScaleData();
+        if(want.includes('vol')){
+          drawScale();
+          $('#now_vol').textContent=STICKY
+            ? '自相似构型：曲线基本走平了，体积停在正数上不动'
+            : '曲线越来越平——比一张纸缩得慢得多，说明它比二维「厚」';
+        }
+        if(want.includes('dim')&&pts.length>1){
+          drawDimBars();
+          const i=pts.length-1, D=3-Math.log2(pts[i-1][1]/pts[i][1]);
+          $('#now_dim').textContent=`最细一档读出 ${D.toFixed(2)}　·　`+
+            (D>2.95?'已经顶到 3 了':'还在往 3 爬');
+        }}
+      else {$('#charts').classList.remove('show');document.body.classList.remove('has-charts');}
       const L=[];
       if(cfg){
         const bv=bushVolumes();

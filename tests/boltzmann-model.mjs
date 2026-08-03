@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const html = await readFile(join(root, "boltzmann/index.html"), "utf8");
+const shell = await readFile(join(root, "article-shell.js"), "utf8");
 
 /* ---- 从页面里取出真正在跑的那几段代码，保证测的就是线上的实现 ---- */
 const grab = (name, kind = "function") => {
@@ -253,8 +254,33 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   const late = QB.net;
   check("接近平衡后 |Q| 明显下降", late < early * 0.5,
     `弛豫早期 ${early.toFixed(4)} → 平衡后 ${late.toFixed(4)}`);
+  /* Q 图的纵轴以散粒噪声为单位，不按当前最大值自动缩放。自动缩放的话，
+     平衡态剩下的纯噪声会被拉满整幅画，正文那句「接近平衡时压回零轴」就成了假话。
+     这里量的就是图上那件事：平衡时整条曲线要躺进那条噪声带里。 */
+  const peakSigma = () => {
+    let den = 0, pk = 0;
+    for (let b = 0; b < QB.NB; b++) den += QB.gAcc[b] + QB.lAcc[b];
+    for (let b = 0; b < QB.NB; b++) pk = Math.max(pk, Math.abs(QB.q[b]));
+    return pk / Math.sqrt(Math.max(den, 1) / QB.NB);
+  };
+  const lateP = peakSigma();
+  const srcQ = grab("drawQ");
+  check("Q 图用噪声标度而不是自动缩放",
+    /const mx=16\*sig, band=2\.5\*sig/.test(srcQ) && !/mx=Math\.max\(mx,Math\.abs\(QB\.q/.test(srcQ),
+    "drawQ 仍在按当前最大值缩放");
+  /* 40 格纯高斯噪声里取最大值，期望约 2.5σ。留点余量到 3.2σ。 */
+  check("平衡时 Q 曲线落进噪声带", lateP < 3.2, `平衡峰值 ${lateP.toFixed(2)}σ，带宽 2.5σ`);
+
+  // 反过来：弛豫早期必须明显冲出带子，否则这张图什么也没说
+  M.gasInit("same");
+  for (let i = 0; i < 240; i++) { M.gasStep(0.005); M.qbStep(); }
+  const earlyP = peakSigma();
+  check("弛豫早期 Q 明显冲出噪声带", earlyP > 6, `早期峰值 ${earlyP.toFixed(2)}σ`);
+  check("满量程装得下弛豫早期的信号", earlyP < 16, `早期峰值 ${earlyP.toFixed(2)}σ，满量程 16σ`);
+
   console.log("Q(f,f):", JSON.stringify({ bin0: b0, qAtBin0: +qAt(b0).toFixed(4),
-    netEarly: +early.toFixed(4), netLate: +late.toFixed(4), ratio: +(late / early).toFixed(3) }));
+    netEarly: +early.toFixed(4), netLate: +late.toFixed(4), ratio: +(late / early).toFixed(3),
+    peakEarlySigma: +earlyP.toFixed(2), peakLateSigma: +lateP.toFixed(2) }));
 }
 
 /* ── 7c. 傅里叶定律 ──
@@ -638,7 +664,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
    每章必须有一句话导语（.lede）。这是这次改版的核心约定：
    读者能只读导语走完全篇，公式推导收在 details 里按需展开。 */
 {
-  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*b:`([\s\S]*?)`,\s*\n\s*en\(\)/g)];
+  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*b:`([\s\S]*?)`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)/g)];
   check("能解析出全部章节正文", bodies.length === 12, `解析到 ${bodies.length} 章`);
   const noLede = bodies.filter(m => !m[2].includes('class="lede"')).map(m => m[1]);
   check("每章都有一句话导语", noLede.length === 0, `缺导语：${noLede.join(", ")}`);
@@ -657,17 +683,153 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   console.log("分层阅读:", JSON.stringify({ chapters: bodies.length, withDeep: deep }));
 }
 
-/* ── 10g. 图表按章节 id 开关，不按序号 ── */
+/* ── 10g. 图表面板的可读性 ──
+   用户的原话是「右边这 3 个图像分别是什么？以及图像上面公式有必要吗？」
+   这一段把改完之后的约定钉住：一章最多两张图、每张自带大白话标题、
+   标题里不许出现公式、图上面不许再挂公式墙。 */
 {
   check("图表开关不再用序号硬编码", !/if\(si>=\d\)\{[\s\S]{0,60}#charts/.test(html), "仍存在 si>=N 的图表判断");
-  const m = html.match(/const CHART_FROM=new Set\(\[([^\]]+)\]\)/);
-  check("CHART_FROM 存在", !!m, "找不到 CHART_FROM");
+  const m = html.match(/const CHARTS=\{([\s\S]*?)\n\};/);
+  check("CHARTS 映射存在", !!m, "找不到 CHARTS");
+  const ids = [...html.matchAll(/\{id:'(\w+)',t:'/g)].map(x => x[1]);
   if (m) {
-    const set = m[1].split(",").map(s => s.trim().replace(/'/g, ""));
-    check("有图的章节从 relax 开始", set[0] === "relax", JSON.stringify(set));
-    check("没数据的前三章不画图", !set.includes("one") && !set.includes("many") && !set.includes("vspace"),
-      JSON.stringify(set));
+    const map = {};
+    for (const line of m[1].split("\n")) {
+      const g = line.match(/(\w+):\[([^\]]*)\]/);
+      if (g) map[g[1]] = g[2] ? g[2].split(",").map(s => s.trim().replace(/'/g, "")) : [];
+    }
+    const missing = ids.filter(id => !(id in map) && !["one", "many", "vspace"].includes(id));
+    check("有数据的章节都在 CHARTS 里有条目", missing.length === 0, `漏了：${missing.join(", ")}`);
+    const fat = Object.entries(map).filter(([, v]) => v.length > 2).map(([k, v]) => `${k}:${v.length}`);
+    check("一章最多两张图", fat.length === 0, `过多：${fat.join(", ")}`);
+    const known = new Set(["mb", "wf", "q", "prof", "recol", "h"]);
+    const unknown = Object.values(map).flat().filter(k => !known.has(k));
+    check("引用的图都真实存在", unknown.length === 0, `未知图表：${unknown.join(", ")}`);
+    /* 前三章没有可看的数据，不该硬摆一张图上去 */
+    check("没数据的前三章不画图", !map.one && !map.many && !map.vspace, JSON.stringify(Object.keys(map)));
+    console.log("每章图表:", JSON.stringify(map));
   }
+
+  /* 每张图必须有大白话标题，而且标题里不能有公式 */
+  const cards = [...html.matchAll(/<section class="ckd" data-chart="(\w+)"[^>]*>\s*<h4>([^<]+)<\/h4>\s*<p class="ckd-how">([^<]+)</g)];
+  check("每张图都是一张带标题的卡片", cards.length === 6, `解析到 ${cards.length} 张`);
+  const noQ = cards.filter(c => !/[？?]/.test(c[2])).map(c => c[1]);
+  check("图表标题写成一个问句", noQ.length === 0, `不是问句：${noQ.join(", ")}`);
+  const hasFml = cards.filter(c => /f\(|Q\(|∫|<sub>|δ|λ|⟨/.test(c[2])).map(c => c[1]);
+  check("图表标题里不出现公式", hasFml.length === 0, `含公式：${hasFml.join(", ")}`);
+  const noHow = cards.filter(c => !/横轴|纵轴|每一横行|你每拖/.test(c[3])).map(c => c[1]);
+  check("每张图都说明了怎么读", noHow.length === 0, `没说明：${noHow.join(", ")}`);
+
+  /* 公式墙必须已经拆掉 */
+  check("图表上方的公式墙已移除", !html.includes("liveeq") && !html.includes("updateLiveMB"),
+    "liveeq / updateLiveMB 仍在");
+  check("旧的一行式图注已移除", !html.includes("chartcap"), "chartcap 仍在");
+  console.log("图表卡片:", JSON.stringify(cards.map(c => `${c[1]}｜${c[2]}`)));
+}
+
+/* ── 先猜一下：结构契约 ──
+   直觉是「押一次、发现自己对不对」建立起来的，不是读出来的。
+   每个 predict 必须恰好有一个正确项，每个选项都要带解释——
+   押错的人拿不到解释，这个组件就白做了。 */
+{
+  const blocks = [...html.matchAll(/<div class="predict">([\s\S]*?)<\/div>/g)].map(m => m[1]);
+  check("正文里有「先猜一下」环节", blocks.length >= 3, `只有 ${blocks.length} 处`);
+  blocks.forEach((b, i) => {
+    const picks = [...b.matchAll(/data-pick/g)].length;
+    const right = [...b.matchAll(/data-right/g)].length;
+    const why = [...b.matchAll(/data-why="/g)].length;
+    check(`第 ${i + 1} 个预测有 2–4 个选项`, picks >= 2 && picks <= 4, `${picks} 个`);
+    check(`第 ${i + 1} 个预测恰有一个正确项`, right === 1, `${right} 个 data-right`);
+    check(`第 ${i + 1} 个预测每个选项都带解释`, why === picks, `${why} 条解释 / ${picks} 个选项`);
+    check(`第 ${i + 1} 个预测有问句`, /class="pq">[\s\S]*?[？?][\s\S]*?<\/p>/.test(b), "问题不是问句");
+  });
+  console.log("先猜一下:", blocks.length + " 处");
+
+  /* 「测度极小」那句抽象话必须有一个能自己拖的计算器兜底 */
+  const odds = html.match(/<div data-odds>([\s\S]*?)<\/div>\s*<p data-odds-cmp><\/p>/);
+  check("有「这个初态有多特殊」的计算器", !!odds, "找不到 data-odds 组件");
+  if (odds) {
+    const s = odds[1];
+    const mx = +(s.match(/max="(\d+)"/) || [, 0])[1];
+    check("滑块能拖到本页真实的粒子数", mx >= 520, `max=${mx}`);
+    check("计算器有读数与类比两处输出",
+      /data-odds-n/.test(s) && /data-odds-p/.test(s), "缺少输出位");
+  }
+  /* 组件是在 article-shell.js 里挂的，正文换章后要重新绑定 */
+  check("换章后重新挂载正文组件", /MutationObserver\(bindStoryWidgets\)/.test(shell),
+    "article-shell.js 没有在换章后重挂 predict / odds");
+
+  /* 类比阶梯必须真的按量级分档。第一版写错过：N=1 时概率是 1/8，
+     却告诉读者「已经比中彩票难了」——比喻一旦不成立，直觉就白建了。
+     把 SCALES 与 fmtOdds 原样抽出来，逐档核对。 */
+  const scalesSrc = shell.match(/const SCALES = \[([\s\S]*?)\n    \];/);
+  check("能取到类比阶梯", !!scalesSrc, "找不到 SCALES");
+  if (scalesSrc) {
+    const thresholds = [...scalesSrc[1].matchAll(/\[\s*([\d.e+-]+)\s*,/g)].map((m) => +m[1]);
+    check("阈值从大到小排（find 取的是「p 在哪一档之上」）",
+      thresholds.every((v, i) => i === 0 || v < thresholds[i - 1]),
+      JSON.stringify(thresholds));
+    check("最后一档兜底为 0", thresholds[thresholds.length - 1] === 0, JSON.stringify(thresholds));
+
+    const band = (n) => {
+      const p = Math.pow(1 / 8, n);
+      const i = thresholds.findIndex((t) => p >= t);
+      return i < 0 ? thresholds.length - 1 : i;
+    };
+    /* 逐档取一个代表性的 N，核对它落在预期那一档 */
+    const want = [[1, 0], [3, 0], [4, 1], [8, 1], [9, 2], [19, 2], [20, 3], [88, 3], [89, 4], [520, 4]];
+    const wrong = want.filter(([n, b]) => band(n) !== b).map(([n, b]) => `N=${n} 期望第${b}档，实得第${band(n)}档`);
+    check("每一档都对得上", wrong.length === 0, wrong.join("；"));
+
+    /* 彩票那一档引用的是双色球头奖 1/17,721,088 ≈ 5.6e-8，核对数值没写错 */
+    const lottery = thresholds.find((t) => t < 1e-6 && t > 1e-9);
+    check("彩票档的阈值就是双色球头奖的量级",
+      lottery && Math.abs(lottery - 1 / 17721088) / (1 / 17721088) < 0.05,
+      `阈值 ${lottery}，双色球实际 ${(1 / 17721088).toExponential(2)}`);
+    /* 秒数那一档：宇宙年龄 138 亿年 ≈ 4.35e17 秒 */
+    const secs = thresholds.find((t) => t < 1e-15 && t > 1e-20);
+    check("宇宙秒数档的阈值对得上宇宙年龄",
+      secs && Math.abs(secs - 1 / 4.35e17) / (1 / 4.35e17) < 0.25,
+      `阈值 ${secs}，1/宇宙秒数 = ${(1 / 4.35e17).toExponential(2)}`);
+
+    console.log("类比阶梯:", JSON.stringify(want.map(([n]) => `N=${n}→第${band(n)}档`)));
+  }
+  check("大指数用真正的减号而不是连字符", shell.includes('"10<sup>−"'),
+    "上标里的负号是 ASCII 连字符，几乎看不见");
+}
+
+/* ── 图的纵轴不许自动缩放 ──
+   Q 和 H 两张图都栽过同一个跟头：按当前数据范围自动缩放，
+   于是平衡态剩下的纯涨落被拉满整幅画。H 那张尤其糟——标题问
+   「有没有一个只往一个方向走的量」，图上却是条剧烈震荡的线，自己反驳自己。
+   两张图现在都锚在固定参照上，这里把它钉死。 */
+{
+  const srcH = grab("drawH");
+  check("H 图的上界锚在初始 H", /GAS\.H0===null/.test(srcH) && /mx=GAS\.H0/.test(srcH),
+    "drawH 仍按当前窗口取上界");
+  check("H 图的下界只降不升（不会被涨落顶回去）",
+    /mn<GAS\.Hfloor/.test(srcH) && /mn=GAS\.Hfloor/.test(srcH),
+    "drawH 的下界会跟着窗口跑");
+  check("H 图标了出发与最低两条参照线",
+    srcH.includes("'出发'") && srcH.includes("'最低'"), "没有参照线，看不出掉了多少");
+  check("重放时纵轴锚点要复位", /GAS\.H0=null;GAS\.Hfloor=null/.test(html),
+    "gasInit 没有复位 H0 / Hfloor");
+
+  /* 行为验证：跑到平衡后，最后四分之一段的振幅相对整个下落幅度必须很小，
+     也就是图上确实是「贴着底的一条平线」。 */
+  M.gasInit("same"); M.gasStats();
+  const H0 = GAS.Hcur;
+  const trace = [];
+  for (let i = 0; i < 12000; i++) { M.gasStep(0.005); if (i % 50 === 0) { M.gasStats(); trace.push(GAS.Hcur); } }
+  const floor = Math.min(...trace);
+  const tail = trace.slice(-Math.floor(trace.length / 4));
+  const wobble = Math.max(...tail) - Math.min(...tail);
+  const drop = H0 - floor;
+  check("平衡段的涨落只占整段落差的一小截", wobble / drop < 0.12,
+    `涨落 ${wobble.toFixed(4)} / 落差 ${drop.toFixed(4)} = ${(wobble / drop * 100).toFixed(1)}%`);
+  console.log("H 纵轴:", JSON.stringify({ H0: +H0.toFixed(3), floor: +floor.toFixed(3),
+    drop: +drop.toFixed(3), tailWobble: +wobble.toFixed(4),
+    占比: (wobble / drop * 100).toFixed(1) + "%" }));
 }
 
 /* ── 11. 章节结构与正文引用的 id 一致 ── */

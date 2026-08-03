@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "dist");
@@ -59,6 +60,28 @@ for (const dir of extraDirs) {
   await cp(join(root, dir), join(out, dir), { recursive: true });
 }
 
+/* ── 共享资源的缓存版本号 ──────────────────────────────────
+   article.css / article-shell.js 由 _headers 设成 max-age=3600，
+   靠 ?v= 破缓存。这个号以前是手写在 HTML 里的，改了文件却忘了改号，
+   回访的读者就会在一小时内继续吃旧的 CSS 和 JS —— 这已经坑过一次，
+   而且很难发现：本地一切正常，线上样式却是旧的。
+   现在按文件内容算哈希，改了必然变，忘不掉。 */
+const assetHash = async (...files) => {
+  const h = createHash("sha256");
+  for (const f of files) h.update(await readFile(join(root, f)));
+  return h.digest("hex").slice(0, 12);
+};
+const stamp = await assetHash("article.css", "article-shell.js");
+let stamped = 0;
+for (const dir of [...workDirs, ...extraDirs]) {
+  const file = join(out, dir, "index.html");
+  let html;
+  try { html = await readFile(file, "utf8"); } catch { continue; }
+  const next = html.replace(/(article\.css|article-shell\.js)\?v=[^"']*/g, `$1?v=${stamp}`);
+  if (next !== html) { await writeFile(file, next); stamped++; }
+}
+if (!stamped) throw new Error("没有一个页面被打上缓存版本号 —— ?v= 的写法可能变了");
+
 works.sort((a, b) => b.date.localeCompare(a.date));
 await writeFile(join(out, "works.json"), `${JSON.stringify(works, null, 2)}\n`);
 
@@ -99,4 +122,4 @@ ${works
 await writeFile(join(out, "feed.xml"), rss);
 
 const built = await readdir(out);
-console.log(`VIZ build complete: ${works.length} works, ${built.length} top-level entries`);
+console.log(`VIZ build complete [assets v=${stamp}, ${stamped} pages]: ${works.length} works, ${built.length} top-level entries`);

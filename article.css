@@ -691,6 +691,111 @@ details.deep>*:last-child{margin-bottom:12px}
 }
 .watch b{color:#ffd866}
 
+/* ── 先猜一下 ──────────────────────────────────────────────
+   揭晓之前先让读者押一个答案。押错那一下的意外感，
+   比把正确结论读十遍都更能长出直觉。 */
+.predict{
+  margin:16px 0;
+  padding:13px 14px;
+  border:1px solid rgba(255,196,87,.30);
+  border-radius:10px;
+  background:rgba(255,196,87,.05);
+}
+.predict .pq{
+  margin:0 0 11px;
+  color:#ffd866;
+  font:600 13px/1.65 var(--sans);
+}
+.predict [data-pick]{
+  display:block;
+  width:100%;
+  margin-bottom:7px;
+  padding:9px 12px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:8px;
+  background:rgba(255,255,255,.04);
+  color:#dfe4ef;
+  font:500 12.5px/1.5 var(--sans);
+  text-align:left;
+  cursor:pointer;
+  transition:border-color .18s ease,background .18s ease;
+}
+.predict [data-pick]:hover:not(:disabled){border-color:rgba(255,216,102,.5);background:rgba(255,255,255,.07)}
+.predict [data-pick]:disabled{cursor:default;opacity:.55}
+.predict [data-pick].correct{
+  border-color:rgba(92,208,179,.75);
+  background:rgba(92,208,179,.13);
+  color:#9fe8d6;
+  opacity:1;
+}
+.predict [data-pick].wrong{
+  border-color:rgba(252,98,85,.6);
+  background:rgba(252,98,85,.10);
+  color:#f2a7a0;
+  opacity:1;
+}
+.predict .pans{display:none}
+.predict .pans.show{
+  display:block;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.11);
+  font:400 12.5px/1.75 var(--sans);
+  color:#c3cbd9;
+}
+.predict .pans strong{display:block;margin-bottom:3px;color:#ffd866;font-weight:650}
+
+/* ── 这个初态有多特殊 ────────────────────────────────────
+   「测度极小」是一句读者接不住的抽象话。让他自己拖 N，
+   看着那个数掉进没有任何东西可以类比的量级。 */
+[data-odds]{
+  margin:16px 0;
+  padding:14px;
+  border:1px solid rgba(120,160,230,.26);
+  border-radius:10px;
+  background:rgba(96,140,220,.06);
+}
+[data-odds] label{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:9px;
+  color:#9fc0ee;
+  font:600 12.5px/1.4 var(--sans);
+}
+[data-odds] label b{
+  font-family:var(--mono);
+  font-size:13px;
+  color:#e8ecf6;
+  background:rgba(255,255,255,.08);
+  padding:3px 9px;
+  border-radius:6px;
+}
+[data-odds] .odds-out{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:12px;
+  margin-top:13px;
+  padding-top:11px;
+  border-top:1px solid rgba(255,255,255,.10);
+}
+[data-odds] .odds-out span{color:#8f9aae;font:400 11.5px/1.5 var(--sans)}
+[data-odds] .odds-out b{
+  font-family:var(--mono);
+  font-size:19px;
+  font-weight:600;
+  color:#ffd866;
+  white-space:nowrap;
+}
+[data-odds] .odds-out b sup{font-size:12px}
+[data-odds] [data-odds-cmp]{
+  margin:10px 0 0;
+  font:400 12px/1.7 var(--sans);
+  color:#c3cbd9;
+}
+[data-odds] [data-odds-cmp] b{color:#ffd866;font-weight:600}
+
 /* 正文里的「打开图表 / 打开参数」按钮 —— 电脑上面板就在旁边，不需要它 */
 .open-charts,.open-controls{
   display:none;
@@ -723,11 +828,26 @@ details.deep>*:last-child{margin-bottom:12px}
 }
 
 /* ── 本章相关的控件 ────────────────────────────────────────
-   面板一次摆十几个东西，读者不知道该碰哪个。把与本章无关的压暗，
-   但不隐藏——想用随时能用，鼠标移上去就恢复。 */
+   全部摆出来是 877px 的内容塞进 295px 的面板：底下的按钮要滚很久才够得到，
+   体感就是「被截断」。所以默认只留本章用得上的那几组，
+   其余收进「显示全部参数」——一键就能全部拿回来。 */
 .ckgrp{transition:opacity .25s ease}
-.ckgrp.ck-dim{opacity:.44}
-.ckgrp.ck-dim:hover,.ckgrp.ck-dim:focus-within{opacity:1}
+.ckgrp.ck-dim{display:none}
+body.ctrl-all .ckgrp.ck-dim{display:block;opacity:.5}
+body.ctrl-all .ckgrp.ck-dim:hover,body.ctrl-all .ckgrp.ck-dim:focus-within{opacity:1}
+.ck-toggle{
+  display:block;
+  width:100%;
+  margin-top:16px;
+  padding:9px 10px;
+  border:1px dashed rgba(255,255,255,.18);
+  border-radius:8px;
+  background:transparent;
+  color:#8f9aae;
+  font:500 11.5px/1.4 var(--sans);
+  cursor:pointer;
+}
+.ck-toggle:hover{border-color:rgba(255,255,255,.34);color:#c3cbd9}
 .ckhint{
   margin:6px 2px 0;
   color:#7d879b;
@@ -736,8 +856,9 @@ details.deep>*:last-child{margin-bottom:12px}
 
 @media(max-width:900px){
   .open-charts,.open-controls{display:block}
-  /* 手机上「相关控件」的提示没意义（一次只看得到一档），全部还原 */
-  .ckgrp.ck-dim{opacity:1}
+  /* 手机上「参数」是独立一档，屏幕整个归它，不必收起来 */
+  .ckgrp.ck-dim{display:block;opacity:1}
+  .ck-toggle{display:none!important}
   #storyExpand{display:block}
   /* 标题别钻到展开键底下 */
   body:not(.home) #story h2{padding-right:52px}

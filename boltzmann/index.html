@@ -148,8 +148,16 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
   display:flex;flex-direction:column;gap:12px;pointer-events:none}
 #right>*{pointer-events:auto;min-height:0}
 /* 右栏在矮视口下必须能自己收缩并滚动，否则会溢出到视口外 */
+/* 右栏是一个高度固定的 flex 列（top:74px 到 bottom:20px）。
+   两块面板必须各自可收缩、各自内部滚动，否则图表一长就把控制面板
+   挤出视口 —— 底部那几个按钮会被整个截掉。
+   控制面板给一个下限，保证它永远不会被压没。 */
 #ctrl{position:relative;right:auto;top:auto;width:100%;padding:16px 18px 18px;
-  flex:0 1 auto;min-height:0;overflow-y:auto}
+  flex:0 1 auto;min-height:min(190px,42vh);overflow-y:auto;
+  overscroll-behavior:contain}
+/* 只有图表也在场时才给控制面板封顶；本章没图就让它独占整列，
+   不然明明有空位，按钮却还要滚才够得到。 */
+body.has-charts #ctrl{max-height:56%}
 #ctrl .hd{margin-bottom:14px}
 .row{margin-bottom:17px}
 .row label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim);margin-bottom:9px}
@@ -206,26 +214,19 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
   background:linear-gradient(180deg,rgba(23,19,15,.94),rgba(13,11,9,.94));
   border:1px solid var(--line);border-radius:4px;
   box-shadow:0 18px 40px -22px rgba(0,0,0,.9)}
-#charts.show{display:block}
+#charts.show{display:flex;flex-direction:column}
+/* 图表拿走控制面板之外的全部高度，内部自己滚 */
+#charts{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 canvas.chart{display:block;border-radius:3px;width:100%;
   background:rgba(0,0,0,.30);border:1px solid rgba(246,241,232,.07)}
-.chartcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--amber);
-  margin:10px 0 5px;text-transform:uppercase}
-.chartcap:first-child{margin-top:0}
-/* 活公式：当前温度直接代进麦氏分布，符号与曲线同色 */
-.liveeq{font-family:var(--mono);font-size:11.5px;line-height:1.9;color:var(--dim);
-  padding:9px 10px;margin-bottom:11px;border:1px solid var(--line);border-radius:3px;
-  background:rgba(0,0,0,.28)}
-.liveeq b{color:var(--ink);font-weight:600}
-.liveeq .lb{font-size:9.5px;letter-spacing:.14em;color:var(--dim2);display:block;margin-bottom:4px}
-.liveeq .eqline{display:block;color:var(--ink);font-size:11px;line-height:1.75;margin-bottom:2px}
-.liveeq .eqnote{display:block;margin:7px 0 2px;padding-top:7px;border-top:1px solid var(--line);
-  font-family:var(--sans);font-size:10.5px;line-height:1.7;color:var(--dim)}
-.liveeq .eqnote b{color:var(--ink)}
-.liveeq .eqgrid{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-top:8px;
-  padding-top:8px;border-top:1px solid var(--line);font-size:10.5px}
-.liveeq .eqgrid span{color:var(--dim2)}
-.liveeq .eqgrid b{text-align:right;color:var(--amber)}
+/* 图表卡片：标题是一个大白话问题，副题说怎么读，底下一行是当下的读数。
+   每张图有自己的强调色（--ac），这样它们不再是一排认不出谁是谁的深色矩形。 */
+.ckd{margin-bottom:18px;padding-left:11px;border-left:2px solid var(--ac,#ffb547)}
+.ckd:last-child{margin-bottom:2px}
+.ckd h4{margin:0 0 4px;font:600 14px/1.45 var(--sans);color:var(--ink);letter-spacing:.01em}
+.ckd .ckd-how{margin:0 0 8px;font:400 11px/1.6 var(--sans);color:var(--dim2)}
+.ckd .ckd-now{margin:7px 0 0;font:500 11.5px/1.6 var(--sans);color:var(--ac,#ffb547);
+  opacity:.92;min-height:1.6em}
 /* 公式里的符号与曲线共用颜色 */
 .v-hot{color:#fc6255;font-weight:650}
 .v-cold{color:#58c4dd;font-weight:650}
@@ -371,18 +372,45 @@ canvas.chart{display:block;border-radius:3px;width:100%;
     <div class="hd">控制</div>
     <div id="ctrlbody"></div>
   </aside>
+  <!-- 每张图是一张卡片：标题写成一个大白话问题，副题说怎么读，
+       底下一行是当下的读数。只显示本章用得上的那几张（见 CHARTS）。 -->
   <aside id="charts" class="panel">
-    <div class="liveeq" id="liveMB"></div>
-    <div class="chartcap" id="cap1"></div>
-    <canvas class="chart" id="ch1" width="520" height="300"></canvas>
-    <div class="chartcap" id="cap3"></div>
-    <canvas class="chart" id="ch3" width="520" height="240"></canvas>
-    <div class="chartcap" id="cap5"></div>
-    <canvas class="chart" id="ch5" width="520" height="230"></canvas>
-    <div class="chartcap" id="cap4"></div>
-    <canvas class="chart" id="ch4" width="520" height="230"></canvas>
-    <div class="chartcap" id="cap2"></div>
-    <canvas class="chart" id="ch2" width="520" height="180"></canvas>
+    <section class="ckd" data-chart="mb" style="--ac:#ffb547">
+      <h4>跑多快的球最多？</h4>
+      <p class="ckd-how">横轴：慢 → 快　·　柱子高低：有多大比例的球是这个速率</p>
+      <canvas class="chart" id="ch1" width="520" height="300"></canvas>
+      <p class="ckd-now" id="now_mb"></p>
+    </section>
+    <section class="ckd" data-chart="wf" style="--ac:#a78bfa">
+      <h4>分布是怎么一步步变过去的？</h4>
+      <p class="ckd-how">每一横行是某个时刻的上图　·　最上面是现在，越往下越早</p>
+      <canvas class="chart" id="ch3" width="520" height="240"></canvas>
+      <p class="ckd-now" id="now_wf"></p>
+    </section>
+    <section class="ckd" data-chart="q" style="--ac:#5cd0b3">
+      <h4>碰撞在把球从哪儿搬到哪儿？</h4>
+      <p class="ckd-how">横轴：慢 → 快　·　往上＝这个速率的球在变多，往下＝在变少　·　整条躺进灰带＝到平衡了</p>
+      <canvas class="chart" id="ch4" width="520" height="230"></canvas>
+      <p class="ckd-now" id="now_q"></p>
+    </section>
+    <section class="ckd" data-chart="prof" style="--ac:#fc6255">
+      <h4>热量是怎么摊平的？</h4>
+      <p class="ckd-how">横轴：盒子从左到右　·　纵轴：那一片有多热　·　淡线是过去</p>
+      <canvas class="chart" id="ch5" width="520" height="230"></canvas>
+      <p class="ckd-now" id="now_prof"></p>
+    </section>
+    <section class="ckd" data-chart="recol" style="--ac:#6fb7ff">
+      <h4>球变小，重碰会消失吗？</h4>
+      <p class="ckd-how">你每拖一次半径，就在这里留下一个点　·　横轴：球比自由程小多少</p>
+      <canvas class="chart" id="ch6" width="520" height="230"></canvas>
+      <p class="ckd-now" id="now_recol"></p>
+    </section>
+    <section class="ckd" data-chart="h" style="--ac:#ffd866">
+      <h4>有没有一个只往一个方向走的量？</h4>
+      <p class="ckd-how">横轴是时间　·　这条线就是 H，玻尔兹曼说它只降不升</p>
+      <canvas class="chart" id="ch2" width="520" height="180"></canvas>
+      <p class="ckd-now" id="now_h"></p>
+    </section>
   </aside>
 </div>
 
@@ -891,6 +919,7 @@ function gasInit(preset){
   GAS.wf=[];GAS.pairLast.clear();PROF.hist=[];PROF.contrast=1;
   GAS.recol=0;GAS.recolRecent=0;GAS.colRecent=0;GAS.recolRate=0;
   GAS.flash=new Float32Array(N);
+  GAS.H0=null;GAS.Hfloor=null;       // 纵轴的上下锚点，随每次重放复位
   trReset();
   /* 速度空间的标尺定死在初态的均方根速率上。若跟着当前 vrms 走，
      整个点云会随着弛豫一起呼吸，「分布在变形」就看不出来了。 */
@@ -1181,6 +1210,12 @@ const SC={
           <p>还是直线飞行、还是硬球弹性碰撞（只交换法向动量），每一次碰撞都严格守恒能量与动量。<b>没有新增任何规则</b>——尤其没有任何一条告诉系统「该往哪个方向发展」。</p>
           <p>现在满屏是同一个颜色，因为颜色编码的是速率，而我给的初态是<em>所有粒子速率完全相同</em>。</p>
           <p>盯着颜色，也盯住读数里的 <b>碰撞 / 粒子</b>。等它走到 2、3 的时候，颜色会散开。</p>
+          <div class="predict">
+            <p class="pq">先猜一下：这 500 个球现在速率完全相同。让它们互相碰几百次之后，速率的分布会变成什么样？</p>
+            <button type="button" data-pick data-why="它会变成一个「中间厚、两头薄」的鼓包，也就是麦克斯韦分布。碰撞既不会让所有球停下来，也不会让它们保持整齐——它只会把速率打散成一个特定的形状，而且<b>无论从什么初态出发都是同一个形状</b>。这个形状是碰撞唯一停得下来的地方，后面几章就是在解释「为什么只能是它」。">还是一根尖峰，只是位置挪一挪</button>
+            <button type="button" data-pick data-right data-why="它会变成一个「中间厚、两头薄」的鼓包，也就是麦克斯韦分布。碰撞既不会让所有球停下来，也不会让它们保持整齐——它只会把速率打散成一个特定的形状，而且<b>无论从什么初态出发都是同一个形状</b>。这个形状是碰撞唯一停得下来的地方，后面几章就是在解释「为什么只能是它」。">变成一个中间厚、两头薄的鼓包</button>
+            <button type="button" data-pick data-why="它会变成一个「中间厚、两头薄」的鼓包，也就是麦克斯韦分布。碰撞既不会让所有球停下来，也不会让它们保持整齐——它只会把速率打散成一个特定的形状，而且<b>无论从什么初态出发都是同一个形状</b>。这个形状是碰撞唯一停得下来的地方，后面几章就是在解释「为什么只能是它」。">在 0 到某个上限之间铺得均匀</button>
+          </div>
           <p>可是看着这一盒乱飞的球，你其实说不出它在往哪儿走。<em>问题出在我们看的地方不对。</em></p>
           <details class="deep"><summary>为什么「多体」本身不产生方向</summary>
             <p>N 个球的状态是 6N 维相空间里的一个点，它按哈密顿流演化。刘维尔定理说：相空间体积元沿流动<b>既不增也不减</b>。</p>
@@ -1241,8 +1276,12 @@ const SC={
             <span class="fml">log f = a + <b>b</b>·<b>v</b> + c v²　⟹　f 是高斯型</span>
             <p>在固定质量、动量、能量的条件下，这个解是<b>唯一</b>的。麦氏分布不是众多平衡态里最可能的一个，它是唯一一个。</p>
           </details>`,
-       en(){camTo(0.8,0.20,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.08;
-            vmixTo(1,900);GAS.running=true;}},
+       /* 必须重放：这一章看的是「壳塌下去」这个过程本身。
+          读者一路读过来时气体早就平衡了，不重置的话什么也看不到。 */
+       /* 半速播放：弛豫本身只有一两个自由时间，按 1× 跑 1.5 秒就演完了，
+          读者还没看清壳是怎么塌的。这三章都放慢。 */
+       en(){camTo(0.8,0.20,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=0.5;CAM.spin=0.08;
+            vmixTo(1,900);gasInit('same');GAS.running=true;}},
 
       {id:'qop',t:'是什么在推着它变形：碰撞算符 Q',
        b:`<p class="lede">上一章看到壳塌了。这一章问：<b>谁在推它？</b>答案是碰撞算符 Q——而 Q 说白了就是一本账。</p>
@@ -1268,8 +1307,10 @@ const SC={
             <span class="fml"><b>v</b>′ = <b>v</b> − ((<b>v</b>−<b>v</b><sub>*</sub>)·ω)ω，　<b>v</b>′<sub>*</sub> = <b>v</b><sub>*</sub> + ((<b>v</b>−<b>v</b><sub>*</sub>)·ω)ω</span>
             <p>注意这是个<b>二次</b>算符——玻尔兹曼方程是非线性的，难就难在这里。</p>
           </details>`,
-       en(){camTo(0.8,0.24,3.4,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.06;
-            vmixTo(1,900);GAS.running=true;}},
+       /* 同样要重放：Q 的形状只有在弛豫过程中才有东西可看，
+          平衡之后它就是一条躺在噪声带里的平线。 */
+       en(){camTo(0.8,0.24,3.4,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=0.5;CAM.spin=0.06;
+            vmixTo(1,900);gasInit('same');GAS.running=true;}},
 
       {id:'htheorem',t:'时间之箭：H 定理',
        b:`<p class="lede">给这团点云配一个数。玻尔兹曼证明：<b>这个数只会往一个方向走。</b></p>
@@ -1287,13 +1328,20 @@ const SC={
             <p>被积函数是 (a−b)·log(a/b) 的形式。a&gt;b 时两个因子都正，a&lt;b 时两个因子都负，所以乘积恒 ≥ 0，整体 ≤ 0。</p>
             <p>取等当且仅当 f′f′<sub>*</sub> = ff<sub>*</sub> 处处成立——正是上一章那个细致平衡条件。</p>
           </details>`,
-       en(){camTo(0.9,0.18,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.05;
-            vmixTo(1,800);}},
+       /* H 曲线要从高处落下来才叫「只往一个方向走」，所以也重放 */
+       en(){camTo(0.9,0.18,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=0.5;CAM.spin=0.05;
+            vmixTo(1,800);gasInit('same');GAS.running=true;}},
 
       {id:'loschmidt',t:'洛施密特的诘问',
        b:`<p class="lede">既然每个球都能原路返回，那把<b>所有</b>球的速度同时取反，H 就该一路爬回去。1876 年洛施密特当面这么问玻尔兹曼。</p>
           <p>画面回到位置空间，而且我给十几个粒子挂上了<b>拖尾</b>——每条尾巴就是那颗球刚刚走过的路。</p>
-          <p class="watch">在「参数」里按 <b>早期反演</b>：系统会重置、只跑一小会儿、然后整体反向。<em>盯着那些尾巴。</em></p>
+          <div class="predict">
+            <p class="pq">先猜一下：把所有球的速度<b>同时</b>取反，接下来 H 会怎样？</p>
+            <button type="button" data-pick data-why="它会先爬升一段，然后掉头继续往下。<b>两件事都是真的</b>：牛顿定律确实让系统往回走了一段（这就是洛施密特说对的部分），但反演出来的那个态在相空间里极不稳定——一点点数值误差每碰一次就被放大约十倍，十几次碰撞之后系统就彻底忘了自己要回哪儿去，于是继续往平衡滑。">一路爬回起点，完整倒放</button>
+            <button type="button" data-pick data-right data-why="它会先爬升一段，然后掉头继续往下。<b>两件事都是真的</b>：牛顿定律确实让系统往回走了一段（这就是洛施密特说对的部分），但反演出来的那个态在相空间里极不稳定——一点点数值误差每碰一次就被放大约十倍，十几次碰撞之后系统就彻底忘了自己要回哪儿去，于是继续往平衡滑。">先爬一段，然后掉头继续往下</button>
+            <button type="button" data-pick data-why="它会先爬升一段，然后掉头继续往下。<b>两件事都是真的</b>：牛顿定律确实让系统往回走了一段（这就是洛施密特说对的部分），但反演出来的那个态在相空间里极不稳定——一点点数值误差每碰一次就被放大约十倍，十几次碰撞之后系统就彻底忘了自己要回哪儿去，于是继续往平衡滑。">纹丝不动，反演什么也改变不了</button>
+          </div>
+          <p class="watch">现在验一下。在「参数」里按 <b>早期反演</b>：系统会重置、只跑一小会儿、然后整体反向。<em>盯着那些尾巴。</em></p>
           <button type="button" class="open-controls" data-open-controls>⏪ 打开反演按钮</button>
           <p>你会看见它们<b>沿着自己刚画出来的那条线走回去</b>。这不是比喻，这就是第 1 章那个式子在 500 个粒子上照样成立。</p>
           <p>同时 H 曲线<b>真的会爬升</b>。下面那个「峰值回升」是<em>你这次运行当场量到的</em> H 最大值，每跑一次都不一样，不是我事先填在页面里的数字。</p>
@@ -1306,6 +1354,15 @@ const SC={
           <p class="watch">现在做对照：先让它跑到平衡，再按 <b>时间反演</b>。H 会<em>纹丝不动</em>。</p>
           <p>区别不在定律，而在<b>初态在相空间里有多特殊</b>。反演后的那个态属于一个测度极小的集合；一旦系统忘了出身，反演就什么也换不回来。玻尔兹曼后来的回答正是这个：H 定理不是力学恒等式，而是<em>关于绝大多数初态</em>的陈述。</p>
           <span class="fml">可逆的定律 + 测度极小的初态 = 不可逆的世界</span>
+          <p><b>「测度极小」到底有多小？</b>这句话是整篇文章的落点，可它听上去只是个形容词。所以直接算一次——就用你在「参数」里试过的那个「全挤在角落」：把球随机撒进盒子，它们<em>碰巧</em>全落在那 1/8 的角落里的概率是 (1/8)<sup>N</sup>。</p>
+          <div data-odds>
+            <label>球的个数 N <b data-odds-n>20</b></label>
+            <input type="range" min="1" max="520" step="1" value="20">
+            <div class="odds-out"><span>随机一撒，全部落进那个角落的概率</span><b data-odds-p>—</b></div>
+            <p data-odds-cmp></p>
+          </div>
+          <p>把滑块拖到 520——也就是屏幕上这盒气体的真实粒子数。真实空气里一立方厘米有 10<sup>19</sup> 个分子，指数还要再乘上十七个数量级。</p>
+          <p><b>这就是答案。</b>没有任何一条定律禁止气体自己缩回角落；只是「能缩回去」的那些初态，占比小到这个地步。<em>不可逆不是一条定律，是一个概率陈述。</em></p>
           <details class="deep"><summary>关于 λ/r 那个放大倍数，以及策梅洛的第二次进攻</summary>
             <p>硬球碰撞是<b>散焦</b>的：两条几乎平行的轨道擦过同一个球面之后会张开，张开的角度由碰撞参数的偏差除以球半径决定。粒子在两次碰撞之间飞过 λ，于是位置偏差每碰一次大致乘上 λ/r 这个量级。这就是硬球系统被当作混沌动力系统研究的原因（Sinai 一系工作在环面情形下确立了遍历性与 K 性质；本页是盒壁反射，严格结论要弱一些，但正指数的定性图像相同）。</p>
             <p>另一路反驳来自策梅洛（Zermelo, 1896）：庞加莱回归定理保证有限能量的有界系统迟早回到初态附近，所以 H 必然回升。玻尔兹曼的回答是算了个数——对 1 摩尔气体，回归时间约 10<sup>10<sup>19</sup></sup> 倍宇宙年龄。定理没错，只是与任何观测无关。</p>
@@ -1330,8 +1387,10 @@ const SC={
             </div>
             <div class="cf-verdict" data-cf-verdict aria-live="polite">两条轨道尚未运行。</div>
           </div>`,
-       en(){camTo(1.05,0.16,3.5,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;
-            GAS.reversed=0;trSet(16,80);}},
+       /* 也重放：这一章要先看着 H 掉下去，「反演让它爬回来」才有对照。
+          读者一路读过来时曲线早就躺平了，什么也对照不出来。 */
+       en(){camTo(1.05,0.16,3.5,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=0.6;CAM.spin=0.02;
+            gasInit('same');GAS.running=true;GAS.reversed=0;trSet(16,80);}},
 
       {id:'assumptions',t:'时间之矢到底是从哪一步冒出来的',
        b:`<p class="lede">把上一章的结论说成「时间之矢来自初始条件」就太糙了。更准确的说法是：<b>玻尔兹曼方程本身已经不是时间对称的了</b>——不对称是在<em>推导它的某一步</em>被放进去的。</p>
@@ -1374,6 +1433,12 @@ const SC={
           <p>它们现在的速度正是上次碰撞的产物，彼此高度相关。这类事件叫<b>重碰</b>（recollision），它是分子混沌唯一真正的敌人。</p>
           <p class="watch">画面上现在每闪一下白光，就是一次重碰。<em>数一数，你会发现并不罕见。</em></p>
           <p>读数里的 <b>重碰率</b> 是当场统计的：一对粒子在 3τ 之内再次相撞，就记一次。现在它大约是百分之几。</p>
+          <div class="predict">
+            <p class="pq">先猜一下：把球变小、同时按 N·r² 不变把球变多（气体的平均自由程 λ 不变）。重碰率会怎样？</p>
+            <button type="button" data-pick data-right data-why="会<b>下降</b>，而且大致按 r/λ 线性地趋于零。关键在于 λ 没变而 r 变小了：重碰要求一个粒子被第三者精准地弹回来，撞上一个半径为 r 的目标。目标越小，这种「撞回同一个人」的事就越难发生。这正是 Boltzmann–Grad 极限在做的事——它不是把气体变稀，而是让粒子相对于自由程越来越小。">下降——球小了，撞回同一个人更难</button>
+            <button type="button" data-pick data-why="会<b>下降</b>，而且大致按 r/λ 线性地趋于零。关键在于 λ 没变而 r 变小了：重碰要求一个粒子被第三者精准地弹回来，撞上一个半径为 r 的目标。目标越小，这种「撞回同一个人」的事就越难发生。这正是 Boltzmann–Grad 极限在做的事——它不是把气体变稀，而是让粒子相对于自由程越来越小。">上升——球多了，碰撞总数也多了</button>
+            <button type="button" data-pick data-why="会<b>下降</b>，而且大致按 r/λ 线性地趋于零。关键在于 λ 没变而 r 变小了：重碰要求一个粒子被第三者精准地弹回来，撞上一个半径为 r 的目标。目标越小，这种「撞回同一个人」的事就越难发生。这正是 Boltzmann–Grad 极限在做的事——它不是把气体变稀，而是让粒子相对于自由程越来越小。">不变——λ 没变，气体的性格就没变</button>
+          </div>
           <p class="subh">现在做那个决定性的实验</p>
           <p>在「参数」里打开 <b>Grad 标度锁</b>，然后把半径 r 往小拖：</p>
           <button type="button" class="open-controls" data-open-controls>🔒 打开 Grad 标度锁</button>
@@ -1470,16 +1535,16 @@ const SC={
           <input type="range" id="s_vm" min="0" max="1" step="0.01"></div>
         <p class="ckhint">左端＝球在盒子里的位置，右端＝同一批球画在各自的速度上。中间是连续形变。</p>
       </div>
-      <div class="sep"></div>
       <div class="ckgrp" data-ck="gas">
+        <div class="sep"></div>
         <div class="row"><label>粒子数 N <b id="v_N"></b></label>
           <input type="range" id="s_N" min="60" max="2600" step="20"></div>
         <div class="row"><label>半径 r <b id="v_r"></b></label>
           <input type="range" id="s_r" min="0.016" max="0.07" step="0.001"></div>
         <button class="btn wide" id="b_grad">Grad 标度锁：N·r² 固定</button>
       </div>
-      <div class="sep"></div>
       <div class="ckgrp" data-ck="preset">
+        <div class="sep"></div>
         <div class="hd" style="margin-bottom:9px">低熵初态</div>
         <div class="btns">
           <button class="btn" id="b_corner">全挤在角落</button>
@@ -1488,29 +1553,31 @@ const SC={
           <button class="btn" id="b_hot">冷热两半</button>
         </div>
       </div>
-      <div class="sep"></div>
       <div class="ckgrp" data-ck="run">
+        <div class="sep"></div>
         <div class="row"><label>时间倍速 <b id="v_sp"></b></label>
           <input type="range" id="s_sp" min="0.1" max="4" step="0.1"></div>
         <div class="btns">
           <button class="btn on" id="b_run">暂停</button>
           <button class="btn" id="b_step">单步</button>
+          <button class="btn wide" id="b_replay">↻ 从头重放这一章</button>
         </div>
       </div>
-      <div class="sep"></div>
       <div class="ckgrp" data-ck="rev">
+        <div class="sep"></div>
         <div class="btns">
           <button class="btn" id="b_rev">时间反演</button>
           <button class="btn wide" id="b_early">早期反演（观察 H 回升）</button>
         </div>
       </div>
-      <div class="sep"></div>
       <div class="ckgrp" data-ck="view">
+        <div class="sep"></div>
         <div class="btns">
           <button class="btn" id="b_macro">宏观视角</button>
           <button class="btn" id="b_spin2">自动旋转</button>
         </div>
-      </div>`
+      </div>
+      <button class="ck-toggle" id="b_ckall">显示全部参数</button>`
   }
 };
 
@@ -1636,6 +1703,14 @@ function bindCtrl(name){
       GAS.vmix=+sv.value;syncCtrl();
     };
     $('#b_run').onclick=()=>{GAS.running=!GAS.running;syncCtrl();};
+    /* 重放：拿当前初态重来一遍，并把本章的镜头/形变一起复位。
+       弛豫、Q、H 这几章看的都是「过程」，看漏了得能再看一次。 */
+    $('#b_replay').onclick=()=>{
+      gasInit();GAS.running=true;
+      RECOL.pts.clear();
+      const s=SC.gas.steps[si];s&&s.en&&s.en();
+      syncCtrl();
+    };
     /* 单步：暂停状态下推进一个固定小步长。想看清一次碰撞前后速度怎么换，
        这是唯一办法——连续播放时它一帧就过去了。 */
     $('#b_step').onclick=()=>{
@@ -1668,6 +1743,9 @@ function bindCtrl(name){
     $('#b_hot').onclick=()=>{gasInit('hot');GAS.running=true;syncCtrl();};
     $('#b_macro').onclick=()=>{GAS.mode=GAS.mode==='macro'?'micro':'macro';syncCtrl();};
     $('#b_spin2').onclick=()=>{CAM.spin=CAM.spin?0:0.05;syncCtrl();};
+    /* 默认只摆本章用得上的那几组。全摆出来是 877px 的内容塞进 295px 的面板，
+       读者得滚很久才找得到按钮 —— 体感就是「被截断了」。 */
+    $('#b_ckall').onclick=()=>{document.body.classList.toggle('ctrl-all');syncCtrl();};
   }
 }
 /* 滑块的已填充部分要跟着走 */
@@ -1678,11 +1756,22 @@ function paintRange(el){
 }
 /* 每章真正用得上的控件。面板一次摆十几个东西，读者不知道该碰哪个；
    把本章相关的那组提亮，其余压暗（不是藏起来——想用随时能用）。 */
-/* 有图可看的章节 */
-const CHART_FROM=new Set(['relax','qop','htheorem','loschmidt','assumptions','recollision','fluid','lanford','deng']);
+/* 每章显示哪几张图。原则是一章一张主图，最多再配一张辅图——
+   五张一起堆着的时候，读者的原话是「右边这 3 个图像分别是什么」。 */
+const CHARTS={
+  relax:['mb','wf'],
+  qop:['q','mb'],
+  htheorem:['h','mb'],
+  loschmidt:['h'],
+  assumptions:[],
+  recollision:['recol'],
+  fluid:['prof','h'],
+  lanford:[],
+  deng:['mb']
+};
 const CK={
   one:['run','view'], many:['gas','preset','run'],
-  vspace:['vmix','preset'], relax:['vmix','preset','run'],
+  vspace:['vmix','preset'], relax:['vmix','run','preset'],
   qop:['vmix','preset','run'], htheorem:['vmix','preset','run'],
   loschmidt:['rev','run'], assumptions:['preset','run'],
   recollision:['gas','run'], fluid:['preset','view'],
@@ -1695,6 +1784,12 @@ function syncCtrl(){
     const cid=(SC.gas.steps[si]||{}).id||'';
     const hot=CK[cid]||[];
     $$('#ctrlbody .ckgrp').forEach(g=>g.classList.toggle('ck-dim',hot.length>0&&!hot.includes(g.dataset.ck)));
+    if(e('#b_ckall')){
+      const all=document.body.classList.contains('ctrl-all');
+      const hidden=$$('#ctrlbody .ckgrp.ck-dim').length;
+      e('#b_ckall').textContent=all?'只看本章相关':`显示全部参数（还有 ${hidden} 组）`;
+      e('#b_ckall').style.display=hidden?'':'none';
+    }
     if(e('#v_N')){e('#v_N').textContent=GAS.N;e('#v_r').textContent=GAS.r.toFixed(3);
       e('#v_sp').textContent=GAS.speed.toFixed(1)+'×';}
     if(e('#s_N'))e('#s_N').value=GAS.N;
@@ -1723,7 +1818,7 @@ function hud(items){
 }
 
 /* 图表 */
-const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d'),c3=$('#ch3'),c4=$('#ch4'),c5=$('#ch5');
+const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d'),c3=$('#ch3'),c4=$('#ch4'),c5=$('#ch5'),c6=$('#ch6');
 function fitChart(c,w,h){
   const dpr=Math.min(2,devicePixelRatio||1);
   w=Math.round(w);h=Math.round(h);
@@ -1737,25 +1832,63 @@ function chartW(){
   const w=box?box.clientWidth-30:248;   // 减掉 #charts 左右各 15px 的 padding
   return clamp(w,180,560);
 }
-function updateLiveMB(){
-  const el=document.getElementById('liveMB');
-  if(!el)return;
-  const T=(GAS.vrms*GAS.vrms)/3||0;
-  const a=Math.sqrt(T)||1;          // a = √(k_BT/m)，本页取 m = k_B = 1
+/* 图上方原本挂着两个完整公式 + 六行符号表。用户的原话是「图像上面公式有必要吗」——
+   没有。正文里已经写过一遍，堆在这儿只会让人认不出下面那几张图是什么。
+   换成每张图自己的一行「现在」读数，用大白话说清此刻该注意什么。 */
+
+/* ── 重碰率 vs r/λ ──
+   这张图由读者自己画出来：每把半径拖到一个新位置、等统计稳下来，
+   就在图上落一个点。拖几次之后那条下降的趋势线是他自己连出来的，
+   不是我预先画好摆在那儿的。 */
+const RECOL={pts:new Map()};
+function recolSample(){
   const K=kinetics();
-  el.innerHTML=
-    `<span class="lb">本次实测 · 全部量取 m = k<sub>B</sub> = 1</span>`+
-    `<span class="eqline">速度分布 f(<b>v</b>) = (2πT)<sup>−3/2</sup> e<sup>−<span class="v-amber">v</span>²/2T</sup></span>`+
-    `<span class="eqline">速率分布 F(<span class="v-amber">v</span>) = 4π<span class="v-amber">v</span>²f = √(2/π)·<span class="v-amber">v</span>²T<sup>−3/2</sup>e<sup>−<span class="v-amber">v</span>²/2T</sup></span>`+
-    `<span class="eqnote">图里画的是<b>速率</b>分布 F(v)：多出来的 4πv² 是速度空间球壳的面积，它才是柱子在小 v 处压下去的原因。</span>`+
-    `<div class="eqgrid">`+
-      `<span>T = ⟨v²⟩/3</span><b>${T.toFixed(4)}</b>`+
-      `<span>v<sub>p</sub> = √(2T)</span><b>${(a*Math.SQRT2).toFixed(3)}</b>`+
-      `<span>v̄ = √(8T/π)</span><b>${K.vbar.toFixed(3)}</b>`+
-      `<span>v<sub>rms</sub> = √(3T)</span><b>${(GAS.vrms||0).toFixed(3)}</b>`+
-      `<span>λ = 1/(√2πd²n)</span><b>${K.mfp.toFixed(3)}</b>`+
-      `<span>τ = λ / v̄</span><b>${K.tau.toFixed(3)}</b>`+
-    `</div>`;
+  if(!(K.mfp>0))return;
+  /* 指数窗口里得攒够碰撞，否则记下来的是散粒噪声而不是重碰率 */
+  if(GAS.colRecent<160)return;
+  const key=GAS.r.toFixed(3);
+  const prev=RECOL.pts.get(key);
+  RECOL.pts.set(key,{
+    x:GAS.r/K.mfp,
+    y:prev?prev.y*0.94+GAS.recolRate*0.06:GAS.recolRate,
+    n:(prev?prev.n:0)+1
+  });
+  if(RECOL.pts.size>40){const k0=RECOL.pts.keys().next().value;RECOL.pts.delete(k0);}
+}
+function drawRecol(){
+  const W=chartW(),H=clamp(W*0.50,120,180),x=fitChart(c6,W,H);
+  const padL=34,padB=26,padT=14,padR=10;
+  const gw=W-padL-padR, gh=H-padB-padT;
+  const pts=[...RECOL.pts.values()].filter(p=>p.n>4);
+  const xmax=0.20, ymax=0.09;                 // 覆盖滑块能到的全范围，坐标轴不跟着数据跳
+  const X=v=>padL+clamp(v/xmax,0,1)*gw, Y=v=>padT+gh-clamp(v/ymax,0,1)*gh;
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.beginPath();x.moveTo(padL,padT);x.lineTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
+  x.font='10px ui-monospace,monospace';
+  /* 原点那条虚线：Grad 极限要去的地方就是左下角 */
+  x.setLineDash([3,3]);x.strokeStyle='rgba(111,183,255,.30)';
+  x.beginPath();x.moveTo(X(0),Y(0));x.lineTo(X(xmax),Y(xmax*0.45));x.stroke();x.setLineDash([]);
+  for(const p of pts){
+    x.fillStyle='rgba(111,183,255,.85)';
+    x.beginPath();x.arc(X(p.x),Y(p.y),3.2,0,7);x.fill();
+  }
+  // 当前这一点单独highlight
+  const K=kinetics();
+  if(K.mfp>0&&GAS.recolRate>0){
+    x.strokeStyle='#ffd866';x.lineWidth=2;
+    x.beginPath();x.arc(X(GAS.r/K.mfp),Y(GAS.recolRate),5.5,0,7);x.stroke();
+  }
+  x.fillStyle='rgba(152,162,189,.9)';
+  x.fillText('小球',padL-2,H-8);
+  x.fillText('大球',padL+gw-26,H-8);
+  x.save();x.translate(11,padT+gh*0.5+22);x.rotate(-Math.PI/2);
+  x.fillText('重碰越多 →',0,0);x.restore();
+  x.fillStyle='rgba(111,183,255,.75)';
+  x.fillText('目标：拖到左下角',padL+6,padT+11);
+  if(pts.length<2){
+    x.fillStyle='rgba(255,216,102,.9)';
+    x.fillText('拖「半径 r」滑块，点会自己出现',padL+6,padT+gh*0.5);
+  }
 }
 function drawMB(){
   const W=chartW(),H=clamp(W*0.54,128,190),x=fitChart(c1,W,H);
@@ -1784,11 +1917,12 @@ function drawMB(){
   for(let i=0;i<=120;i++){const v=i/120*GAS.top;const p=cur[i];
     i?x.lineTo(X(v),Y(p)):x.moveTo(X(v),Y(p));}
   x.stroke();
-  updateLiveMB();
-  x.fillStyle='rgba(255,181,71,.95)';x.font='9px ui-monospace,monospace';
-  x.fillText('麦克斯韦–玻尔兹曼',W-104,16);
-  x.fillStyle='rgba(152,162,189,.75)';
-  x.fillText('速率 v →',W-52,H-5);
+  /* 画布内只留必要的锚点：坐标轴的意思卡片标题已经说过了 */
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(255,181,71,.95)';
+  x.fillText('← 理论预言的形状',W-108,15);
+  x.fillStyle='rgba(152,162,189,.7)';
+  x.fillText('慢',12,H-5);x.fillText('快',W-20,H-5);
 }
 /* 演化瀑布图：纵轴是时间（上=现在），横轴是速率，亮度=该速率的粒子占比。
    低熵初态是一条竖亮线，往下（时间推进）逐渐摊成麦氏分布的形状。 */
@@ -1818,12 +1952,13 @@ function drawWF(){
   }
   x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
   x.strokeRect(padL,padT,gw,gh);
-  x.fillStyle='rgba(152,162,189,.8)';x.font='9px ui-monospace,monospace';
-  x.fillText('速率 v →',W-56,H-4);
-  x.save();x.translate(padL-1,padT+gh*0.5);x.rotate(-Math.PI/2);
-  x.fillText('← 时间',-16,-1);x.restore();
-  x.fillStyle='rgba(255,181,71,.9)';
-  x.fillText('现在',padL+3,padT+9);
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(152,162,189,.75)';
+  x.fillText('慢',padL+2,H-4);x.fillText('快',W-20,H-4);
+  x.fillStyle='rgba(255,181,71,.92)';
+  x.fillText('▲ 现在',padL+4,padT+11);
+  x.fillStyle='rgba(152,162,189,.6)';
+  x.fillText('▼ 更早',padL+4,padT+gh-4);
 }
 /* 碰撞算符 Q(f,f) 的实测图：产生项在上、损失项在下，净值是那条实线。
    平衡态下两者逐格相消，实线压在零轴上；弛豫过程中它清楚地指出
@@ -1831,20 +1966,36 @@ function drawWF(){
 function drawQ(){
   const W=chartW(),H=clamp(W*0.44,110,165),x=fitChart(c4,W,H);
   const NB=QB.NB;
-  let mx=1e-9;
-  for(let b=0;b<NB;b++)mx=Math.max(mx,Math.abs(QB.q[b]));
+  /* 纵轴以「散粒噪声」为单位，而不是按当前最大值自动缩放。
+     自动缩放的后果是：平衡态剩下的全是计数噪声，却被拉满整幅画，
+     看上去和弛豫期一样激烈——正文说「接近平衡时压回零轴」就成了假话。
+
+     每格计数是泊松的，涨落尺度 σ = √(总计数/格数)。40 格里取最大值，
+     纯噪声下典型就是 2.5σ（实测平衡时 2.5，弛豫早期 14）。
+     所以把 2.5σ 画成一条带子：躺进去 = 和平衡没有区别。 */
+  let den=0;
+  for(let b=0;b<NB;b++)den+=QB.gAcc[b]+QB.lAcc[b];
+  const sig=Math.sqrt(Math.max(den,1)/NB);
+  const mx=16*sig, band=2.5*sig;
   const padL=10,padB=15,padT=10;
   const gw=W-padL-8, gh=H-padB-padT;
   const y0=padT+gh*0.5;                       // 零轴在中间
   const X=b=>padL+(b+0.5)/NB*gw;
-  const Y=v=>y0-(v/mx)*(gh*0.46);
+  const Y=v=>y0-clamp(v/mx,-1,1)*(gh*0.46);
   // 零轴
+  /* 噪声带：曲线整个躺进去，就说明剩下的只是计数涨落 */
+  const bh=(band/mx)*(gh*0.46);
+  x.fillStyle='rgba(255,255,255,.07)';
+  x.fillRect(padL,y0-bh,W-8-padL,bh*2);
+  x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;x.setLineDash([2,3]);
+  x.beginPath();x.moveTo(padL,y0-bh);x.lineTo(W-8,y0-bh);
+  x.moveTo(padL,y0+bh);x.lineTo(W-8,y0+bh);x.stroke();x.setLineDash([]);
   x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;
   x.beginPath();x.moveTo(padL,y0);x.lineTo(W-8,y0);x.stroke();
   // 柱：正=产生占优（该速率在被填充），负=损失占优（在被清空）
   const bw=gw/NB;
   for(let b=0;b<NB;b++){
-    const v=QB.q[b];if(Math.abs(v)<mx*0.012)continue;
+    const v=QB.q[b];if(Math.abs(v)<mx*0.02)continue;
     const yy=Y(v);
     x.fillStyle=v>0?'rgba(92,208,179,.75)':'rgba(252,98,85,.72)';
     x.fillRect(X(b)-bw*0.42,Math.min(y0,yy),Math.max(1,bw*0.84),Math.abs(yy-y0));
@@ -1852,10 +2003,12 @@ function drawQ(){
   x.strokeStyle='rgba(255,181,71,.9)';x.lineWidth=1.6;x.beginPath();
   for(let b=0;b<NB;b++){const px=X(b),py=Y(QB.q[b]);b?x.lineTo(px,py):x.moveTo(px,py);}
   x.stroke();
-  x.font='9px ui-monospace,monospace';
-  x.fillStyle='rgba(92,208,179,.95)';x.fillText('+ 产生',padL+2,padT+8);
-  x.fillStyle='rgba(252,98,85,.95)';x.fillText('− 损失',padL+2,H-padB+11);
-  x.fillStyle='rgba(152,162,189,.8)';x.fillText('速率 v →',W-56,y0-4);
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(92,208,179,.95)';x.fillText('↑ 这个速率的球在变多',padL+2,padT+9);
+  x.fillStyle='rgba(252,98,85,.95)';x.fillText('↓ 在变少',padL+2,H-padB+12);
+  x.fillStyle='rgba(255,255,255,.36)';x.fillText('灰带内＝只剩统计噪声',W-134,y0+bh+11);
+  x.fillStyle='rgba(152,162,189,.7)';
+  x.fillText('慢',padL+1,y0-4);x.fillText('快',W-22,y0-4);
 }
 /* 温度剖面 T(x)：当前那条画实线，过去若干条淡出叠在后面。
    冷热两半松手后，能看到台阶被抹成一条平线——热传导方程在动。 */
@@ -1890,19 +2043,26 @@ function drawProfile(){
     b?x.lineTo(X(b),py):x.moveTo(X(b),py);
   }
   x.strokeStyle='#ffb547';x.stroke();
-  x.font='9px ui-monospace,monospace';
-  x.fillStyle='rgba(152,162,189,.85)';
-  x.fillText('T',6,padT+9);
-  x.fillText('x →',W-30,H-4);
-  x.fillStyle='rgba(255,181,71,.95)';
-  x.fillText(`对比度 ${(PROF.contrast*100).toFixed(0)}%`,padL+4,padT+10);
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(252,98,85,.9)';x.fillText('热',6,padT+10);
+  x.fillStyle='rgba(88,196,221,.9)';x.fillText('冷',6,padT+gh);
+  x.fillStyle='rgba(152,162,189,.7)';
+  x.fillText('盒子左端',padL,H-4);x.fillText('右端',W-34,H-4);
 }
 function heatCss(T){const c=heat(clamp((T-0.2)/1.4,0,1));
   return `rgb(${Math.round(c[0]*255)},${Math.round(c[1]*255)},${Math.round(c[2]*255)})`;}
 function drawH(){
-  const W=chartW(),H=clamp(W*0.31,76,120),x=fitChart(c2,W,H);
+  const W=clamp(chartW(),180,560),H=clamp(W*0.34,86,132),x=fitChart(c2,W,H);
   const A=GAS.H;if(A.length<2)return;
-  let mn=1e9,mx=-1e9;for(const v of A){mn=Math.min(mn,v);mx=Math.max(mx,v);}
+  /* 纵轴锚在「初始 H」和「本次跑到过的最低点」之间，不按当前窗口自动缩放。
+     自动缩放的后果是：到了平衡，剩下的只有涨落，却被拉满整幅画——
+     标题问「有没有一个只往一个方向走的量」，图上却是一条剧烈震荡的线，
+     等于自己反驳自己。锚死之后，平衡就是贴在底部的一条平线。 */
+  if(GAS.H0===null||GAS.H0===undefined)GAS.H0=A[0];
+  let mn=1e9,mx=GAS.H0;
+  for(const v of A){mn=Math.min(mn,v);mx=Math.max(mx,v);}
+  if(GAS.Hfloor===undefined||GAS.Hfloor===null||mn<GAS.Hfloor)GAS.Hfloor=mn;
+  mn=GAS.Hfloor;
   if(mx-mn<1e-6){mx+=0.5;mn-=0.5;}
   const pad=(mx-mn)*0.16;mn-=pad;mx+=pad;
   const X=i=>8+i/(A.length-1)*(W-14), Y=v=>H-14-((v-mn)/(mx-mn))*(H-24);
@@ -1915,11 +2075,21 @@ function drawH(){
     x.fillStyle='rgba(255,216,102,.9)';x.font='9px ui-monospace,monospace';
     x.fillText('反演',Math.min(rx+3,W-30),20);
   }
+  /* 起点与终点两条参照线：一眼看出「从这儿掉到了那儿，然后不动了」 */
+  x.strokeStyle='rgba(255,255,255,.13)';x.setLineDash([2,4]);x.lineWidth=1;
+  x.beginPath();x.moveTo(8,Y(GAS.H0));x.lineTo(W-6,Y(GAS.H0));x.stroke();
+  x.beginPath();x.moveTo(8,Y(GAS.Hfloor));x.lineTo(W-6,Y(GAS.Hfloor));x.stroke();
+  x.setLineDash([]);
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(255,255,255,.34)';
+  x.fillText('出发',W-34,Y(GAS.H0)-4);
+  x.fillText('最低',W-34,Y(GAS.Hfloor)+12);
   const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#ffd866');g.addColorStop(1,'#ffb547');
   x.strokeStyle=g;x.lineWidth=1.8;x.beginPath();
   A.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.stroke();
-  x.fillStyle='rgba(154,165,189,.8)';x.font='9px ui-monospace,monospace';
-  x.fillText('H(t)',10,12);
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(154,165,189,.7)';
+  x.fillText('早',10,H-3);x.fillText('现在',W-32,H-3);
 }
 /* 碰撞树：Duhamel 展开的第 n 项，就是所有「n 次碰撞的历史」之和。
    树的分支数按 n! 爆炸，只有 t 小到能被 1/n! 压住，级数才收敛 —— 这就是 0.2τ 的来历。
@@ -2076,30 +2246,68 @@ function frame(now){
      }}
     /* 图表从「壳塌成麦氏分布」那一章起才有意义。按 id 判断，不按序号——
        改章节顺序时序号会错位，id 不会。 */
-    if(CHART_FROM.has(id)){
+    const want=CHARTS[id]||[];
+    if(want.length){
       const box=$('#charts');
-      box.classList.add('show');
+      box.classList.add('show');document.body.classList.add('has-charts');
+      /* 只留本章用得上的那几张。以前是五张一起堆着，谁也认不出谁。 */
+      /* 显示顺序跟着 CHARTS 数组走：主图排最前。DOM 顺序是固定的，
+         不设 order 的话「本章主图」可能被辅图压在下面。 */
+      $$('#charts .ckd').forEach(s=>{
+        const k=want.indexOf(s.dataset.chart);
+        s.style.display=k<0?'none':'';
+        s.style.order=k;
+      });
+      /* 采样必须在可见性判断之外：手机上读者是在「参数」档拖滑块的，
+         那时图表面板是隐藏的，放在里面就一个点也记不到。 */
+      if(want.includes('recol'))recolSample();
       const visible=box.offsetParent!==null;
       if(visible&&(chartTick++%3)===0){
-        drawMB();
-        $('#cap1').textContent='速率分布 · 柱=实测，红线=理论';
-        $('#cap3').textContent='速率分布的演化 · 上=现在，往下是过去';
-        drawWF();
-        $('#cap4').textContent='碰撞算符 Q(f,f) 实测 · 产生 − 损失';
-        drawQ();
-        /* 温度剖面只在流体那一章有意义，其余章节收起来 */
-        const showProf=(id==='fluid');
-        $('#cap5').style.display=showProf?'':'none';
-        c5.style.display=showProf?'':'none';
-        if(showProf){$('#cap5').textContent='温度剖面 T(x) · 淡线是过去，看台阶被抹平';drawProfile();}
-        /* 冷热两半时空间不均匀，此处 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
-        $('#cap2').textContent=(GAS.preset==='hot')
-          ?'H 函数 · 全局速率分布（此时空间不均匀）'
-          :'玻尔兹曼 H 函数（只减不增）';
-        drawH();
+        const T=(GAS.vrms*GAS.vrms)/3||0, a=Math.sqrt(T)||1;
+        if(want.includes('mb')){
+          drawMB();
+          /* 一行大白话读数，代替原来那面公式墙 */
+          $('#now_mb').textContent=QB.net>0.12
+            ? `现在还在变形中：柱子还没贴上红线`
+            : `现在已经贴住理论曲线了　·　最常见的速率约 ${(a*Math.SQRT2).toFixed(2)}`;
+        }
+        if(want.includes('wf')){
+          drawWF();
+          $('#now_wf').textContent=GAS.preset==='hot'
+            ? '「冷热两半」起手是两条亮线，看它们并成一条'
+            : GAS.preset==='beam'
+            ? '「同向束流」起手也是一条线，但方向也有序，摊得更慢'
+            : '起手是一条竖直亮线（所有球同速率），往上逐渐摊开';
+        }
+        if(want.includes('q')){
+          drawQ();
+          $('#now_q').textContent=`离平衡还有 ${(QB.net*100).toFixed(0)}%　·　`+
+            (QB.net<0.08?'曲线已经压回零轴，这就是麦克斯韦分布':'红色那格在被搬空，绿色那格在被填上');
+        }
+        if(want.includes('prof')){
+          drawProfile();
+          $('#now_prof').textContent=`温差还剩 ${(PROF.contrast*100).toFixed(0)}%　·　`+
+            (PROF.contrast<0.15?'台阶基本抹平了':'看棱角先被磨圆，再整体塌下去');
+        }
+        if(want.includes('recol')){
+          drawRecol();
+          const n=[...RECOL.pts.values()].filter(p=>p.n>4).length;
+          $('#now_recol').textContent=n<2
+            ? '还没有点　·　打开「Grad 标度锁」再拖半径，效果最干净'
+            : `已记下 ${n} 个半径　·　当前重碰率 ${(GAS.recolRate*100).toFixed(1)}%`;
+        }
+        if(want.includes('h')){
+          drawH();
+          /* 冷热两半时空间不均匀，这条 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
+          $('#now_h').textContent=GAS.preset==='hot'
+            ? '注意：这半盒热半盒冷，空间不均匀，这条线不是 H 定理里的那个 H'
+            : GAS.reversed
+            ? `刚做过反演：H 从 ${GAS.revH.toFixed(3)} 回升到 ${GAS.revPeak.toFixed(3)}`
+            : '它只降不升。降到底那一刻，就是麦克斯韦分布';
+        }
       }
     }
-    else $('#charts').classList.remove('show');
+    else {$('#charts').classList.remove('show');document.body.classList.remove('has-charts');}
     const GL2_=[];
     if(id==='fluid'){
       GL2_.push({p:[-0.55,1.22,0],t:'热（快）',c:'#fc6255',dot:1});
@@ -2128,7 +2336,7 @@ function frame(now){
     }
     labels(GL2_);
     }else{
-      $('#charts').classList.remove('show');
+      $('#charts').classList.remove('show');document.body.classList.remove('has-charts');
       labels([]);
     }
   }
