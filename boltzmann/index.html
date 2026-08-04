@@ -82,7 +82,10 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
    纯 CSS，不依赖任何测量或主循环 —— 视口再矮也压不到读数上。 */
 #story{left:22px;top:74px;bottom:112px;width:min(352px,calc(48vw - 30px));
   padding:20px 20px 18px;display:flex;flex-direction:column;overflow:hidden}
-#story .step{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--dim2);margin-bottom:9px}
+#story .step{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--dim2);margin-bottom:9px}
+#story .step .act{color:var(--amber);letter-spacing:.12em}
+#story .step .count{flex:none;letter-spacing:.16em}
 #story h2{font-family:var(--serif);font-size:26px;line-height:1.28;font-weight:600;margin-bottom:12px;letter-spacing:.01em}
 #story .body{font-size:13.5px;line-height:1.85;color:#c3cbe0;overflow-y:auto;flex:1;padding-right:6px}
 #story .body p{margin-bottom:11px}
@@ -130,12 +133,15 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 .g #story .body em{border-color:rgba(255,196,87,.5)}
 
 #nav2{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-#dots{display:flex;gap:5px;flex:1;min-width:0}
-#dots i{flex:1 1 0;min-width:6px;max-width:22px;height:3px;border-radius:2px;
-  background:rgba(255,255,255,.14);cursor:pointer;transition:.3s}
-#dots i:hover{background:rgba(255,255,255,.34)}
-#dots i.on{background:var(--k1);box-shadow:0 0 10px rgba(94,231,255,.6)}
-.g #dots i.on{background:var(--g1);box-shadow:0 0 10px rgba(255,196,87,.6)}
+#dots{display:flex;gap:10px;flex:1;min-width:0}
+#dots .dot-act{display:flex;gap:4px;flex:1;min-width:0}
+#dots button{position:relative;flex:1 1 0;min-width:6px;max-width:22px;height:20px;
+  padding:0;border:0;background:transparent;color:var(--dim2);cursor:pointer}
+#dots button::after{content:'';position:absolute;left:0;right:0;top:8px;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.14);transition:background .3s,box-shadow .3s}
+#dots button:hover::after{background:rgba(255,255,255,.34)}
+#dots button.on::after{background:var(--k1);box-shadow:0 0 10px rgba(94,231,255,.6)}
+.g #dots button.on::after{background:var(--g1);box-shadow:0 0 10px rgba(255,196,87,.6)}
 .nbtn{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--ink);
   width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:13px;transition:.2s;
   display:grid;place-items:center;flex:none}
@@ -345,14 +351,15 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   </p>
   <div id="cards">
     <div class="card gg" data-go="gas" style="width:520px">
-      <div class="who"><h3>开始互动演示 ↗</h3><span>7 章 · 约 8 分钟</span></div>
+      <div class="who"><h3>开始互动演示 ↗</h3><span>3 幕 · 12 步</span></div>
       <div class="tag">希尔伯特第六问题</div>
       <p class="prob">观察粒子碰撞、速率分布与 H 函数，再亲手反转速度，看看微观可逆与宏观不可逆如何同时成立。</p>
       <div class="go">进入演示 →</div>
     </div>
   </div>
   <p class="foot">
-    7 章 · 约 8 分钟 · 可以拖动、调节参数和反转时间
+    可逆的粒子 → 时间之箭 → 从模型到定理<br>
+    3 幕 · 12 步 · 主线约 25 分钟 · 含推导约 35 分钟
   </p>
 </section>
 
@@ -362,7 +369,7 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   <h2 id="sttitle"></h2>
   <div class="body" id="stbody"></div>
   <div id="nav2">
-    <div id="dots"></div>
+    <div id="dots" role="navigation" aria-label="文章步骤"></div>
     <button class="nbtn" id="prev">‹</button>
     <button class="nbtn" id="next">›</button>
   </div>
@@ -1190,6 +1197,15 @@ function gasRender(){
 /* =====================================================================
    4. 剧本
    ===================================================================== */
+/* 三幕不是装饰标题，而是读者的论证地图：先建立可逆模型，再定位时间之箭，
+   最后才讨论从模型到定理。进度条也按这三个认知任务分组。 */
+const ACTS=[
+  {k:'第一幕',t:'可逆的粒子',start:0,end:4},
+  {k:'第二幕',t:'时间之箭',start:4,end:8},
+  {k:'第三幕',t:'从模型到定理',start:8,end:12}
+];
+function actForStep(i){return ACTS.find(a=>i>=a.start&&i<a.end)||ACTS[ACTS.length-1];}
+
 const SC={
   gas:{
     color:'g',
@@ -1668,17 +1684,35 @@ function setScene(name){
   if(name==='gas'&&!GAS.px)gasInit('same');
 }
 function buildDots(){
-  const n=SC[scene].steps.length;
-  $('#dots').innerHTML=Array.from({length:n},(_,i)=>`<i data-i="${i}"></i>`).join('');
-  $$('#dots i').forEach(e=>e.onclick=()=>gotoStep(+e.dataset.i));
+  const S=SC[scene].steps;
+  $('#dots').innerHTML=ACTS.map(act=>
+    `<span class="dot-act" aria-label="${act.k}：${act.t}">${Array.from({length:act.end-act.start},(_,j)=>{
+      const i=act.start+j;
+      return `<button type="button" data-i="${i}" aria-label="第 ${i+1} 步：${S[i].t}"></button>`;
+    }).join('')}</span>`
+  ).join('');
+  $$('#dots button').forEach(e=>e.onclick=()=>gotoStep(+e.dataset.i));
   markDots();
 }
-function markDots(){$$('#dots i').forEach((e,i)=>e.classList.toggle('on',i===si));}
+function markDots(){$$('#dots button').forEach((e,i)=>{
+  const on=i===si;e.classList.toggle('on',on);
+  if(on)e.setAttribute('aria-current','step');else e.removeAttribute('aria-current');
+});}
+/* 章节圆点允许跳读，所以每一步必须从一份可信的基线开始。
+   以前从第 1 步直接点到第 3/6/10 步，会继承 N=1：正文说 500 个球，
+   屏幕上却只有一个。镜头复位不等于模型复位。 */
+function resetGasChapterState(){
+  GAS.N=520;GAS.r=0.045;GAS.gradLock=false;GAS.single=false;
+  GAS.mode='micro';GAS.speed=1;GAS.running=true;
+  gasInit('same');
+}
 function gotoStep(i){
   const S=SC[scene].steps;si=clamp(i,0,S.length-1);
   const s=S[si];
   clearShow();
-  $('#stepno').textContent=`${String(si+1).padStart(2,'0')} / ${String(S.length).padStart(2,'0')}`;
+  const act=actForStep(si);
+  $('#stepno').innerHTML=`<span class="act">${act.k} · ${act.t}</span><span class="count">${String(si+1).padStart(2,'0')} / ${String(S.length).padStart(2,'0')}</span>`;
+  $('#stepno').setAttribute('aria-label',`${act.k} ${act.t}，第 ${si+1} 步，共 ${S.length} 步`);
   $('#sttitle').textContent=s.t;
   $('#stbody').innerHTML=s.b;
   $('#stbody').scrollTop=0;
@@ -1688,6 +1722,7 @@ function gotoStep(i){
      翻到后面几章画面就是错的。宁可每章从同一个零点重新出发。
      只有 vmix 例外——它是连续形变，硬切回去就把「同一批粒子换个空间看」
      这层意思弄丢了。所以让每章自己声明目标，没声明的才淡回位置空间。 */
+  resetGasChapterState();
   trSet(0,0);
   if(GAS.flash)GAS.flash.fill(0);
   GAS.vmixSet=false;

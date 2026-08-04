@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const html = await readFile(join(root, "boltzmann/index.html"), "utf8");
 const shell = await readFile(join(root, "article-shell.js"), "utf8");
+const work = JSON.parse(await readFile(join(root, "boltzmann/work.json"), "utf8"));
 
 /* ---- 从页面里取出真正在跑的那几段代码，保证测的就是线上的实现 ---- */
 const grab = (name, kind = "function") => {
@@ -945,6 +946,21 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   check("第 2 章把粒子数加回来", m2 && /GAS\.N=\d{2,}/.test(m2[1]),
     "第 2 章没设 N，会继承上一章的 1 个球");
 
+  /* 不能只修「下一步」：圆点本来就允许任意跳转。过去从第 1 步直跳第 3、6、10 步，
+     后面所有画面都继承 N=1。抽出页面真正调用的基线函数，污染一次状态再验。 */
+  const resetSrc = grab("resetGasChapterState");
+  const reset = new Function("GAS", "gasInit", `${resetSrc}; return resetGasChapterState;`)(GAS, M.gasInit);
+  GAS.N=1;GAS.r=0.07;GAS.gradLock=true;GAS.single=true;GAS.mode="macro";GAS.speed=0.2;GAS.preset="hot";
+  reset();
+  check("任意跳章都会恢复 520 个球", GAS.N===520 && GAS.px.length===520,
+    `N=${GAS.N}, 数组长度=${GAS.px.length}`);
+  check("任意跳章都会恢复模型基线", GAS.r===0.045 && !GAS.gradLock && !GAS.single && GAS.mode==="micro" && GAS.speed===1 && GAS.preset==="same",
+    JSON.stringify({r:GAS.r,gradLock:GAS.gradLock,single:GAS.single,mode:GAS.mode,speed:GAS.speed,preset:GAS.preset}));
+  const gotoSrc = grab("gotoStep");
+  check("模型复位发生在章节 en() 之前",
+    gotoSrc.indexOf("resetGasChapterState()")>=0 && gotoSrc.indexOf("resetGasChapterState()")<gotoSrc.indexOf("s.en&&s.en()"),
+    "gotoStep 没有先复位模型再进入章节");
+
   /* 模拟的近似之处必须写在文章里，不能只在代码注释里 */
   const text2 = html.replace(/<[^>]+>/g, "");
   check("文章交代了「按时间步长推进，不是事件驱动」",
@@ -961,6 +977,18 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   const ids = [...html.matchAll(/\{id:'([a-z]+)',t:'/g)].map(m => m[1]);
   const want = ["one","many","vspace","relax","qop","htheorem","loschmidt","assumptions","recollision","fluid","lanford","deng"];
   check("章节 id 齐全且顺序正确", JSON.stringify(ids) === JSON.stringify(want), JSON.stringify(ids));
+  check("文章元数据与真实步骤数一致", work.chapters===ids.length,
+    `work.json 写 ${work.chapters}，正文实际 ${ids.length}`);
+  check("首页不再承诺不可能的 8 分钟", !html.includes("约 8 分钟") && work.duration!=="8 分钟",
+    `${work.chapters} 章 / ${work.duration}`);
+  const acts = [...html.matchAll(/\{k:'第[一二三四]幕',t:'[^']+',start:(\d+),end:(\d+)\}/g)]
+    .map(m => [+m[1],+m[2]]);
+  check("三幕无缝覆盖全部 12 步",
+    JSON.stringify(acts)===JSON.stringify([[0,4],[4,8],[8,12]]), JSON.stringify(acts));
+  const dotSrc = grab("buildDots");
+  check("进度点是可键盘操作的原生按钮",
+    /<button type="button"/.test(dotSrc) && /aria-label=/.test(dotSrc) && !/\$\$\('#dots i'\)/.test(html),
+    "仍在用不可聚焦的 i 元素充当章节按钮");
   for (const id of ["lanford","recollision","fluid","loschmidt","many","vspace"]) {
     check(`帧循环引用了 ${id}`, html.includes(`id==='${id}'`) || html.includes(`id==='${id}'`), "未引用");
   }
