@@ -9,16 +9,21 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const pages = ["boltzmann", "kakeya", "optimization", "reaction-diffusion"];
+const pages = ["boltzmann", "kakeya", "cosmic-web", "optimization", "reaction-diffusion"];
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 
-/* 这些站点用 JS/Cookie 挡机器人，人工用真实浏览器确认过可访问 */
-const KNOWN_BOT_WALLED = ["zhuanlan.zhihu.com"];
+/* 这些站点用 JS/Cookie 挡机器人，人工用真实浏览器确认过可访问。
+   ADS 对裸请求回 202（已受理）而不是 200，属于同一类。 */
+const KNOWN_BOT_WALLED = ["zhuanlan.zhihu.com", "ui.adsabs.harvard.edu"];
+/* 本站自己的 canonical 自链不算外链：新页面在首次部署之前必然 404，
+   拿它当断链报警只会制造噪声。部署后的可达性由发布验证那一步负责。 */
+const SELF = "viz.gopromp.com";
 
 const urls = new Map();
 for (const page of pages) {
   const html = await readFile(join(root, page, "index.html"), "utf8");
   for (const m of html.matchAll(/href="(https?:\/\/[^"]+)"/g)) {
+    if (new URL(m[1]).host.endsWith(SELF)) continue;
     if (!urls.has(m[1])) urls.set(m[1], []);
     urls.get(m[1]).push(page);
   }
@@ -44,7 +49,7 @@ for (const [url, where] of urls) {
   let st = await probe(url, false);
   if (st !== 200) st = await probe(url, true);
   const host = new URL(url).host;
-  const ok = st === 200;
+  const ok = st === 200 || st === 202;
   const known = KNOWN_BOT_WALLED.some(h => host.endsWith(h));
   results.push({ url, status: st, pages: [...new Set(where)].join(",") });
   if (!ok) (known ? walled : bad).push(`${st}  ${url}  [${[...new Set(where)].join(",")}]`);

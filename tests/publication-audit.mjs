@@ -17,7 +17,8 @@ const works = [
   { slug: "optimization", method: "可探索论文" },
   { slug: "boltzmann", method: "反事实分屏" },
   { slug: "reaction-diffusion", method: "生成式场景" },
-  { slug: "kakeya", method: "证明侦探片" }
+  { slug: "kakeya", method: "证明侦探片" },
+  { slug: "cosmic-web", method: "从初条件长出来" }
 ];
 
 const home = await readFile("index.html", "utf8");
@@ -80,7 +81,7 @@ for (const { slug, method } of works) {
   }
 
   /* 页面里不许再出现手写的日期式版本号 —— 那正是会忘记更新的那种 */
-  for (const dir of ["boltzmann", "kakeya"]) {
+  for (const dir of ["boltzmann", "kakeya", "cosmic-web"]) {
     const page = await readFile(new URL(`../${dir}/index.html`, import.meta.url), "utf8");
     const stamps = [...page.matchAll(/(?:article\.css|article-shell\.js)\?v=([^"']*)/g)].map((m) => m[1]);
     if (!stamps.length) {

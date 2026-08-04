@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const pages = ["boltzmann", "kakeya", "optimization", "reaction-diffusion"];
+const pages = ["boltzmann", "kakeya", "cosmic-web", "optimization", "reaction-diffusion"];
 const shared = ["article-shell.js"];
 const fail = [];
 const report = [];

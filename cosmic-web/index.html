@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d11">
+<title>横跨上亿光年的那张网，是从哪来的？— VIZ</title>
+<meta name="description" content="今天星系排成的纤维与空洞，来自 138 亿年前一次量子抖动。用可交互的粒子-网格 N-body 从原初功率谱出发，亲手把宇宙网长出来，并当场核对增长因子与理论。">
+<link rel="canonical" href="https://viz.gopromp.com/cosmic-web/">
+<link rel="icon" href="../favicon.png" type="image/png">
+<meta property="og:title" content="横跨上亿光年的那张网，是从哪来的？">
+<meta property="og:description" content="一次量子抖动，被暴胀吹到一亿光年，再被引力放大四万倍。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://viz.gopromp.com/cosmic-web/">
+<style>
+:root{
+  /* 热力学读数台：炭黑机身、琥珀读数、冷暖速率色标 */
+  --bg:#0d0b09; --bg2:#17130f;
+  --ink:#f6f1e8; --dim:#b3a794; --dim2:#7d7264;
+  --line:rgba(246,241,232,.12);
+  --glass:rgba(246,241,232,.045);
+  --amber:#ffb547;   /* 主读数 */
+  --hot:#fc6255;     /* 快 / 热 */
+  --cold:#58c4dd;    /* 慢 / 冷 */
+  --teal:#5cd0b3;
+  --grn:#83c167;
+  --yel:#ffd866;
+  --org:#f0ac5f;
+  --red:#fc6255;
+  --pur:#9a72ac;
+  --b3b:#58c4dd;
+  --k1:#58c4dd; --k2:#9a72ac;      /* 王虹 · 挂谷 */
+  --g1:#ffd866; --g2:#fc6255;      /* 邓煜 · 玻尔兹曼 */
+  --ok:#5cd0b3;
+  --serif:"Songti SC","Source Han Serif SC","Noto Serif SC",Georgia,serif;
+  --sans:"PingFang SC","Noto Sans SC","Hiragino Sans GB",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--sans);
+  overflow:hidden; -webkit-font-smoothing:antialiased;
+  font-feature-settings:"tnum";
+}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+#vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 0%,transparent 40%,rgba(0,0,0,.55) 100%)}
+#labels{position:fixed;inset:0;z-index:3;pointer-events:none}
+.lbl{position:absolute;transform:translate(-50%,-50%);font-size:12px;letter-spacing:.04em;
+  padding:3px 9px;border-radius:20px;white-space:nowrap;backdrop-filter:blur(8px);
+  background:rgba(8,10,20,.62);border:1px solid var(--line);color:var(--ink);
+  transition:opacity .35s;font-family:var(--mono)}
+.lbl.dot::before{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;
+  background:currentColor;margin-right:7px;vertical-align:1px}
+
+/* ---------- 顶栏 ---------- */
+#top{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;gap:18px;
+  padding:14px 22px;background:linear-gradient(180deg,rgba(5,6,13,.92),rgba(5,6,13,0));pointer-events:none}
+#brand{pointer-events:auto;font-family:var(--serif);font-size:15px;letter-spacing:.14em;color:var(--ink);
+  cursor:pointer;display:flex;align-items:baseline;gap:10px;flex:none}
+#brand a{color:var(--dim2);text-decoration:none;font-size:15px;transition:.2s;font-family:var(--mono)}
+#brand a:hover{color:var(--ink)}
+#brand b{font-weight:600}
+#brand span{font-size:11px;color:var(--dim2);letter-spacing:.2em;font-family:var(--mono)}
+#nav{pointer-events:auto;display:flex;gap:4px;margin-left:auto;background:var(--glass);
+  border:1px solid var(--line);border-radius:999px;padding:4px;backdrop-filter:blur(14px)}
+#nav button{background:none;border:0;color:var(--dim);font:inherit;font-size:12.5px;
+  padding:7px 15px;border-radius:999px;cursor:pointer;transition:.22s;letter-spacing:.03em;white-space:nowrap}
+#nav button:hover{color:var(--ink)}
+#nav button.on{background:rgba(255,255,255,.10);color:var(--ink)}
+#nav button.on.k{box-shadow:inset 0 0 0 1px rgba(94,231,255,.35);color:var(--k1)}
+#nav button.on.g{box-shadow:inset 0 0 0 1px rgba(255,196,87,.35);color:var(--g1)}
+
+/* ---------- 通用面板 ---------- */
+.panel{position:fixed;z-index:10;background:rgba(9,11,20,.72);border:1px solid var(--line);
+  border-radius:4px;backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.hd{font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:var(--dim2);text-transform:uppercase}
+
+/* 左：讲解 */
+/* 上下双向锚定：下边界固定留出左下角 HUD 的高度（约 68px）加间距。
+   纯 CSS，不依赖任何测量或主循环 —— 视口再矮也压不到读数上。 */
+#story{left:22px;top:74px;bottom:112px;width:min(352px,calc(48vw - 30px));
+  padding:20px 20px 18px;display:flex;flex-direction:column;overflow:hidden}
+#story .step{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--dim2);margin-bottom:9px}
+#story .step .act{color:var(--amber);letter-spacing:.12em}
+#story .step .count{flex:none;letter-spacing:.16em}
+#story h2{font-family:var(--serif);font-size:26px;line-height:1.28;font-weight:600;margin-bottom:12px;letter-spacing:.01em}
+#story .body{font-size:13.5px;line-height:1.85;color:#c3cbe0;overflow-y:auto;flex:1;padding-right:6px}
+#story .body p{margin-bottom:11px}
+#story .body em{color:var(--ink);font-style:normal;border-bottom:1px solid rgba(255,255,255,.22);padding-bottom:1px}
+#story .body b{color:#fff;font-weight:600}
+#story .body .fml{display:block;text-align:center;font-family:var(--mono);font-size:13px;color:var(--ink);
+  margin:12px 0;padding:11px;background:rgba(255,255,255,.04);border-radius:9px;letter-spacing:.02em}
+#story .body .tbar{margin:14px 0;padding:13px 13px 10px;background:rgba(255,255,255,.04);border-radius:10px}
+.tbar-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;font-size:11px;color:var(--dim)}
+.tbar-row>span:first-child{width:88px;flex:none;font-size:11px}
+.tbar .tt{flex:1;height:7px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.tbar .tt i{display:block;height:100%;background:#ff6b6b;border-radius:4px}
+.tbar .tt i.full{background:linear-gradient(90deg,var(--g1),var(--ok));box-shadow:0 0 12px rgba(91,230,168,.5)}
+.tbar .tv{width:26px;flex:none;text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--ink)}
+.tbar .tcap{font-size:10px;color:var(--dim2);margin-top:2px}
+/* 小节标题：长章节需要分段，否则在手机上就是一堵墙 */
+#story .body .subh{margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--line);
+  font-size:13px;font-weight:650;color:var(--amber);letter-spacing:.02em}
+/* 假设台账：把玻尔兹曼方程依赖的四条假设摊开，标出哪一条不是时间对称的 */
+.axioms{display:grid;gap:8px;margin:14px 0 16px}
+.ax{padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.035)}
+.ax-h{display:flex;align-items:baseline;gap:9px;margin-bottom:6px}
+.ax-h span{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--dim2);
+  border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.ax-h b{color:#fff;font-size:12.5px;font-weight:650}
+#story .body .ax p{margin:0 0 5px;font-size:12px;line-height:1.72;color:#b3bccd}
+.ax .axf{display:block;text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink);
+  margin:7px 0;padding:8px;background:rgba(0,0,0,.28);border-radius:6px}
+#story .body .ax .ax-v{margin:6px 0 0;padding-top:6px;border-top:1px dashed rgba(255,255,255,.1);
+  font-size:11px;color:var(--ok)}
+#story .body .ax .ax-break{color:var(--hot)}
+.ax-hot{border-color:rgba(252,98,85,.45);background:rgba(252,98,85,.07)}
+/* 碰撞树示意图 */
+.treewrap{margin:12px 0 14px;padding:10px;border:1px solid var(--line);border-radius:9px;
+  background:rgba(0,0,0,.26)}
+.treewrap canvas{display:block;width:100%}
+/* 数字出处的旁注：正文里凡是引了别人一个具体数字，就地说明它从哪来 */
+#story .body .srcnote{margin:13px 0;padding:11px 12px;border-left:2px solid var(--amber);
+  background:rgba(255,181,71,.07);border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.8;color:#b9c1d4}
+#story .body .srcnote b{color:var(--amber)}
+#story .body ul{margin:0 0 11px 2px;list-style:none}
+#story .body li{padding-left:15px;position:relative;margin-bottom:6px}
+#story .body li::before{content:'';position:absolute;left:0;top:9px;width:5px;height:1px;background:var(--dim2)}
+.k #story .body em{border-color:rgba(94,231,255,.5)}
+.g #story .body em{border-color:rgba(255,196,87,.5)}
+
+#nav2{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+#dots{display:flex;gap:10px;flex:1;min-width:0}
+#dots .dot-act{display:flex;gap:4px;flex:1;min-width:0}
+#dots button{position:relative;flex:1 1 0;min-width:6px;max-width:22px;height:20px;
+  padding:0;border:0;background:transparent;color:var(--dim2);cursor:pointer}
+#dots button::after{content:'';position:absolute;left:0;right:0;top:8px;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.14);transition:background .3s,box-shadow .3s}
+#dots button:hover::after{background:rgba(255,255,255,.34)}
+#dots button.on::after{background:var(--k1);box-shadow:0 0 10px rgba(94,231,255,.6)}
+.g #dots button.on::after{background:var(--g1);box-shadow:0 0 10px rgba(255,196,87,.6)}
+.nbtn{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--ink);
+  width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:13px;transition:.2s;
+  display:grid;place-items:center;flex:none}
+.nbtn:hover{background:rgba(255,255,255,.15)}
+.nbtn:disabled{opacity:.28;cursor:default}
+
+/* 右：控制 + 图表（同一列，永不重叠） */
+/* 两栏宽度随视口收缩，保证永远不会横向相撞 */
+#right{position:fixed;right:22px;top:74px;bottom:20px;width:min(330px,calc(48vw - 30px));z-index:10;
+  display:flex;flex-direction:column;gap:12px;pointer-events:none}
+#right>*{pointer-events:auto;min-height:0}
+/* 右栏在矮视口下必须能自己收缩并滚动，否则会溢出到视口外 */
+/* 右栏是一个高度固定的 flex 列（top:74px 到 bottom:20px）。
+   两块面板必须各自可收缩、各自内部滚动，否则图表一长就把控制面板
+   挤出视口 —— 底部那几个按钮会被整个截掉。
+   控制面板给一个下限，保证它永远不会被压没。 */
+#ctrl{position:relative;right:auto;top:auto;width:100%;padding:16px 18px 18px;
+  flex:0 1 auto;min-height:min(190px,42vh);overflow-y:auto;
+  overscroll-behavior:contain}
+/* 只有图表也在场时才给控制面板封顶；本章没图就让它独占整列，
+   不然明明有空位，按钮却还要滚才够得到。 */
+body.has-charts #ctrl{max-height:56%}
+#ctrl .hd{margin-bottom:14px}
+.row{margin-bottom:17px}
+.row label{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim);margin-bottom:9px}
+.row label b{font-family:var(--mono);font-size:11.5px;color:var(--ink);font-weight:500;
+  background:rgba(255,255,255,.07);padding:3px 8px;border-radius:6px;letter-spacing:.02em}
+.k .row label b{color:var(--k1);background:rgba(88,196,221,.13)}
+.g .row label b{color:var(--g1);background:rgba(255,216,102,.13)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:20px;background:transparent;
+  outline:none;cursor:pointer;display:block}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;
+  background:linear-gradient(90deg,var(--fill,#58c4dd) 0 var(--pct,0%),rgba(255,255,255,.13) var(--pct,0%) 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:#fff;margin-top:-5.5px;cursor:pointer;
+  box-shadow:0 0 0 3px rgba(255,255,255,.10),0 2px 8px rgba(0,0,0,.5);transition:box-shadow .18s,transform .18s}
+input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.12)}
+input[type=range]:active::-webkit-slider-thumb{box-shadow:0 0 0 7px rgba(255,255,255,.16),0 2px 8px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-track{height:4px;border-radius:3px;background:rgba(255,255,255,.13)}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radius:50%;background:#fff;cursor:pointer}
+.k input[type=range]{--fill:#58c4dd} .g input[type=range]{--fill:#ffd866}
+.btns{display:flex;gap:7px;flex-wrap:wrap}
+.btn{flex:1;min-width:calc(50% - 4px);background:rgba(255,255,255,.05);border:1px solid var(--line);
+  color:var(--dim);font:inherit;font-size:11.5px;padding:9px 6px;border-radius:10px;cursor:pointer;
+  transition:.22s cubic-bezier(.2,.8,.3,1);white-space:nowrap;position:relative;overflow:hidden}
+.btn:hover{background:rgba(255,255,255,.12);color:var(--ink);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.on{background:rgba(255,255,255,.14);color:var(--ink);border-color:rgba(255,255,255,.28)}
+.k .btn.on{color:var(--k1);border-color:rgba(88,196,221,.5);box-shadow:0 0 16px rgba(88,196,221,.16) inset}
+.g .btn.on{color:var(--g1);border-color:rgba(255,216,102,.5);box-shadow:0 0 16px rgba(255,216,102,.16) inset}
+.btn.wide{min-width:100%;flex:1 0 100%;margin-top:7px}
+.sep{height:1px;background:var(--line);margin:16px 0}
+
+/* 底部：数据 */
+#hud{left:22px;bottom:22px;padding:14px 18px;display:flex;gap:24px;align-items:flex-end}
+.stat{min-width:74px}
+.stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--dim2);margin-bottom:6px;
+  text-transform:uppercase;white-space:nowrap}
+.stat .v{font-family:var(--mono);font-size:21px;line-height:1;color:var(--ink);font-weight:500;white-space:nowrap}
+.stat .v small{font-size:11px;color:var(--dim);margin-left:2px}
+/* t 和 T 是两个不同的量，这一格不能被 text-transform 抹平 */
+.stat.notrans .k{text-transform:none;letter-spacing:.1em}
+.stat.hi .v{color:var(--k1)}
+.g .stat.hi .v{color:var(--g1)}
+.stat.bar{min-width:132px}
+.barwrap{height:7px;background:rgba(255,255,255,.09);border-radius:4px;margin-top:10px;position:relative}
+.barfill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--k2),var(--k1));
+  transition:width .25s;box-shadow:0 0 12px rgba(94,231,255,.5)}
+.barref{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:rgba(255,255,255,.5)}
+.barref::after{content:attr(data-l);position:absolute;left:4px;top:-14px;font-size:8.5px;
+  color:var(--dim2);font-family:var(--mono);white-space:nowrap}
+
+/* 图表 */
+#charts{position:relative;right:auto;bottom:auto;padding:15px 15px 11px;display:none;
+  order:-1;flex:none;
+  background:linear-gradient(180deg,rgba(23,19,15,.94),rgba(13,11,9,.94));
+  border:1px solid var(--line);border-radius:4px;
+  box-shadow:0 18px 40px -22px rgba(0,0,0,.9)}
+#charts.show{display:flex;flex-direction:column}
+/* 图表拿走控制面板之外的全部高度，内部自己滚 */
+#charts{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+canvas.chart{display:block;border-radius:3px;width:100%;
+  background:rgba(0,0,0,.30);border:1px solid rgba(246,241,232,.07)}
+/* 图表卡片：标题是一个大白话问题，副题说怎么读，底下一行是当下的读数。
+   每张图有自己的强调色（--ac），这样它们不再是一排认不出谁是谁的深色矩形。 */
+.ckd{margin-bottom:18px;padding-left:11px;border-left:2px solid var(--ac,#ffb547)}
+.ckd:last-child{margin-bottom:2px}
+.ckd h4{margin:0 0 4px;font:600 14px/1.45 var(--sans);color:var(--ink);letter-spacing:.01em}
+.ckd .ckd-how{margin:0 0 8px;font:400 11px/1.6 var(--sans);color:var(--dim2)}
+.ckd .ckd-now{margin:7px 0 0;font:500 11.5px/1.6 var(--sans);color:var(--ac,#ffb547);
+  opacity:.92;min-height:1.6em}
+/* 公式里的符号与曲线共用颜色 */
+.v-hot{color:#fc6255;font-weight:650}
+.v-cold{color:#58c4dd;font-weight:650}
+.v-amber{color:#ffb547;font-weight:650}
+.v-H{color:#ffd866;font-weight:650}
+.chip{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* 提示 */
+#hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10;font-size:11px;
+  color:var(--dim2);font-family:var(--mono);letter-spacing:.1em;pointer-events:none;transition:opacity .6s}
+
+/* ---------- 首页 ---------- */
+#home{position:fixed;inset:0;z-index:15;display:flex;flex-direction:column;justify-content:center;
+  align-items:center;text-align:center;padding:20px;transition:opacity .7s,visibility .7s;overflow-y:auto}
+#home.hide{opacity:0;visibility:hidden}
+#home::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(64% 46% at 50% 34%,rgba(5,6,13,.90),rgba(5,6,13,.38) 62%,transparent 82%)}
+#home .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.4em;color:var(--dim2);margin-bottom:22px;text-transform:uppercase}
+#home h1{font-family:var(--serif);font-size:clamp(38px,7.4vw,86px);font-weight:600;line-height:1.08;
+  letter-spacing:.02em;margin-bottom:20px}
+#home h1 i{font-style:normal;background:linear-gradient(100deg,var(--k1),var(--k2) 55%,var(--g1));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+#home .sub{font-size:14.5px;color:var(--dim);line-height:2;max-width:620px;margin-bottom:40px}
+#cards{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:800px}
+.card{width:330px;text-align:left;padding:22px;border-radius:18px;background:rgba(9,11,20,.74);
+  border:1px solid var(--line);cursor:pointer;transition:.35s cubic-bezier(.2,.8,.3,1);
+  backdrop-filter:blur(22px) saturate(1.3);box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.card:hover{transform:translateY(-5px);background:rgba(16,20,34,.86);border-color:rgba(255,255,255,.28)}
+.card .who{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}
+.card .who h3{font-family:var(--serif);font-size:25px;font-weight:600}
+.card .who span{font-family:var(--mono);font-size:11px;color:var(--dim2)}
+.card .prob{font-size:13px;margin:10px 0 12px;line-height:1.7;color:#cbd3e6}
+.card .tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  padding:4px 10px;border-radius:20px;margin-top:2px}
+.card.kk{border-top:2px solid var(--k1)} .card.kk .tag{background:rgba(94,231,255,.13);color:var(--k1)}
+.card.gg{border-top:2px solid var(--g1)} .card.gg .tag{background:rgba(255,196,87,.13);color:var(--g1)}
+.card .go{margin-top:14px;font-size:12px;color:var(--dim2);font-family:var(--mono);letter-spacing:.1em}
+.card:hover .go{color:var(--ink)}
+#home .foot{margin-top:36px;font-size:11.5px;color:var(--dim2);line-height:2.1;max-width:660px}
+#home .foot a{color:var(--dim);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.15)}
+#home .foot a:hover{color:var(--ink)}
+
+/* ---------- 时间线 ---------- */
+#tl{position:fixed;inset:0;z-index:14;overflow-y:auto;padding:100px 24px 70px;
+  background:linear-gradient(180deg,rgba(5,6,13,.9),rgba(5,6,13,.97));backdrop-filter:blur(8px);
+  transition:opacity .5s,visibility .5s}
+#tl.hide{opacity:0;visibility:hidden;pointer-events:none}
+.tlin{max-width:840px;margin:0 auto}
+#tl h2{font-family:var(--serif);font-size:32px;margin-bottom:8px;font-weight:600}
+#tl .lead{color:var(--dim);font-size:13.5px;line-height:1.9;margin-bottom:40px;max-width:640px}
+.ev{display:flex;gap:22px;padding:20px 0;border-top:1px solid var(--line)}
+.ev .yr{font-family:var(--mono);font-size:13px;color:var(--dim2);width:74px;flex:none;padding-top:2px;letter-spacing:.06em}
+.ev .ct h4{font-size:15px;margin-bottom:7px;font-weight:600}
+.ev .ct p{font-size:13px;color:var(--dim);line-height:1.85}
+.ev.hot .yr{color:var(--k1)}
+.ev.hot .ct h4{color:#fff}
+.bios{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:34px 0}
+.bio{padding:20px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+.bio h4{font-family:var(--serif);font-size:20px;margin-bottom:3px}
+.bio .m{font-family:var(--mono);font-size:10.5px;color:var(--dim2);margin-bottom:13px;letter-spacing:.08em}
+.bio p{font-size:12.5px;color:var(--dim);line-height:1.9}
+.srcs{margin-top:34px;padding-top:22px;border-top:1px solid var(--line);font-size:12px;color:var(--dim2);line-height:2.1}
+.srcs a{color:var(--dim);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.14)}
+.srcs a:hover{color:var(--ink)}
+
+#loader{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:var(--bg);
+  transition:opacity .6s;font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--dim2)}
+#loader.hide{opacity:0;pointer-events:none}
+
+@media (max-width:1180px){
+  #story{width:300px} #right{width:238px}
+}
+@media (max-width:900px){
+  #top{padding:10px 12px;gap:10px}
+  #brand span{display:none}
+  #nav button{padding:6px 10px;font-size:11.5px}
+  #story{left:10px;right:10px;top:auto;bottom:10px;width:auto;max-height:44vh;padding:15px 15px 13px}
+  #story h2{font-size:20px} #story .body{font-size:12.5px;line-height:1.75}
+  #right{right:10px;top:56px;bottom:auto;width:184px}
+  #ctrl{padding:12px 13px 13px}
+  #hud{left:10px;top:56px;bottom:auto;padding:10px 12px;gap:14px;flex-wrap:wrap;max-width:calc(100% - 210px)}
+  .stat .v{font-size:16px} .stat{min-width:56px} .stat.bar{min-width:100px}
+  /* 图表在手机上不再整个丢掉 —— 它搬到了顶部「图表」那一档里（见 article.css） */
+  body.mobile-controls #charts{display:none!important}
+  #hint{display:none}
+  .bios{grid-template-columns:1fr}
+  .card{width:100%}
+}
+</style><!-- ?v=dev 只是占位：构建时会按 article.css / article-shell.js 的内容哈希改写它。
+     别手工维护这个号 —— 手工同步一定会忘，线上就会继续吃旧样式。 -->
+<link rel="stylesheet" href="../article.css?v=dev">
+<script src="../article-shell.js?v=dev" defer></script>
+</head>
+<body class="home">
+
+<canvas id="gl"></canvas>
+<div id="vignette"></div>
+<div id="labels"></div>
+
+<div id="top">
+  <div id="brand"><a href="../" title="返回 VIZ">VIZ</a><b>宇宙网</b><span>STRUCTURE FORMATION</span></div>
+  <nav id="nav">
+    <button data-go="home">文章</button>
+    <button data-go="cos" class="k">互动</button>
+    <button data-go="tl">资料</button>
+  </nav>
+</div>
+
+<!-- 首页 -->
+<section id="home">
+  <div class="eyebrow">2026 年 8 月 4 日 · 宇宙学 × 计算</div>
+  <h1>横跨上亿光年的那张网，是从哪来的？</h1>
+  <p class="sub">
+    星系不是随手撒在宇宙里的，它们排成纤维、围出空洞，像一张三维的网。这张网的种子，是 138 亿年前一次量子抖动 —— 幅度只有十万分之一。这一篇从原初功率谱出发，让你亲手把它长出来。
+  </p>
+  <div id="cards">
+    <div class="card kk" data-go="cos" style="width:520px">
+      <div class="who"><h3>开始互动演示 ↗</h3><span>8 章</span></div>
+      <div class="tag">粒子-网格 N-body</div>
+      <p class="prob">按下播放，看 32768 个粒子从几乎均匀塌成纤维与空洞；再拖动物质密度与谱指数，换一个宇宙重跑一遍。</p>
+      <div class="go">进入演示 →</div>
+    </div>
+  </div>
+  <p class="foot">
+    量子涨落 → 引力放大 → 各向异性坍缩 → 宇宙网<br>
+    8 章 · 主线约 15 分钟 · 含推导约 22 分钟
+  </p>
+</section>
+
+<!-- 讲解面板 -->
+<aside id="story" class="panel" style="display:none">
+  <div class="step" id="stepno"></div>
+  <h2 id="sttitle"></h2>
+  <div class="body" id="stbody"></div>
+  <div id="nav2">
+    <div id="dots" role="navigation" aria-label="文章步骤"></div>
+    <button class="nbtn" id="prev">‹</button>
+    <button class="nbtn" id="next">›</button>
+  </div>
+</aside>
+
+<!-- 右列：控制 + 图表 -->
+<div id="right" style="display:none">
+  <aside id="ctrl" class="panel">
+    <div class="hd">控制</div>
+    <div id="ctrlbody"></div>
+  </aside>
+  <!-- 每张图是一张卡片：标题是一个大白话问句，副题说怎么读，
+       底下一行是当下的读数。只显示本章用得上的那几张（见 CHARTS）。 -->
+  <aside id="charts" class="panel">
+    <section class="ckd" data-chart="pk" style="--ac:#5ee7ff">
+      <h4>抖动在每个尺度上有多强？</h4>
+      <p class="ckd-how">横轴：左边是大尺度，右边是小尺度　·　纵轴：那个尺度上的起伏有多大</p>
+      <canvas class="chart" id="ch1" width="520" height="260"></canvas>
+      <p class="ckd-now" id="now_pk"></p>
+    </section>
+    <section class="ckd" data-chart="growth" style="--ac:#ffd866">
+      <h4>引力把起伏放大了多少倍？</h4>
+      <p class="ckd-how">横轴是宇宙的年龄　·　点是模拟量到的，虚线是线性理论的预言</p>
+      <canvas class="chart" id="ch2" width="520" height="240"></canvas>
+      <p class="ckd-now" id="now_growth"></p>
+    </section>
+    <section class="ckd" data-chart="morph" style="--ac:#a78bfa">
+      <h4>物质是怎么从铺满变成挤成一团的？</h4>
+      <p class="ckd-how">上：几乎空的地方占多大体积　·　下：最密的 10% 格子装了多少质量</p>
+      <canvas class="chart" id="ch3" width="520" height="240"></canvas>
+      <p class="ckd-now" id="now_morph"></p>
+    </section>
+  </aside>
+</div>
+
+<!-- 数据 -->
+<aside id="hud" class="panel" style="display:none"></aside>
+
+<div id="hint"></div>
+
+<!-- 背景 -->
+<section id="tl" class="hide"><div class="tlin">
+  <h2>从一次量子抖动到一张宇宙网</h2>
+  <p class="lead">宇宙网不是被谁画出来的。它的种子是暴胀期间一个量子场不可避免的涨落，被暴胀拉出视界而冻结成经典的密度扰动，再被引力放大了四万倍。这一条因果链是现代宇宙学的主线剧情。</p>
+
+  <div class="ev"><div class="yr">1980–82</div><div class="ct"><h4>暴胀与原初涨落谱</h4><p>Guth 提出暴胀解决视界与平坦性问题；随后 Mukhanov–Chibisov、Hawking、Guth–Pi、Starobinsky、Bardeen–Steinhardt–Turner 等人算出：暴胀场的量子涨落会留下一个近乎标度不变的谱。</p></div></div>
+  <div class="ev"><div class="yr">1970</div><div class="ct"><h4>Zel'dovich 近似</h4><p>Zel'dovich 指出：一块物质沿三个主轴的坍缩速度不同，最短轴先塌，于是先压成「饼」。这就是宇宙网不是一团团而是网状的原因。</p></div></div>
+  <div class="ev"><div class="yr">1986</div><div class="ct"><h4>「长城」与 BBKS</h4><p>de Lapparent、Geller 与 Huchra 的红移巡天画出第一张明确的纤维与空洞图。同年 Bardeen–Bond–Kaiser–Szalay 给出至今仍在用的转移函数拟合公式 —— 本页用的就是它。</p></div></div>
+  <div class="ev"><div class="yr">1992</div><div class="ct"><h4>COBE 测到 10⁻⁵</h4><p>COBE 首次测到微波背景的温度各向异性，幅度约十万分之一。整张宇宙网的种子被直接看见了。</p></div></div>
+  <div class="ev hot"><div class="yr">2005–</div><div class="ct"><h4>Millennium 及其后继</h4><p>Millennium、IllustrisTNG、EAGLE、Uchuu 等数值模拟长出的网，与巡天看到的网在统计上一致。这是宇宙学最漂亮的成功之一。</p></div></div>
+  <div class="ev hot"><div class="yr">2018 / 2024–</div><div class="ct"><h4>Planck 与 DESI</h4><p>Planck 把谱指数测到 n<sub>s</sub> ≈ 0.965 —— 略小于 1，正是暴胀模型的预言。DESI 正在用数千万条星系红移把这张网量得更细。</p></div></div>
+
+  <div class="srcs">
+    <p style="margin-bottom:14px"><b>这一页在算什么</b><br>
+    粒子-网格（PM）N-body：把 32768 个粒子撒进周期盒子，每一步用 CIC 撒到网格上、FFT 解泊松方程、把力插回粒子、按 ln a 等步长做 kick–drift–kick。初条件是高斯随机场 + Zel'dovich 位移，功率谱取 P(k) ∝ k<sup>n<sub>s</sub></sup>T²(k)，T 用 BBKS 拟合式。</p>
+
+    <p style="margin-bottom:14px"><b>可以核对的原始文献</b><br>
+    <a href="https://articles.adsabs.harvard.edu/pdf/1986ApJ...304...15B" target="_blank" rel="noopener">Bardeen, Bond, Kaiser, Szalay (1986) — 转移函数拟合式（本页 T(k) 的出处）</a><br>
+    <a href="https://ui.adsabs.harvard.edu/abs/1970A%26A.....5...84Z/abstract" target="_blank" rel="noopener">Zel'dovich (1970) — 各向异性坍缩与「饼」</a><br>
+    <a href="https://www.aanda.org/articles/aa/full_html/2020/09/aa33910-18/aa33910-18.html" target="_blank" rel="noopener">Planck 2018 宇宙学参数（n<sub>s</sub> = 0.9649 ± 0.0042）</a><br>
+    <a href="https://arxiv.org/abs/astro-ph/0504097" target="_blank" rel="noopener">Springel 等 (2005) — Millennium 模拟</a></p>
+
+    <p style="margin-bottom:14px"><b>这一页<em>没有</em>算的</b><br>
+    没有重子、没有气体、没有恒星形成、没有中微子、没有辐射时期。它是纯冷暗物质的引力演化 —— 宇宙网的骨架确实是这么长出来的，但真实星系长在骨架上还需要另一整套物理。分辨率也只有 32³：能看出纤维和空洞，看不出单个星系晕。</p>
+  </div>
+</div></section>
+
+<div id="loader">L O A D I N G</div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const ease=k=>k*k*(3-2*k);
+
+/* =====================================================================
+   1. WebGL 内核
+   ===================================================================== */
+const cv=$('#gl');
+const gl=cv.getContext('webgl2',{antialias:true,alpha:false});
+if(!gl){$('#loader').textContent='这台设备不支持 WebGL2';throw new Error('no webgl2');}
+
+function sh(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+function prog(vs,fs,attrs,unis){
+  const p=gl.createProgram();
+  gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+  p.a={};for(const a of attrs)p.a[a]=gl.getAttribLocation(p,a);
+  p.u={};for(const u of unis)p.u[u]=gl.getUniformLocation(p,u);
+  return p;
+}
+const buf=arr=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+  gl.bufferData(gl.ARRAY_BUFFER,arr,gl.STATIC_DRAW);return b;};
+
+/* 背景渐变 */
+const P_BG=prog(
+ `#version 300 es
+  in vec2 aPos; out vec2 vUv;
+  void main(){vUv=aPos*0.5+0.5;gl_Position=vec4(aPos,0.999,1.0);}`,
+ `#version 300 es
+  precision highp float; in vec2 vUv; out vec4 o; uniform vec3 uA,uB;
+  void main(){float r=length(vUv-vec2(0.5));o=vec4(mix(uA,uB,smoothstep(0.0,0.85,r)),1.0);}`,
+ ['aPos'],['uA','uB']);
+const QUAD=buf(new Float32Array([-1,-1,3,-1,-1,3]));
+
+/* 粒子点云。t 是「这颗粒子周围有多密」，已在 JS 里归一到 0..1，
+   着色器只负责查色带 —— 色带写在这里，改配色不用动 JS。 */
+const P_PT=prog(
+ `#version 300 es
+  in vec3 aPos; in float aT;
+  uniform mat4 uVP; uniform float uSize; uniform vec3 uEye;
+  out float vT;
+  void main(){
+    vT=aT;
+    vec4 c=uVP*vec4(aPos,1.0);
+    gl_Position=c;
+    float d=max(0.35,length(aPos-uEye));
+    /* 密的地方点更大：网就是靠这个从噪点里浮出来的 */
+    gl_PointSize=uSize*(0.55+2.6*aT*aT)/d;
+  }`,
+ `#version 300 es
+  precision highp float; in float vT; out vec4 o;
+  void main(){
+    vec2 q=gl_PointCoord-0.5;
+    float r=dot(q,q);
+    if(r>0.25) discard;
+    float a=smoothstep(0.25,0.02,r);
+    vec3 c1=vec3(0.10,0.16,0.34);      // 空洞：暗蓝
+    vec3 c2=vec3(0.22,0.55,0.78);      // 一般
+    vec3 c3=vec3(0.55,0.86,0.95);      // 纤维：青
+    vec3 c4=vec3(1.00,0.86,0.55);      // 节点：暖白
+    vec3 c = vT<0.34 ? mix(c1,c2,vT/0.34)
+           : vT<0.67 ? mix(c2,c3,(vT-0.34)/0.33)
+                     : mix(c3,c4,(vT-0.67)/0.33);
+    o=vec4(c,a*(0.30+0.70*vT));
+  }`,
+ ['aPos','aT'],['uVP','uSize','uEye']);
+
+const P_LINE=prog(
+ `#version 300 es
+  in vec3 aPos; uniform mat4 uVP;
+  void main(){gl_Position=uVP*vec4(aPos,1.0);}`,
+ `#version 300 es
+  precision highp float; out vec4 o; uniform vec4 uCol;
+  void main(){o=uCol;}`,
+ ['aPos'],['uVP','uCol']);
+
+const M4={
+  id:()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
+  mul(a,b,o){o=o||new Float32Array(16);
+    for(let c=0;c<4;c++)for(let r=0;r<4;r++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s;}
+    return o;},
+  persp(f,asp,n,fa,ox,oy){const t=1/Math.tan(f/2),o=new Float32Array(16);
+    o[0]=t/asp;o[5]=t;o[8]=-(ox||0);o[9]=-(oy||0);
+    o[10]=(fa+n)/(n-fa);o[11]=-1;o[14]=2*fa*n/(n-fa);return o;},
+  look(e,c,u){
+    let z=[e[0]-c[0],e[1]-c[1],e[2]-c[2]];let l=Math.hypot(...z);z=[z[0]/l,z[1]/l,z[2]/l];
+    let x=[u[1]*z[2]-u[2]*z[1],u[2]*z[0]-u[0]*z[2],u[0]*z[1]-u[1]*z[0]];l=Math.hypot(...x)||1;x=[x[0]/l,x[1]/l,x[2]/l];
+    const y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
+    return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,
+      -(x[0]*e[0]+x[1]*e[1]+x[2]*e[2]),-(y[0]*e[0]+y[1]*e[1]+y[2]*e[2]),-(z[0]*e[0]+z[1]*e[1]+z[2]*e[2]),1]);}
+};
+
+/* 相机 */
+const CAM={az:0.7,el:0.25,dist:2.9,taz:0.7,tel:0.25,tdist:2.9,spin:0.03,drag:false,ox:0,oy:0,tox:0,toy:0};
+let VP=M4.id(), EYE=[0,0,3];
+function camTo(az,el,dist,ox,oy){CAM.taz=az;CAM.tel=el;CAM.tdist=dist;CAM.tox=ox||0;CAM.toy=oy||0;}
+function camUpdate(dt){
+  if(!CAM.drag)CAM.taz+=CAM.spin*dt;
+  const k=1-Math.pow(0.0016,dt);
+  CAM.az=lerp(CAM.az,CAM.taz,k);CAM.el=lerp(CAM.el,CAM.tel,k);
+  CAM.dist=lerp(CAM.dist,CAM.tdist,k);
+  CAM.ox=lerp(CAM.ox,CAM.tox,k);CAM.oy=lerp(CAM.oy,CAM.toy,k);
+  const ce=Math.cos(CAM.el);
+  EYE=[Math.sin(CAM.az)*ce*CAM.dist,Math.sin(CAM.el)*CAM.dist,Math.cos(CAM.az)*ce*CAM.dist];
+  const asp=cv.width/cv.height;
+  VP=M4.mul(M4.persp(0.9,asp,0.05,40,CAM.ox,CAM.oy),M4.look(EYE,[0,0,0],[0,1,0]));
+}
+(function(){
+  let px=0,py=0,pid=null,pd=0;
+  const pts=new Map();
+  cv.addEventListener('pointerdown',e=>{pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===1){pid=e.pointerId;px=e.clientX;py=e.clientY;CAM.drag=true;cv.setPointerCapture(e.pointerId);}});
+  cv.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId))return;pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===2){
+      const [a,b]=[...pts.values()];
+      const d=Math.hypot(a[0]-b[0],a[1]-b[1]);
+      if(pd)CAM.tdist=clamp(CAM.tdist*(pd/d),1.1,9);
+      pd=d;return;
+    }
+    if(e.pointerId!==pid)return;
+    CAM.taz-=(e.clientX-px)*0.006;CAM.tel=clamp(CAM.tel+(e.clientY-py)*0.005,-1.35,1.35);
+    px=e.clientX;py=e.clientY;});
+  const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pd=0;if(pts.size===0){CAM.drag=false;pid=null;}};
+  cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  cv.addEventListener('wheel',e=>{e.preventDefault();CAM.tdist=clamp(CAM.tdist*(1+e.deltaY*0.0012),1.1,9);},{passive:false});
+})();
+
+/* 三维标注 */
+function labels(list){
+  const box=$('#labels');
+  if(!list.length){if(box.childElementCount)box.innerHTML='';return;}
+  const html=list.map(l=>{
+    const p=l.p;
+    const x=VP[0]*p[0]+VP[4]*p[1]+VP[8]*p[2]+VP[12];
+    const y=VP[1]*p[0]+VP[5]*p[1]+VP[9]*p[2]+VP[13];
+    const w=VP[3]*p[0]+VP[7]*p[1]+VP[11]*p[2]+VP[15];
+    if(w<=0.02)return '';
+    const sx=(x/w*0.5+0.5)*100, sy=(0.5-y/w*0.5)*100;
+    if(sx<-8||sx>108||sy<-8||sy>108)return '';
+    return `<div class="lab" style="left:${sx.toFixed(2)}%;top:${sy.toFixed(2)}%;opacity:${(l.o===undefined?1:l.o).toFixed(2)};color:${l.c||'#9aa5bd'}">${l.t}</div>`;
+  }).join('');
+  if(html!==labels.last){labels.last=html;box.innerHTML=html;}
+}
+
+/* =====================================================================
+   2. 宇宙学内核：粒子-网格（PM）N-body
+
+   单位：盒子边长 L=1（周期边界），H₀=1，用 a 作时间变量。
+     p = a² dx/dt
+     dx/dlna = p / (a²E)
+     dp/dlna = −∇φ / E
+     ∇²φ = (3/2) Ω_m δ / a
+     E(a) = √(Ω_m a⁻³ + Ω_Λ)，平坦宇宙 Ω_Λ = 1 − Ω_m
+   ===================================================================== */
+const COS={
+  N:32,                       // 网格边长，同时也是每边的粒子数
+  om:0.31, ns:0.965,
+  /* Γ_code = Γ_phys × L。BBKS 的 q = k/Γ 要求两者同为物理单位，而本页的 k
+     是盒子单位（k = 2πj，L=1）。盒子取 180 Mpc/h、Γ_phys = Ω_m h ≈ 0.21 h/Mpc，
+     于是 Γ_code ≈ 38。
+     盒子为什么这么小：32³ 的力分辨率只有两三个格子，盒子一大，方差就全堆到
+     长不起来的格子尺度上 —— 实测 1000 Mpc/h 的盒子里 δ 只长到线性预期的
+     五分之一。180 Mpc/h 下每格 5.6 Mpc/h，可分辨范围里有真正的功率。
+     代价是谱的转折（波长约 309 Mpc/h）落在盒子之外，图上会标出来。 */
+  gamma:38, boxMpc:180,
+  /* σ₀ 是 a_init 时刻、3 个格子平滑尺度上的起伏。取 0.012 使 a=1 时
+     σ(3格)≈0.43 —— 对得上真实宇宙在 ~17 Mpc/h 上的值。 */
+  sigma0:0.012, aInit:0.02, seed:20260804,
+  a:0.02, np:0, running:false, steps:0, nsteps:100,
+  px:null,py:null,pz:null,vx:null,vy:null,vz:null,
+  dre:null,dim:null,phi:null,gx:null,gy:null,gz:null,
+  deltaIC:null, dens:null, buf:null,
+  ampView:1,                  // 只影响显示的位移放大倍数
+  hist:[], morph:{voids:0,top10:0.1,max:0,sig:0},
+  growthRate:1, sig0:1, showBox:1
+};
+const E_of=(a,om)=>Math.sqrt(om/(a*a*a)+(1-om));
+
+function rngc(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+function gaussc(rand){let u=0;while(u===0)u=rand();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rand());}
+
+/* ── 一维复数 FFT（原地，radix-2）。旋转因子预先打表。 ── */
+const _tw=new Map();
+function twiddles(n){
+  let t=_tw.get(n); if(t)return t;
+  const cos=new Float64Array(n/2), sin=new Float64Array(n/2);
+  for(let i=0;i<n/2;i++){const a=-2*Math.PI*i/n;cos[i]=Math.cos(a);sin[i]=Math.sin(a);}
+  const rev=new Int32Array(n);
+  for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;rev[i]=j;}
+  t={cos,sin,rev};_tw.set(n,t);return t;
+}
+function fft1(re,im,n,inv){
+  const t=twiddles(n), cos=t.cos, sin=t.sin, rev=t.rev;
+  for(let i=1;i<n;i++){const j=rev[i];
+    if(i<j){let x=re[i];re[i]=re[j];re[j]=x;x=im[i];im[i]=im[j];im[j]=x;}}
+  for(let len=2;len<=n;len<<=1){
+    const half=len>>1, stride=n/len;
+    for(let i=0;i<n;i+=len){
+      for(let k=0,tw=0;k<half;k++,tw+=stride){
+        const cr=cos[tw], ci=inv?-sin[tw]:sin[tw];
+        const p=i+k, q=p+half;
+        const ur=re[p], ui=im[p];
+        const vr=re[q]*cr-im[q]*ci, vi=re[q]*ci+im[q]*cr;
+        re[p]=ur+vr;im[p]=ui+vi;re[q]=ur-vr;im[q]=ui-vi;
+      }
+    }
+  }
+  if(inv){const s=1/n;for(let i=0;i<n;i++){re[i]*=s;im[i]*=s;}}
+}
+/* ── 三维 FFT：沿三个轴各做一遍。x 轴连续，y/z 轴按步长收集。 ── */
+let _lr=null,_li=null;
+function fft3(re,im,N,inv){
+  if(!_lr||_lr.length<N){_lr=new Float64Array(N);_li=new Float64Array(N);}
+  const lr=_lr, li=_li, N2=N*N;
+  for(let base=0;base<N*N2;base+=N){
+    for(let i=0;i<N;i++){lr[i]=re[base+i];li[i]=im[base+i];}
+    fft1(lr,li,N,inv);
+    for(let i=0;i<N;i++){re[base+i]=lr[i];im[base+i]=li[i];}
+  }
+  for(let z=0;z<N;z++)for(let x=0;x<N;x++){
+    const base=z*N2+x;
+    for(let i=0;i<N;i++){const p=base+i*N;lr[i]=re[p];li[i]=im[p];}
+    fft1(lr,li,N,inv);
+    for(let i=0;i<N;i++){const p=base+i*N;re[p]=lr[i];im[p]=li[i];}
+  }
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const base=y*N+x;
+    for(let i=0;i<N;i++){const p=base+i*N2;lr[i]=re[p];li[i]=im[p];}
+    fft1(lr,li,N,inv);
+    for(let i=0;i<N;i++){const p=base+i*N2;re[p]=lr[i];im[p]=li[i];}
+  }
+}
+
+/* ── BBKS 转移函数（Bardeen–Bond–Kaiser–Szalay 1986）──
+   闭式，可以直接核对。q = k/Γ，Γ = Ω_m h 是形状参数。
+   它编码的物理是：进入视界早的小尺度模在辐射主导期被压制。 */
+function transferBBKS(k,gamma){
+  const q=k/gamma;
+  if(q<1e-8)return 1;
+  const a=Math.log(1+2.34*q)/(2.34*q);
+  const b=1+3.89*q+Math.pow(16.1*q,2)+Math.pow(5.46*q,3)+Math.pow(6.71*q,4);
+  return a*Math.pow(b,-0.25);
+}
+function powerSpec(k,ns,gamma){
+  if(k<=0)return 0;
+  const T=transferBBKS(k,gamma);
+  return Math.pow(k,ns)*T*T;
+}
+/* ── 线性增长因子 D(a) ∝ E(a)∫₀^a da'/(a'E)³，归一到 D(1)=1 ── */
+function growth(a,om){
+  const E=x=>Math.sqrt(om/(x*x*x)+(1-om));
+  const integ=top=>{const M=600;let s=0;
+    for(let i=0;i<M;i++){const x=top*(i+0.5)/M;const e=E(x);s+=1/((x*e)*(x*e)*(x*e));}
+    return s*(top/M);};
+  return E(a)*integ(a)/(E(1)*integ(1));
+}
+
+function cosInit(){
+  const N=COS.N, N3=N*N*N;
+  COS.a=COS.aInit; COS.np=N3; COS.steps=0; COS.hist=[];
+  COS.px=new Float64Array(N3);COS.py=new Float64Array(N3);COS.pz=new Float64Array(N3);
+  COS.vx=new Float64Array(N3);COS.vy=new Float64Array(N3);COS.vz=new Float64Array(N3);
+  COS.dre=new Float64Array(N3);COS.dim=new Float64Array(N3);COS.phi=new Float64Array(N3);
+  COS.gx=new Float64Array(N3);COS.gy=new Float64Array(N3);COS.gz=new Float64Array(N3);
+  COS.dens=new Float32Array(N3);COS.buf=new Float32Array(N3*4);
+  COS.wrapP=new Int32Array(N);COS.wrapM=new Int32Array(N);
+  for(let i=0;i<N;i++){COS.wrapP[i]=(i+1)%N;COS.wrapM[i]=(i-1+N)%N;}
+
+  /* ① 实空间白噪声 → FFT → 乘 √P(k) → 逆 FFT。
+     这样厄米对称性自动满足，出来的 δ 一定是实场。 */
+  const rand=rngc(COS.seed);
+  for(let i=0;i<N3;i++){COS.dre[i]=gaussc(rand);COS.dim[i]=0;}
+  fft3(COS.dre,COS.dim,N,false);
+  const kf=2*Math.PI, kv=new Float64Array(N);
+  for(let j=0;j<N;j++)kv[j]=kf*(j<=N/2?j:j-N);
+  const sxr=new Float64Array(N3),sxi=new Float64Array(N3);
+  const syr=new Float64Array(N3),syi=new Float64Array(N3);
+  const szr=new Float64Array(N3),szi=new Float64Array(N3);
+  for(let z=0;z<N;z++)for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const i=(z*N+y)*N+x;
+    const kx=kv[x],ky=kv[y],kz=kv[z], k2=kx*kx+ky*ky+kz*kz;
+    if(k2===0){COS.dre[i]=0;COS.dim[i]=0;continue;}
+    const amp=Math.sqrt(powerSpec(Math.sqrt(k2),COS.ns,COS.gamma));
+    COS.dre[i]*=amp;COS.dim[i]*=amp;
+    /* Zel'dovich 位移场 s_k = i k δ_k / k² */
+    const f=1/k2;
+    sxr[i]=-kx*f*COS.dim[i];sxi[i]=kx*f*COS.dre[i];
+    syr[i]=-ky*f*COS.dim[i];syi[i]=ky*f*COS.dre[i];
+    szr[i]=-kz*f*COS.dim[i];szi[i]=kz*f*COS.dre[i];
+  }
+  fft3(COS.dre,COS.dim,N,true);
+  fft3(sxr,sxi,N,true);fft3(syr,syi,N,true);fft3(szr,szi,N,true);
+
+  /* ② 定标。这里<b>不能</b>按整个网格的 rms 归一 —— 那样会把方差堆在
+     格子尺度上，而 PM 的力分辨率只有 2～3 格，那些模根本长不起来：
+     实测 δ 只长到线性预期的五分之一。
+     正确的做法是按「能被分辨的尺度上的起伏」定标，也就是宇宙学里
+     用 σ₈ 归一的道理。这里取 3 个格子的高斯平滑尺度。 */
+  const Rn=3/N;
+  let sm=0;
+  {
+    const re=Float64Array.from(COS.dre), im=Float64Array.from(COS.dim);
+    fft3(re,im,N,false);
+    let s=0;
+    for(let z=0;z<N;z++)for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+      const i=(z*N+y)*N+x;
+      const k2=kv[x]*kv[x]+kv[y]*kv[y]+kv[z]*kv[z];
+      s+=(re[i]*re[i]+im[i]*im[i])*Math.exp(-k2*Rn*Rn);
+    }
+    sm=Math.sqrt(s)/N3;
+  }
+  const scale=sm>0?COS.sigma0/sm:0;
+  COS.deltaIC=new Float64Array(N3);
+  for(let i=0;i<N3;i++)COS.deltaIC[i]=COS.dre[i]*scale;
+
+  /* ③ x = q + s。δ_IC 已经是 a_init 时刻的场，增长因子已吸收进去，
+        位移直接用 s，不再乘一次 D。
+        速度 p = a²·(dx/dlna)·(dlna/dt)·a … 化简为 p = a²E f s，f = dlnD/dlna。 */
+  const h=1/N, eps=1e-4;
+  const f=(Math.log(growth(COS.a*(1+eps),COS.om))-Math.log(growth(COS.a*(1-eps),COS.om)))/(2*eps);
+  COS.growthRate=f;
+  const pref=COS.a*COS.a*E_of(COS.a,COS.om)*f;
+  let p=0;
+  for(let z=0;z<N;z++)for(let y=0;y<N;y++)for(let x=0;x<N;x++,p++){
+    const i=(z*N+y)*N+x;
+    const ux=sxr[i]*scale, uy=syr[i]*scale, uz=szr[i]*scale;
+    COS.px[p]=(x+0.5)*h+ux;COS.py[p]=(y+0.5)*h+uy;COS.pz[p]=(z+0.5)*h+uz;
+    COS.vx[p]=pref*ux;COS.vy[p]=pref*uy;COS.vz[p]=pref*uz;
+  }
+  cosDeposit();
+  COS.sig0=sigmaR(4/N);
+  measureMorph();
+  COS.hist=[{a:COS.a,sig:1,D:1}];
+}
+
+/* CIC 撒点 → 密度反衬 δ */
+function cosDeposit(){
+  const N=COS.N,N3=N*N*N,d=COS.dre;
+  d.fill(0);COS.dim.fill(0);
+  for(let p=0;p<COS.np;p++){
+    let ax=COS.px[p]*N, ay=COS.py[p]*N, az=COS.pz[p]*N;
+    ax-=Math.floor(ax/N)*N;ay-=Math.floor(ay/N)*N;az-=Math.floor(az/N)*N;
+    const i0=ax|0,j0=ay|0,k0=az|0;
+    const fx=ax-i0,fy=ay-j0,fz=az-k0;
+    const i1=i0+1===N?0:i0+1,j1=j0+1===N?0:j0+1,k1=k0+1===N?0:k0+1;
+    for(let c=0;c<8;c++){
+      const ii=(c&1)?i1:i0, jj=(c&2)?j1:j0, kk=(c&4)?k1:k0;
+      const w=((c&1)?fx:1-fx)*((c&2)?fy:1-fy)*((c&4)?fz:1-fz);
+      d[(kk*N+jj)*N+ii]+=w;
+    }
+  }
+  const mean=COS.np/N3;
+  for(let i=0;i<N3;i++)d[i]=d[i]/mean-1;
+}
+/* 解泊松：φ_k = −(3/2)(Ω_m/a) δ_k / k² */
+function cosPoisson(a){
+  const N=COS.N;
+  fft3(COS.dre,COS.dim,N,false);
+  const kf=2*Math.PI, kv=new Float64Array(N);
+  for(let j=0;j<N;j++)kv[j]=kf*(j<=N/2?j:j-N);
+  const src=1.5*COS.om/a;
+  for(let z=0;z<N;z++)for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const i=(z*N+y)*N+x;
+    const k2=kv[x]*kv[x]+kv[y]*kv[y]+kv[z]*kv[z];
+    if(k2===0){COS.dre[i]=0;COS.dim[i]=0;continue;}
+    const g=-src/k2;COS.dre[i]*=g;COS.dim[i]*=g;
+  }
+  fft3(COS.dre,COS.dim,N,true);
+  COS.phi.set(COS.dre);
+}
+/* 网格上先把 −∇φ 算好，再 CIC 插回粒子。
+   逐粒子做带取模的网格查找会成为整个循环的瓶颈。 */
+function cosGradient(){
+  const N=COS.N,h=1/N,phi=COS.phi,gx=COS.gx,gy=COS.gy,gz=COS.gz;
+  const wp=COS.wrapP,wm=COS.wrapM,inv=1/(2*h);
+  for(let z=0;z<N;z++)for(let y=0;y<N;y++){
+    const row=(z*N+y)*N;
+    for(let x=0;x<N;x++){
+      const i=row+x;
+      gx[i]=-(phi[row+wp[x]]-phi[row+wm[x]])*inv;
+      gy[i]=-(phi[(z*N+wp[y])*N+x]-phi[(z*N+wm[y])*N+x])*inv;
+      gz[i]=-(phi[(wp[z]*N+y)*N+x]-phi[(wm[z]*N+y)*N+x])*inv;
+    }
+  }
+}
+function cosKick(a,dlna){
+  cosGradient();
+  const N=COS.N,gx=COS.gx,gy=COS.gy,gz=COS.gz;
+  const fac=dlna/E_of(a,COS.om);
+  for(let p=0;p<COS.np;p++){
+    let ax=COS.px[p]*N, ay=COS.py[p]*N, az=COS.pz[p]*N;
+    ax-=Math.floor(ax/N)*N;ay-=Math.floor(ay/N)*N;az-=Math.floor(az/N)*N;
+    const i0=ax|0,j0=ay|0,k0=az|0;
+    const fx=ax-i0,fy=ay-j0,fz=az-k0;
+    const i1=i0+1===N?0:i0+1,j1=j0+1===N?0:j0+1,k1=k0+1===N?0:k0+1;
+    let Fx=0,Fy=0,Fz=0;
+    for(let c=0;c<8;c++){
+      const ii=(c&1)?i1:i0, jj=(c&2)?j1:j0, kk=(c&4)?k1:k0;
+      const w=((c&1)?fx:1-fx)*((c&2)?fy:1-fy)*((c&4)?fz:1-fz);
+      const q=(kk*N+jj)*N+ii;
+      Fx+=w*gx[q];Fy+=w*gy[q];Fz+=w*gz[q];
+    }
+    COS.vx[p]+=fac*Fx;COS.vy[p]+=fac*Fy;COS.vz[p]+=fac*Fz;
+  }
+}
+function cosDrift(a,dlna){
+  const fac=dlna/(a*a*E_of(a,COS.om));
+  for(let p=0;p<COS.np;p++){
+    COS.px[p]+=fac*COS.vx[p];COS.py[p]+=fac*COS.vy[p];COS.pz[p]+=fac*COS.vz[p];
+  }
+}
+/* 按 ln a 等步长的 kick–drift–kick。
+   按 a 等步长会严重欠采样早期（a=0.02 时 da/a≈0.2），实测线性增长
+   会系统性偏低 25%；增长在 ln a 上才是均匀的。 */
+function cosStep(dlna){
+  const a0=COS.a, a1=a0*Math.exp(dlna/2), a2=a0*Math.exp(dlna);
+  cosDrift(Math.sqrt(a0*a1),dlna/2);
+  cosDeposit();
+  cosPoisson(a1);
+  cosKick(a1,dlna);
+  cosDrift(Math.sqrt(a1*a2),dlna/2);
+  COS.a=a2;COS.steps++;
+}
+
+/* ── 测量 ──
+   直接取 δ 的 rms 是不能用的：CIC 撒点对小尺度有系统性压低（初条件处
+   实测就只剩真值的 0.84 倍），而且结构越长压得越狠，用它比线性增长
+   会得出 −28% 的假偏差。抹到几个格子以上，CIC 与力的离散误差都退场。
+   这也正是宇宙学里 σ₈ 的定义方式。 */
+function sigmaR(R){
+  const N=COS.N,N3=N*N*N;
+  const re=Float64Array.from(COS.dre), im=new Float64Array(N3);
+  fft3(re,im,N,false);
+  const kf=2*Math.PI, kv=new Float64Array(N);
+  for(let j=0;j<N;j++)kv[j]=kf*(j<=N/2?j:j-N);
+  let s=0;
+  for(let z=0;z<N;z++)for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const i=(z*N+y)*N+x;
+    const k2=kv[x]*kv[x]+kv[y]*kv[y]+kv[z]*kv[z];
+    s+=(re[i]*re[i]+im[i]*im[i])*Math.exp(-k2*R*R);
+  }
+  return Math.sqrt(s)/N3;
+}
+/* 球壳平均的功率谱 */
+function measureP(nbin){
+  const N=COS.N,N3=N*N*N;
+  const re=Float64Array.from(COS.dre), im=new Float64Array(N3);
+  fft3(re,im,N,false);
+  const kf=2*Math.PI, kv=new Float64Array(N);
+  for(let j=0;j<N;j++)kv[j]=kf*(j<=N/2?j:j-N);
+  const kmax=kf*N/2;
+  const sum=new Float64Array(nbin),cnt=new Float64Array(nbin),kc=new Float64Array(nbin);
+  for(let z=0;z<N;z++)for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const i=(z*N+y)*N+x;
+    const k=Math.sqrt(kv[x]*kv[x]+kv[y]*kv[y]+kv[z]*kv[z]);
+    if(k<=0||k>kmax)continue;
+    const b=Math.min(nbin-1,Math.floor(nbin*Math.log(k/kf)/Math.log(kmax/kf)));
+    if(b<0)continue;
+    sum[b]+=(re[i]*re[i]+im[i]*im[i])/(N3*N3);cnt[b]++;kc[b]+=k;
+  }
+  const out=[];
+  for(let b=0;b<nbin;b++)if(cnt[b]>4)out.push([kc[b]/cnt[b],sum[b]/cnt[b],cnt[b]]);
+  return out;
+}
+/* 形态：空洞体积占比、最密 10% 格子占的质量、δ 的 rms 与最大值 */
+function measureMorph(){
+  const N3=COS.N**3, d=COS.dre;
+  let voids=0,mx=-9,s2=0;
+  for(let i=0;i<N3;i++){const v=d[i];if(v<-0.5)voids++;if(v>mx)mx=v;s2+=v*v;}
+  const sorted=Float64Array.from(d).sort();
+  let top=0,all=0;
+  for(let i=0;i<N3;i++){const m=1+sorted[i];all+=m;if(i>=N3*0.9)top+=m;}
+  COS.morph={voids:voids/N3,top10:all>0?top/all:0.1,max:mx,sig:Math.sqrt(s2/N3)};
+  return COS.morph;
+}
+
+/* =====================================================================
+   3. 渲染
+   ===================================================================== */
+let ptVBO=null, boxVBO=null;
+(function(){
+  ptVBO=gl.createBuffer();
+  const v=[],e=[[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
+  const P=i=>[(i&1?1:-1)*0.5,(i&2?1:-1)*0.5,(i&4?1:-1)*0.5];
+  for(const [a,b] of e){v.push(...P(a),...P(b));}
+  boxVBO=buf(new Float32Array(v));
+})();
+
+/* δ → 颜色刻度。用固定映射，不跟着当前最大值走 ——
+   自动缩放会让「什么都还没发生」和「网已经长好」看起来一样热闹。 */
+function densT(d){
+  /* 粒子是按质量采样的：一半质量挤在最密的 10% 格子里，所以按密度直接线性
+     配色会让三分之一的点顶到最亮档，网糊成一片亮云。刻度往暗端压，
+     让空洞真的暗下去、只有节点才亮到顶。
+       δ=−0.5（空洞）→ 0.08　δ=0 → 0.19　δ=1 → 0.31　δ=20 → 0.70　δ=100 → 0.98 */
+  return clamp((Math.log10(1+Math.max(d,-0.95))+0.5)/2.6,0,1);
+}
+function cosRender(){
+  const N=COS.N, N3=N*N*N, h=1/N, d=COS.dre, b=COS.buf;
+  const amp=COS.ampView;
+  let o=0;
+  for(let p=0;p<COS.np;p++){
+    /* 位置：显示时可以把「相对晶格的位移」放大，方便在种子阶段看清图案。
+       放大倍数只作用于画面，不进入任何计算。 */
+    const gz0=(p/(N*N))|0, gy0=((p/N)|0)%N, gx0=p%N;
+    const qx=(gx0+0.5)*h, qy=(gy0+0.5)*h, qz=(gz0+0.5)*h;
+    let X=qx+(COS.px[p]-qx)*amp, Y=qy+(COS.py[p]-qy)*amp, Z=qz+(COS.pz[p]-qz)*amp;
+    /* 回卷到盒子里。物理是周期性的，但 px 会一路累加不回头；
+       不回卷的话粒子会飘出盒子边框，周期结构看起来就断了。 */
+    X-=Math.floor(X);Y-=Math.floor(Y);Z-=Math.floor(Z);
+    /* CIC 取该点的局域密度，用来定颜色和点大小 */
+    let ax=COS.px[p]*N, ay=COS.py[p]*N, az=COS.pz[p]*N;
+    ax-=Math.floor(ax/N)*N;ay-=Math.floor(ay/N)*N;az-=Math.floor(az/N)*N;
+    const i0=ax|0,j0=ay|0,k0=az|0;
+    const fx=ax-i0,fy=ay-j0,fz=az-k0;
+    const i1=i0+1===N?0:i0+1,j1=j0+1===N?0:j0+1,k1=k0+1===N?0:k0+1;
+    let dd=0;
+    for(let c=0;c<8;c++){
+      const ii=(c&1)?i1:i0, jj=(c&2)?j1:j0, kk=(c&4)?k1:k0;
+      dd+=((c&1)?fx:1-fx)*((c&2)?fy:1-fy)*((c&4)?fz:1-fz)*d[(kk*N+jj)*N+ii];
+    }
+    b[o++]=X-0.5;b[o++]=Y-0.5;b[o++]=Z-0.5;b[o++]=densT(dd);
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER,ptVBO);
+  gl.bufferData(gl.ARRAY_BUFFER,b,gl.DYNAMIC_DRAW);
+
+  if(COS.showBox>0.01){
+    gl.useProgram(P_LINE);
+    gl.uniformMatrix4fv(P_LINE.u.uVP,false,VP);
+    gl.uniform4f(P_LINE.u.uCol,1,1,1,0.10*COS.showBox);
+    gl.bindBuffer(gl.ARRAY_BUFFER,boxVBO);
+    gl.enableVertexAttribArray(P_LINE.a.aPos);
+    gl.vertexAttribPointer(P_LINE.a.aPos,3,gl.FLOAT,false,0,0);
+    gl.drawArrays(gl.LINES,0,24);
+  }
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE);gl.depthMask(false);
+  gl.useProgram(P_PT);
+  gl.uniformMatrix4fv(P_PT.u.uVP,false,VP);
+  gl.uniform3fv(P_PT.u.uEye,EYE);
+  gl.uniform1f(P_PT.u.uSize,Math.max(1.5,cv.height*0.0055));
+  gl.bindBuffer(gl.ARRAY_BUFFER,ptVBO);
+  gl.enableVertexAttribArray(P_PT.a.aPos);
+  gl.vertexAttribPointer(P_PT.a.aPos,3,gl.FLOAT,false,16,0);
+  gl.enableVertexAttribArray(P_PT.a.aT);
+  gl.vertexAttribPointer(P_PT.a.aT,1,gl.FLOAT,false,16,12);
+  gl.drawArrays(gl.POINTS,0,COS.np);
+  gl.depthMask(true);gl.disable(gl.BLEND);
+}
+
+/* =====================================================================
+   4. 图表
+   ===================================================================== */
+const c1=$('#ch1'),c2=$('#ch2'),c3=$('#ch3');
+function fitChart(c,w,h){
+  const dpr=Math.min(2,devicePixelRatio||1);
+  w=Math.round(w);h=Math.round(h);
+  if(c.width!==w*dpr||c.height!==h*dpr){c.width=w*dpr;c.height=h*dpr;}
+  c.style.width=w+'px';c.style.height=h+'px';
+  const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return x;
+}
+function chartW(){const box=$('#charts');const w=box?box.clientWidth-30:248;return clamp(w,180,560);}
+
+function drawPk(){
+  const W=chartW(),H=clamp(W*0.52,130,190),x=fitChart(c1,W,H);
+  const padL=30,padB=24,padT=14,padR=10;
+  const gw=W-padL-padR, gh=H-padB-padT;
+  const kf=2*Math.PI, kbox0=kf, kbox1=kf*COS.N/2;
+  /* 横轴故意画得比盒子宽：谱的转折在比盒子还大的尺度上，
+     只画盒子范围的话读者会以为谱是单调下降的。 */
+  const k0=kf/16, k1=kf*COS.N;
+  const X=k=>padL+Math.log(k/k0)/Math.log(k1/k0)*gw;
+  const th=[];let lo=1e30,hi=-1e30;
+  for(let i=0;i<=160;i++){
+    const k=k0*Math.pow(k1/k0,i/160);
+    const p=powerSpec(k,COS.ns,COS.gamma);
+    th.push([k,p]);if(p>0){lo=Math.min(lo,p);hi=Math.max(hi,p);}
+  }
+  const Y=p=>padT+gh-(Math.log10(p)-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo))*gh;
+  // 这个盒子采到的那一段
+  x.fillStyle='rgba(94,231,255,.07)';
+  x.fillRect(X(kbox0),padT,X(kbox1)-X(kbox0),gh);
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.beginPath();x.moveTo(padL,padT);x.lineTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
+  x.strokeStyle='#5ee7ff';x.lineWidth=2;x.beginPath();
+  th.forEach(([k,p],i)=>{const px=X(k),py=Y(Math.max(p,lo));i?x.lineTo(px,py):x.moveTo(px,py);});
+  x.stroke();
+  // 转折
+  let bk=0,bp=-1;for(const [k,p] of th)if(p>bp){bp=p;bk=k;}
+  x.setLineDash([2,3]);x.strokeStyle='rgba(255,216,102,.55)';
+  x.beginPath();x.moveTo(X(bk),padT);x.lineTo(X(bk),padT+gh);x.stroke();x.setLineDash([]);
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(255,216,102,.9)';x.fillText('转折',X(bk)-11,padT+9);
+  x.fillStyle='rgba(94,231,255,.75)';
+  x.fillText('这个盒子采到的范围',X(kbox0)+4,padT+gh-8);
+  x.fillStyle='rgba(152,162,189,.75)';
+  x.fillText('大尺度',padL,H-6);x.fillText('小尺度',padL+gw-42,H-6);
+  x.save();x.translate(11,padT+gh*0.5+24);x.rotate(-Math.PI/2);
+  x.fillText('起伏更强 ↑',0,0);x.restore();
+  x.fillStyle='rgba(94,231,255,.9)';x.fillText('n_s = '+COS.ns.toFixed(3),padL+gw-84,padT+11);
+}
+
+function drawGrowth(){
+  const W=chartW(),H=clamp(W*0.50,126,180),x=fitChart(c2,W,H);
+  const padL=34,padB=24,padT=14,padR=10;
+  const gw=W-padL-padR, gh=H-padB-padT;
+  const aI=COS.aInit;
+  const D0=growth(aI,COS.om);
+  /* 纵轴按理论的整体涨幅定死，不跟着数据缩放 */
+  const top=growth(1,COS.om)/D0*1.08;
+  const X=a=>padL+Math.log(a/aI)/Math.log(1/aI)*gw;
+  const Y=v=>padT+gh-clamp(v/top,0,1)*gh;
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.beginPath();x.moveTo(padL,padT);x.lineTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
+  // 理论
+  x.setLineDash([4,3]);x.strokeStyle='rgba(255,255,255,.45)';x.lineWidth=1.5;x.beginPath();
+  for(let i=0;i<=80;i++){const a=aI*Math.pow(1/aI,i/80);
+    const py=Y(growth(a,COS.om)/D0); i?x.lineTo(X(a),py):x.moveTo(X(a),py);}
+  x.stroke();x.setLineDash([]);
+  // 实测
+  x.fillStyle='#ffd866';
+  for(const p of COS.hist){x.beginPath();x.arc(X(p.a),Y(p.sig),2.4,0,7);x.fill();}
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='rgba(255,255,255,.5)';x.fillText('虚线：线性理论 D(a)',padL+6,padT+11);
+  x.fillStyle='rgba(255,216,102,.95)';x.fillText('点：模拟实测',padL+6,padT+24);
+  x.fillStyle='rgba(152,162,189,.75)';
+  x.fillText('早',padL,H-6);x.fillText('今天',padL+gw-26,H-6);
+  x.save();x.translate(11,padT+gh*0.5+26);x.rotate(-Math.PI/2);
+  x.fillText('放大了几倍 ↑',0,0);x.restore();
+}
+
+function drawMorph(){
+  const W=chartW(),H=clamp(W*0.50,126,180),x=fitChart(c3,W,H);
+  const padL=34,padB=24,padT=12,padR=10;
+  const gw=W-padL-padR, gh=(H-padB-padT);
+  const aI=COS.aInit;
+  const X=a=>padL+Math.log(a/aI)/Math.log(1/aI)*gw;
+  const Y=v=>padT+gh-clamp(v,0,1)*gh;
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.beginPath();x.moveTo(padL,padT);x.lineTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
+  // 均匀时最密 10% 就装 10% 的质量 —— 这条线是「什么也没发生」的基准
+  x.setLineDash([2,3]);x.strokeStyle='rgba(255,255,255,.22)';
+  x.beginPath();x.moveTo(padL,Y(0.1));x.lineTo(padL+gw,Y(0.1));x.stroke();x.setLineDash([]);
+  const plot=(key,col)=>{
+    x.strokeStyle=col;x.lineWidth=2;x.beginPath();
+    COS.hist.forEach((p,i)=>{const py=Y(p[key]||0);i?x.lineTo(X(p.a),py):x.moveTo(X(p.a),py);});
+    x.stroke();
+  };
+  plot('voids','#7f8cff');
+  plot('top10','#ff9f6a');
+  x.font='10px ui-monospace,monospace';
+  x.fillStyle='#7f8cff';x.fillText('几乎空的体积',padL+6,padT+11);
+  x.fillStyle='#ff9f6a';x.fillText('最密 10% 格子装的质量',padL+6,padT+24);
+  x.fillStyle='rgba(255,255,255,.35)';x.fillText('均匀基准 10%',padL+gw-78,Y(0.1)-4);
+  x.fillStyle='rgba(152,162,189,.75)';
+  x.fillText('早',padL,H-6);x.fillText('今天',padL+gw-26,H-6);
+}
+
+/* =====================================================================
+   5. 剧本
+   ===================================================================== */
+const anims=[],beats=[];
+function anim(set,from,to,ms,delay,key){anims.push({set,from,to,ms,t0:performance.now()+(delay||0),key});}
+function beat(delay,fn){beats.push({t:performance.now()+delay,fn});}
+function clearShow(){anims.length=0;beats.length=0;}
+function to(obj,key,val,ms,delay){anim(v=>obj[key]=v,obj[key],val,ms===undefined?600:ms,delay,key);}
+function stepAnims(){
+  const now=performance.now();
+  for(let i=anims.length-1;i>=0;i--){
+    const a=anims[i];
+    if(now<a.t0)continue;
+    const k=clamp((now-a.t0)/a.ms,0,1);
+    a.set(lerp(a.from,a.to,ease(k)));
+    if(k>=1)anims.splice(i,1);
+  }
+  let i=0;
+  while(i<beats.length){if(beats[i].t<=now){const f=beats[i].fn;beats.splice(i,1);f();}else i++;}
+}
+/* 把模拟拨回起点并重新播放 */
+function replay(play){
+  clearShow();cosInit();COS.running=!!play;
+}
+
+const SC={steps:[
+  {id:'seed',t:'一切从一次抖动开始',
+   b:`<p class="lede">今天横跨上亿光年的星系纤维，种子是 138 亿年前一个量子场的<b>抖动</b>。</p>
+      <p>画面里是一个立方体，边长 <b>180 Mpc/h</b>——约 8 亿光年。里面撒着 32768 个粒子，代表暗物质。</p>
+      <p>此刻它们几乎是<b>均匀</b>的——排得像晶格，只是每个粒子被轻轻推离了自己的格点。推的方向和大小，来自暴胀时期的量子涨落。</p>
+      <p>颜色标的是「这一带比平均密多少」：暗蓝是偏空，青色是偏密。<em>图案已经在了，只是非常淡。</em></p>
+      <p class="watch">在「参数」里拖 <b>把位移放大</b>，可以把这个几乎看不见的图案夸张出来看清楚。这个放大只作用于画面，不进入任何计算。</p>
+      <button type="button" class="open-controls" data-open-controls>🎚 打开「把位移放大」</button>
+      <details class="deep"><summary>量子涨落怎么变成经典的密度扰动</summary>
+        <p>暴胀期间，驱动暴胀的标量场 φ 有不可避免的量子涨落 δφ。暴胀让空间指数膨胀，涨落的波长很快被拉得<b>超过视界</b>——大到因果无法联系两端。</p>
+        <p>超出视界之后，涨落的两个模式解中衰减的那一支消失，只剩下不随时间变的那一支：涨落被「冻结」了。它不再是量子涨落，而成为一个确定的、经典的空间图案。</p>
+        <p>暴胀结束后视界重新长大，这些图案陆续「重新进入视界」，变成物质密度的扰动 δ = δρ/ρ̄。<b>整张宇宙网的初条件就是它。</b></p>
+      </details>`,
+   en(){camTo(0.7,0.25,2.6,0,0,0);CAM.spin=0.035;COS.showBox=1;to(COS,'ampView',18,900);}},
+
+  {id:'spectrum',t:'抖动不是白噪声：它有形状',
+   b:`<p class="lede">涨落在<b>每个尺度上</b>各有多强？这条曲线是暴胀留下的指纹。</p>
+      <p>如果各个尺度一样强，那是白噪声，长不出网。真实的原初涨落有一个特定的形状：</p>
+      <span class="fml">P(k) ∝ k<sup>n<sub>s</sub></sup> · T²(k)</span>
+      <button type="button" class="open-charts" data-open-charts>📈 打开功率谱曲线</button>
+      <p>左边那半是<b>原初谱</b> k<sup>n<sub>s</sub></sup>：暴胀预言 n<sub>s</sub> 略小于 1。Planck 量到 <b>0.9649 ± 0.0042</b>。这个「略小于 1」不是凑数——它正是暴胀模型的硬预言之一。</p>
+      <p>右边那半下降，是<b>转移函数</b> T(k) 干的：小尺度的模进入视界更早，那时宇宙由辐射主导，辐射的压强把它们顶住不让长大。所以谱有个<b>转折</b>，位置由物质–辐射相等的时刻定下——波长约 <b>307 Mpc/h</b>。</p>
+          <p class="q"><b>图上要注意一件事：</b>那个转折的波长比这个盒子（180 Mpc/h）还大，所以<em>本页的模拟根本采不到它</em>。图里画的理论曲线故意画得比盒子宽，蓝色带子标出的才是这个盒子真正采到的那一段。只画盒子范围的话，你会以为谱是单调下降的。这也是真实模拟里一直要权衡的事：盒子小了看不到大尺度，盒子大了小尺度又分辨不出来。</p>
+      <p class="watch">拖 <b>谱指数 n<sub>s</sub></b>：调大，小尺度更强，图案更「毛」；调小，大尺度占优，图案更「块」。</p>
+      <details class="deep"><summary>本页用的 T(k) 是哪个式子</summary>
+        <p>BBKS（Bardeen–Bond–Kaiser–Szalay 1986）的拟合公式，令 q = k/Γ：</p>
+        <span class="fml">T(q) = ln(1+2.34q)/(2.34q) × [1 + 3.89q + (16.1q)² + (5.46q)³ + (6.71q)⁴]<sup>−1/4</sup></span>
+        <p>Γ ≈ Ω<sub>m</sub>h 是形状参数。这是个闭式，你可以拿计算器直接核对——本页没有偷偷读任何数据文件。</p>
+        <p>更精确的做法是用 CAMB/CLASS 数值解玻尔兹曼层级（那里还能看到重子声学振荡的涟漪），BBKS 是它的光滑近似。</p>
+      </details>`,
+   en(){camTo(0.9,0.20,2.6,0,0,0);CAM.spin=0.03;COS.showBox=1;to(COS,'ampView',18,600);}},
+
+  {id:'amplitude',t:'幅度只有十万分之一',
+   b:`<p class="lede">这些起伏有多大？<b>δ ≈ 10⁻⁵。</b>十万分之一。</p>
+      <p>这不是估计，是量出来的：宇宙微波背景的温度在天上各处相差约十万分之一。COBE 1992 年首次测到，WMAP 与 Planck 把它测精。<em>那张著名的「宇宙婴儿照」就是这张图案。</em></p>
+      <div class="predict">
+        <p class="pq">先猜一下：从十万分之一，长到今天「一半的体积几乎空掉」，引力需要把它放大多少倍？</p>
+        <button type="button" data-pick data-why="约<b>四万倍</b>。线性增长因子从 a≈2×10⁻⁵（复合时期）到今天大约是这个量级，10⁻⁵ × 4×10⁴ ≈ 0.4，正好进入非线性坍缩的门槛。放大倍数看着惊人，但它只是「δ 正比于宇宙尺度因子」这一条线性规律跑了 138 亿年的结果——每一步都不快，架不住时间长。">大约一百倍</button>
+        <button type="button" data-pick data-why="约<b>四万倍</b>。线性增长因子从 a≈2×10⁻⁵（复合时期）到今天大约是这个量级，10⁻⁵ × 4×10⁴ ≈ 0.4，正好进入非线性坍缩的门槛。放大倍数看着惊人，但它只是「δ 正比于宇宙尺度因子」这一条线性规律跑了 138 亿年的结果——每一步都不快，架不住时间长。">大约一千倍</button>
+        <button type="button" data-pick data-right data-why="约<b>四万倍</b>。线性增长因子从 a≈2×10⁻⁵（复合时期）到今天大约是这个量级，10⁻⁵ × 4×10⁴ ≈ 0.4，正好进入非线性坍缩的门槛。放大倍数看着惊人，但它只是「δ 正比于宇宙尺度因子」这一条线性规律跑了 138 亿年的结果——每一步都不快，架不住时间长。">大约四万倍</button>
+      </div>
+      <p class="q"><b>本页的诚实交代：</b>模拟从 a = 0.02（红移 z ≈ 49）起步，起始起伏取 σ = 0.012（3 个格子的平滑尺度上），而不是 10⁻⁵。原因是从复合时期一路积分到今天，绝大部分时间里什么可看的事都没发生，纯属浪费。标准 N-body 模拟都是这么干的：先用<em>线性理论</em>把扰动从 10⁻⁵ 解析地推到 z≈50，再交给数值积分。下一章那张图会告诉你线性理论在这段区间里到底准不准。</p>
+          <p class="q">为什么按「3 个格子」定标而不是按整个网格的 rms：PM 的力分辨率只有两三个格子，格子尺度上的模压根长不起来。按网格 rms 定标会把大部分方差堆在那些长不动的模上——实测 δ 只能长到线性预期的五分之一。这一条是我在写这一页时踩过的坑。</p>`,
+   en(){camTo(1.1,0.30,2.4,0,0,0);CAM.spin=0.05;COS.showBox=1;to(COS,'ampView',26,700);}},
+
+  {id:'gravity',t:'引力是个放大器',
+   b:`<p class="lede">过密的地方引力更强，吸来更多物质，于是更密。<b>这个正反馈就是整张网的发动机。</b></p>
+      <p class="watch">按 <b>播放</b>，看这团几乎均匀的点云开始结块。</p>
+      <button type="button" class="open-controls" data-open-controls>▶ 打开播放按钮</button>
+      <p>在起伏还小的时候（δ ≪ 1），增长有个干净的解析解。物质主导期里：</p>
+      <span class="fml">δ(t) ∝ a(t)</span>
+      <p>也就是<b>正比于宇宙的尺度因子</b>。宇宙长大一倍，起伏也长大一倍。</p>
+      <button type="button" class="open-charts" data-open-charts>📈 打开增长曲线</button>
+      <p>虚线是线性理论算出来的 D(a)，黄点是模拟当场量到的。<em>它们应该重合</em>——如果不重合，要么理论错了，要么我的代码错了。</p>
+      <p class="q">图里量的不是 δ 的 rms，而是<b>抹到 4 个格子以上</b>的 σ_R。直接取 δ 的 rms 会被 CIC 撒点对小尺度的系统性压低污染（初条件处实测就只剩真值的 0.84 倍），拿它比线性增长会得出 −28% 的假偏差。这类「换个统计量才量得准」的取舍，在数值实验里比公式推导更常遇到。</p>
+      <details class="deep"><summary>D(a) 是怎么来的</summary>
+        <p>线性扰动方程在物质主导期是</p>
+        <span class="fml">δ̈ + 2H δ̇ − (3/2) Ω<sub>m</sub>H² δ = 0</span>
+        <p>两个解：一支增长、一支衰减。增长解可以写成积分形式</p>
+        <span class="fml">D(a) ∝ E(a) ∫₀<sup>a</sup> da′ / (a′E(a′))³，　E(a)=√(Ω<sub>m</sub>a⁻³+Ω<sub>Λ</sub>)</span>
+        <p>Ω<sub>m</sub>=1 的爱因斯坦–德西特宇宙里这个积分能积出来，正好给 D ∝ a。有了 Λ 之后增长在晚期会被拖慢——下一次你调 Ω<sub>m</sub> 就会看到。</p>
+        <p>另一个常用量是增长率 f = dlnD/dlna，有个好记的近似 f ≈ Ω<sub>m</sub>(a)<sup>0.55</sup>。本页在 a=1、Ω<sub>m</sub>=0.31 时算出 0.5224，而 0.31<sup>0.55</sup> = 0.5251——差 0.5%。</p>
+      </details>`,
+   en(){camTo(0.6,0.22,2.5,0,0,0);CAM.spin=0.03;COS.showBox=1;
+        to(COS,'ampView',1,700);replay(true);}},
+
+  {id:'collapse',t:'为什么是网，不是一团团',
+   b:`<p class="lede">如果引力只是「把东西吸到一起」，宇宙该长满一个个球才对。<b>可它长出来的是纤维。</b></p>
+      <p>关键在 Zel'dovich 1970 年的一个观察：一块物质受到的压缩，沿三个主轴的<b>速度是不一样的</b>。三个速度几乎不可能相等，于是坍缩有严格的先后：</p>
+      <ul>
+        <li>先沿<b>最快</b>的那个方向压扁 → <b>饼 / 墙</b>（二维）</li>
+        <li>再沿次快的方向收缩 → <b>纤维</b>（一维）</li>
+        <li>最后沿第三个方向 → <b>节点</b>（零维）</li>
+        <li>被抽空的地方 → <b>空洞</b>（三维）</li>
+      </ul>
+      <p class="watch">重放一次，盯着某一块区域看它<em>先变扁</em>，再抽成一条线。</p>
+      <button type="button" class="open-controls" data-open-controls>↻ 打开重放</button>
+      <p>所以网状结构不是巧合，而是<b>各向异性坍缩的必然结果</b>。三个方向同时到达的情形测度为零——真要长成球，得三个本征值精确相等。</p>
+      <details class="deep"><summary>Zel'dovich 近似的式子</summary>
+        <p>把粒子的初始（拉格朗日）位置记为 <b>q</b>，则</p>
+        <span class="fml"><b>x</b>(<b>q</b>,a) = <b>q</b> + D(a)·<b>s</b>(<b>q</b>)</span>
+        <p>位移场 <b>s</b> 满足 ∇·<b>s</b> = −δ<sub>初</sub>。做一阶展开，密度由变形张量 ∂s<sub>i</sub>/∂q<sub>j</sub> 的三个本征值 −λ₁ ≥ −λ₂ ≥ −λ₃ 决定：</p>
+        <span class="fml">1 + δ = 1 / [(1−Dλ₁)(1−Dλ₂)(1−Dλ₃)]</span>
+        <p>哪个 λ 最大，哪个方向先让分母趋零、密度先发散。<b>三个因子几乎不会同时归零</b>，所以坍缩总是「先二维、再一维、最后零维」。</p>
+        <p>本页的初条件用的就是这个式子（一阶版本），之后交给完整的 N-body 演化。</p>
+      </details>`,
+   en(){camTo(1.35,0.16,2.1,0,0,0);CAM.spin=0.02;COS.showBox=0.4;
+        COS.ampView=1;replay(true);}},
+
+  {id:'web',t:'宇宙网：空洞、墙、纤维、节点',
+   b:`<p class="lede">跑到今天。<b>一半的体积几乎空了，一半的质量挤进了十分之一的格子里。</b></p>
+      <button type="button" class="open-charts" data-open-charts>📊 打开形态曲线</button>
+      <p>两条线量的是同一件事的两面：</p>
+      <ul>
+        <li><span style="color:#7f8cff">几乎空的体积</span>——密度低于平均一半的格子占多大比例。从 0 涨到<b>约 51%</b>。</li>
+        <li><span style="color:#ff9f6a">最密 10% 格子装的质量</span>——均匀时它就是 10%（图里那条虚线）。今天涨到<b>约 53%</b>。</li>
+      </ul>
+      <p>这两个数字合起来就是「网」的定量含义：<em>物质离开了大部分空间，聚到很小一部分里去。</em></p>
+      <p>按维度排下来是一套完整的层级：</p>
+      <span class="fml">空洞(3D) → 墙(2D) → 纤维(1D) → 节点(0D)</span>
+      <p>节点就是星系团所在的地方。纤维上串着星系群。而空洞占了宇宙体积的绝大部分，里面几乎没有星系。</p>
+      <p class="q">本页 32³ 的分辨率能看出纤维和空洞的骨架，但看不出单个星系晕——每格 5.6 Mpc/h，比一个星系团还大。真实模拟（Millennium 500 Mpc/h、IllustrisTNG、Uchuu 2000 Mpc/h）用的是几十亿到上万亿个粒子。</p>`,
+   en(){camTo(0.5,0.30,2.3,0,0,0);CAM.spin=0.035;COS.showBox=0.5;
+        COS.ampView=1;replay(true);}},
+
+  {id:'cosmology',t:'换一个宇宙',
+   b:`<p class="lede">这张网的样子由几个数决定。<b>改一个，重跑，看它变成什么。</b></p>
+      <button type="button" class="open-controls" data-open-controls>🎚 打开参数</button>
+      <p><b>物质密度 Ω<sub>m</sub></b>——宇宙里有多少物质。它管两件事：引力有多强，以及暗能量什么时候开始接管。</p>
+      <ul>
+        <li>调<b>大</b>：引力更强，结构长得更快更结实，纤维更粗、节点更重。</li>
+        <li>调<b>小</b>：暗能量更早主导，宇宙加速膨胀把结构「拉住」，增长在晚期被冻住，网更淡。</li>
+      </ul>
+      <p><b>谱指数 n<sub>s</sub></b>——初始起伏在大小尺度之间怎么分配。</p>
+      <ul>
+        <li>调<b>大</b>：小尺度起伏更强，先长出很多小团块。</li>
+        <li>调<b>小</b>：大尺度占优，结构更成片、更「块状」。</li>
+      </ul>
+      <p class="watch">改完按 <b>↻ 重放</b>。同一颗随机种子，所以图案的「骨架」不变，变的是它长成什么样——这样才比得出来是参数的功劳，不是随机的功劳。</p>
+      <p>顺带看一眼增长曲线：调小 Ω<sub>m</sub>，虚线的后半段会明显<b>压平</b>。那就是暗能量在踩刹车。</p>
+      <details class="deep"><summary>为什么暗能量会「冻住」结构增长</summary>
+        <p>线性增长方程里的阻尼项是 2Hδ̇。暗能量主导后 H 趋于常数、不再随膨胀衰减，阻尼相对引力项越来越占上风，增长解趋于常数。</p>
+        <p>量化一点：增长率 f = dlnD/dlna ≈ Ω<sub>m</sub>(a)<sup>0.55</sup>。物质主导期 Ω<sub>m</sub>(a)→1，f→1，也就是 δ ∝ a；今天 Ω<sub>m</sub>≈0.31，f≈0.52，增长已经慢了一半。再往后会趋于零。</p>
+        <p>换句话说：<b>宇宙网基本已经定型了。</b>暗能量接管之后，它不会再长出多少新结构。</p>
+      </details>`,
+   en(){camTo(0.85,0.26,2.6,0,0,0);CAM.spin=0.03;COS.showBox=0.6;COS.ampView=1;}},
+
+  {id:'evidence',t:'怎么知道它真长这样',
+   b:`<p class="lede">上面这一切是算出来的。<b>凭什么相信真实宇宙也长这样？</b></p>
+      <p>四条独立的证据链，方法完全不同，结论互相对得上：</p>
+      <ul>
+        <li><b>红移巡天</b>——直接量星系的三维位置。1986 年 de Lapparent–Geller–Huchra 画出第一条「长城」，之后是 2dF、SDSS，现在是 DESI。<em>星系在三维里确实排成纤维。</em></li>
+        <li><b>Lyman-α 森林</b>——类星体的光穿过一路上的中性氢云，在光谱上留下一排吸收线。每条线是一团气体，可以反推纤维之间的气体分布。</li>
+        <li><b>弱引力透镜</b>——前景物质弯曲背景星系的像。它量的是<b>全部</b>质量，不管发不发光，所以能直接看见暗物质骨架。</li>
+        <li><b>数值模拟</b>——就是这一页在做的事，只是大得多。模拟出的网和巡天看到的网在统计上一致，这是宇宙学最漂亮的成功之一。</li>
+      </ul>
+      <p class="subh">这一页没有做的事</p>
+      <p>说清楚边界：本页是<b>纯冷暗物质的引力演化</b>。没有重子、没有气体动力学、没有恒星形成、没有中微子、没有辐射时期。骨架确实是这么长出来的，但真实星系长在骨架上还需要另一整套物理。</p>
+      <p>分辨率也只有 32³ = 32768 个粒子，盒子 180 Mpc/h、每格 5.6 Mpc/h，连一个像样的星系晕都分辨不出来。它能诚实告诉你的是：<em>从一个有形状的高斯随机场出发，只靠引力，就能长出空洞与纤维</em>——以及这个过程的增长率确实跟得住线性理论（实测差 4.5%）。</p>
+      <p class="q">「资料」页列了本页用到的每一个公式的出处（BBKS 转移函数、Zel'dovich 近似、Planck 的 n<sub>s</sub>），都可以直接核对。</p>`,
+   en(){camTo(1.5,0.22,2.8,0,0,0);CAM.spin=0.05;COS.showBox=0.35;COS.ampView=1;}}
+],
+ctrl:`
+  <div class="ckgrp" data-ck="run">
+    <div class="btns">
+      <button class="btn on" id="b_play">播放</button>
+      <button class="btn" id="b_replay">↻ 重放</button>
+    </div>
+    <p class="ckhint">从 a=0.02（红移 ≈ 49）跑到 a=1（今天），约 100 步。</p>
+  </div>
+  <div class="ckgrp" data-ck="cosmo">
+    <div class="sep"></div>
+    <div class="row"><label>物质密度 Ω<sub>m</sub> <b id="v_om"></b></label>
+      <input type="range" id="s_om" min="0.10" max="1.00" step="0.01"></div>
+    <p class="ckhint">今天的实测值约 0.31。改完要按「重放」才生效。</p>
+  </div>
+  <div class="ckgrp" data-ck="spec">
+    <div class="sep"></div>
+    <div class="row"><label>谱指数 n<sub>s</sub> <b id="v_ns"></b></label>
+      <input type="range" id="s_ns" min="0.80" max="1.20" step="0.005"></div>
+    <p class="ckhint">Planck 测得 0.9649 ± 0.0042。改完要按「重放」才生效。</p>
+  </div>
+  <div class="ckgrp" data-ck="amp">
+    <div class="sep"></div>
+    <div class="row"><label>把位移放大 <b id="v_amp"></b></label>
+      <input type="range" id="s_amp" min="1" max="40" step="1"></div>
+    <p class="ckhint">只作用于画面，不进入任何计算。用来在种子阶段看清那个很淡的图案。</p>
+  </div>
+  <div class="ckgrp" data-ck="view">
+    <div class="sep"></div>
+    <div class="btns">
+      <button class="btn" id="b_box">盒子边框</button>
+      <button class="btn" id="b_spin">自动旋转</button>
+    </div>
+  </div>`
+};
+
+/* 每章相关的控件 —— 全摆出来读者不知道该碰哪个 */
+const CK={
+  seed:['amp','view'], spectrum:['spec','view'], amplitude:['amp','view'],
+  gravity:['run','view'], collapse:['run','view'], web:['run','view'],
+  cosmology:['cosmo','spec','run'], evidence:['view']
+};
+/* 每章显示哪几张图。一章一张主图，最多再配一张。 */
+const CHARTS={
+  spectrum:['pk'], amplitude:[], gravity:['growth'],
+  collapse:[], web:['morph','growth'], cosmology:['morph','pk'], evidence:[]
+};
+
+/* =====================================================================
+   6. 界面
+   ===================================================================== */
+let scene='home', si=0;
+function setScene(name){
+  scene=name;
+  document.body.className=name==='cos'?'k':'home';
+  $('#home').classList.toggle('hide',name!=='home');
+  $('#tl').classList.toggle('hide',name!=='tl');
+  const play=name==='cos';
+  $('#story').style.display=play?'flex':'none';
+  $('#right').style.display=play?'flex':'none';
+  $('#hud').style.display=play?'flex':'none';
+  $$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.go===name));
+  $('#hint').textContent=play?'拖动旋转 · 滚轮缩放':'';
+  if(play){
+    $('#ctrlbody').innerHTML=SC.ctrl;
+    bindCtrl();
+    si=0;gotoStep(0);
+    buildDots();
+  }else{
+    labels([]);
+    if(name==='home'){CAM.spin=0.03;camTo(CAM.taz,0.2,3.0,0,0);}
+  }
+}
+function buildDots(){
+  const n=SC.steps.length;
+  $('#dots').innerHTML=Array.from({length:n},(_,i)=>`<i data-i="${i}"></i>`).join('');
+  $$('#dots i').forEach(e=>e.onclick=()=>gotoStep(+e.dataset.i));
+  markDots();
+}
+function markDots(){$$('#dots i').forEach((e,i)=>e.classList.toggle('on',i===si));}
+function gotoStep(i){
+  const S=SC.steps;si=clamp(i,0,S.length-1);
+  const s=S[si];
+  clearShow();
+  $('#stepno').textContent=`${String(si+1).padStart(2,'0')} / ${String(S.length).padStart(2,'0')}`;
+  $('#sttitle').textContent=s.t;
+  $('#stbody').innerHTML=s.b;
+  $('#stbody').scrollTop=0;
+  $('#prev').disabled=si===0;$('#next').disabled=si===S.length-1;
+  markDots();
+  s.en&&s.en();
+  syncCtrl();
+}
+$('#prev').onclick=()=>gotoStep(si-1);
+$('#next').onclick=()=>gotoStep(si+1);
+document.addEventListener('keydown',e=>{
+  if(scene!=='cos')return;
+  if(e.key==='ArrowRight')gotoStep(si+1);
+  if(e.key==='ArrowLeft')gotoStep(si-1);
+  if(e.key===' '){e.preventDefault();COS.running=!COS.running;syncCtrl();}
+});
+$$('#nav button').forEach(b=>b.onclick=()=>setScene(b.dataset.go));
+$$('[data-go]').forEach(b=>{if(!b.closest('#nav'))b.onclick=()=>setScene(b.dataset.go);});
+$('#brand').onclick=()=>setScene('home');
+
+function bindCtrl(){
+  const so=$('#s_om');so.value=COS.om;
+  so.oninput=()=>{COS.om=+so.value;syncCtrl();};
+  const sn=$('#s_ns');sn.value=COS.ns;
+  sn.oninput=()=>{COS.ns=+sn.value;syncCtrl();};
+  const sa=$('#s_amp');sa.value=COS.ampView;
+  sa.oninput=()=>{
+    /* 手动拖的时候把同名补间掐掉，否则松手会被动画抢回去 */
+    for(let i=anims.length-1;i>=0;i--)if(anims[i].key==='ampView')anims.splice(i,1);
+    COS.ampView=+sa.value;syncCtrl();
+  };
+  $('#b_play').onclick=()=>{
+    if(COS.a>=0.999)replay(true); else COS.running=!COS.running;
+    syncCtrl();
+  };
+  $('#b_replay').onclick=()=>{replay(true);syncCtrl();};
+  $('#b_box').onclick=()=>{COS.showBox=COS.showBox>0.5?0:1;syncCtrl();};
+  $('#b_spin').onclick=()=>{CAM.spin=CAM.spin?0:0.035;syncCtrl();};
+}
+function paintRange(el){
+  if(!el)return;
+  const mn=+el.min,mx=+el.max;
+  el.style.setProperty('--pct',((+el.value-mn)/(mx-mn)*100).toFixed(1)+'%');
+}
+function syncCtrl(){
+  $$('#ctrlbody input[type=range]').forEach(paintRange);
+  if(scene!=='cos')return;
+  const cid=(SC.steps[si]||{}).id||'';
+  const hot=CK[cid]||[];
+  $$('#ctrlbody .ckgrp').forEach(g=>g.classList.toggle('ck-dim',hot.length>0&&!hot.includes(g.dataset.ck)));
+  const e=id=>$(id);
+  if(e('#v_om'))e('#v_om').textContent=COS.om.toFixed(2);
+  if(e('#v_ns'))e('#v_ns').textContent=COS.ns.toFixed(3);
+  if(e('#v_amp'))e('#v_amp').textContent='×'+COS.ampView.toFixed(0);
+  if(e('#s_om'))e('#s_om').value=COS.om;
+  if(e('#s_ns'))e('#s_ns').value=COS.ns;
+  if(e('#s_amp'))e('#s_amp').value=COS.ampView;
+  if(e('#b_play')){
+    const done=COS.a>=0.999;
+    e('#b_play').textContent=done?'已跑到今天':(COS.running?'暂停':'播放');
+    e('#b_play').classList.toggle('on',COS.running);
+  }
+  if(e('#b_box'))e('#b_box').classList.toggle('on',COS.showBox>0.5);
+  if(e('#b_spin'))e('#b_spin').classList.toggle('on',!!CAM.spin);
+}
+
+/* HUD */
+let hudSig='';
+function hud(items){
+  const html=items.map(it=>
+    `<div class="stat${it.hi?' hi':''}${it.cls?' '+it.cls:''}"><div class="k">${it.k}</div><div class="v">${it.v}${it.u?`<small>${it.u}</small>`:''}</div></div>`
+  ).join('');
+  if(html!==hudSig){hudSig=html;$('#hud').innerHTML=html;}
+}
+function syncHudH(){
+  const h=$('#hud');
+  if(!h)return;
+  const v=Math.round(h.getBoundingClientRect().height);
+  if(v>0&&v!==syncHudH.last){syncHudH.last=v;
+    document.documentElement.style.setProperty('--hudH',v+'px');}
+}
+
+/* =====================================================================
+   7. 主循环
+   ===================================================================== */
+function resize(){
+  const dpr=Math.min(2,devicePixelRatio||1);
+  const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;}
+}
+let last=performance.now(), chartTick=0;
+function frame(now){
+  syncHudH();
+  requestAnimationFrame(frame);
+  if(document.hidden||scene!=='cos'){last=now;return;}
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  drawScene(dt);
+}
+/* 画一帧。抽出来是为了能被外部驱动 —— 后台标签页里 rAF 是冻结的，
+   不抽出来就没有任何办法验证渲染到底对不对。 */
+function drawScene(dt){
+  resize();stepAnims();camUpdate(dt);
+  gl.viewport(0,0,cv.width,cv.height);
+  gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);
+  gl.useProgram(P_BG);
+  gl.uniform3f(P_BG.u.uA,0.035,0.030,0.060);
+  gl.uniform3f(P_BG.u.uB,0.008,0.008,0.018);
+  gl.bindBuffer(gl.ARRAY_BUFFER,QUAD);
+  gl.enableVertexAttribArray(P_BG.a.aPos);gl.vertexAttribPointer(P_BG.a.aPos,2,gl.FLOAT,false,0,0);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.enable(gl.DEPTH_TEST);gl.clear(gl.DEPTH_BUFFER_BIT);
+
+  /* 推进模拟。一步约 12ms，一帧一步，跑完 100 步约 1.7 秒。 */
+  if(COS.running&&COS.a<0.999){
+    const dlna=Math.log(1/COS.aInit)/COS.nsteps;
+    cosStep(Math.min(dlna,Math.log(1/COS.a)));
+    cosDeposit();
+    measureMorph();
+    COS.hist.push({a:COS.a,sig:sigmaR(4/COS.N)/COS.sig0,
+                   D:growth(COS.a,COS.om)/growth(COS.aInit,COS.om),
+                   voids:COS.morph.voids,top10:COS.morph.top10});
+    if(COS.a>=0.999){COS.running=false;syncCtrl();}
+  }
+  cosRender();
+
+  const id=(SC.steps[si]||{}).id||'';
+  const D=growth(COS.a,COS.om)/growth(COS.aInit,COS.om);
+  const meas=COS.hist.length?COS.hist[COS.hist.length-1].sig:1;
+  hud([
+    {k:'尺度因子 a',v:COS.a.toFixed(3),hi:true,cls:'notrans m-keep'},
+    {k:'红移 z',v:(1/COS.a-1).toFixed(1),cls:'m-keep'},
+    {k:'起伏放大了',v:'×'+meas.toFixed(1),hi:true,cls:(id==='gravity')?'m-keep':''},
+    {k:'理论预言',v:'×'+D.toFixed(1),cls:(id==='gravity')?'notrans m-keep':'notrans'},
+    {k:'δ 的 rms',v:COS.morph.sig.toFixed(2),cls:''},
+    {k:'空洞体积',v:(COS.morph.voids*100).toFixed(0),u:'%',cls:(id==='web')?'m-keep':''},
+    {k:'最密 10% 占的质量',v:(COS.morph.top10*100).toFixed(0),u:'%',cls:(id==='web')?'m-keep':''},
+    {k:'Ω_m',v:COS.om.toFixed(2),cls:(id==='cosmology')?'notrans m-keep':'notrans'},
+    {k:'n_s',v:COS.ns.toFixed(3),cls:(id==='cosmology')?'notrans m-keep':'notrans'}
+  ]);
+
+  const want=CHARTS[id]||[];
+  if(want.length){
+    const box=$('#charts');
+    box.classList.add('show');document.body.classList.add('has-charts');
+    $$('#charts .ckd').forEach(s=>{
+      const k=want.indexOf(s.dataset.chart);
+      s.style.display=k<0?'none':'';s.style.order=k;
+    });
+    if(box.offsetParent!==null&&(chartTick++%3)===0){
+      if(want.includes('pk')){
+        drawPk();
+        $('#now_pk').textContent=COS.ns>1.02?'小尺度被抬高了：会先长出很多小团块'
+          :COS.ns<0.92?'大尺度占优：结构更成片、更块状'
+          :'当前接近 Planck 的实测值 0.965';
+      }
+      if(want.includes('growth')){
+        drawGrowth();
+        const err=(meas/D-1)*100;
+        $('#now_growth').textContent=COS.hist.length<3
+          ? '还没开始跑　·　按「播放」'
+          : `实测 ×${meas.toFixed(1)}　理论 ×${D.toFixed(1)}　差 ${err.toFixed(1)}%`;
+      }
+      if(want.includes('morph')){
+        drawMorph();
+        $('#now_morph').textContent=COS.a<0.1
+          ? '现在还几乎均匀：两条线都贴在基准上'
+          : `空洞已占 ${(COS.morph.voids*100).toFixed(0)}% 的体积，最密的 10% 格子装了 ${(COS.morph.top10*100).toFixed(0)}% 的质量`;
+      }
+    }
+  }else{
+    $('#charts').classList.remove('show');document.body.classList.remove('has-charts');
+  }
+
+  const L=[];
+  if(id==='seed'&&COS.ampView>4)
+    L.push({p:[0,0.68,0],t:`位移已放大 ×${COS.ampView.toFixed(0)}（仅显示）`,c:'#ffd866'});
+  if(id==='collapse'&&COS.a>0.25)
+    L.push({p:[0,0.68,0],t:'先压成饼 → 再抽成纤维 → 最后成节点',c:'#a78bfa'});
+  if(id==='web'&&COS.a>=0.999)
+    L.push({p:[0,0.68,0],t:`空洞占 ${(COS.morph.voids*100).toFixed(0)}% 体积 · 最密 10% 格子装 ${(COS.morph.top10*100).toFixed(0)}% 质量`,c:'#7f8cff'});
+  labels(L);
+}
+
+/* 对外接口：给页面内的组件和自动化验证用 */
+window.vizCosApi={
+  state:COS, init:cosInit, step:cosStep, deposit:cosDeposit,
+  morph:measureMorph, sigmaR, growth, draw:drawScene,
+  chapter:()=>({i:si,id:(SC.steps[si]||{}).id})
+};
+
+cosInit();
+$('#loader').classList.add('hide');
+setTimeout(()=>{const l=$('#loader');if(l)l.style.display='none';},700);
+setScene('home');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

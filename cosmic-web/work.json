@@ -1,0 +1,12 @@
+{
+  "slug": "cosmic-web",
+  "title": "宇宙网",
+  "question": "横跨上亿光年的那张网，是从哪来的？",
+  "description": "星系排成纤维、围出空洞。这张网的种子是 138 亿年前一次量子抖动，幅度只有十万分之一。从原初功率谱出发，亲手把它长出来，并当场核对增长因子。",
+  "date": "2026-08-04",
+  "category": ["宇宙学", "计算"],
+  "duration": "15 分钟",
+  "chapters": 8,
+  "featured": true,
+  "accent": "#5ee7ff"
+}

@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "dist");
 const baseUrl = "https://viz.gopromp.com";
-const workDirs = ["optimization", "reaction-diffusion", "kakeya", "boltzmann"];
+const workDirs = ["optimization", "reaction-diffusion", "kakeya", "boltzmann", "cosmic-web"];
 const fixedFiles = [
   "index.html",
   "404.html",

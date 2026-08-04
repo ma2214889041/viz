@@ -14,8 +14,9 @@
     "test:reaction": "node tests/reaction-diffusion-model.mjs",
     "test:boltzmann": "node tests/boltzmann-model.mjs",
     "test:syntax": "node tests/page-syntax.mjs",
-    "test": "npm run test:syntax && npm run test:boltzmann && npm run test:kakeya && npm run test:optimization && npm run test:reaction && npm run test:publication",
+    "test": "npm run test:syntax && npm run test:boltzmann && npm run test:kakeya && npm run test:cosmic && npm run test:optimization && npm run test:reaction && npm run test:publication",
     "test:kakeya": "node tests/kakeya-model.mjs",
+    "test:cosmic": "node tests/cosmic-web-model.mjs",
     "test:links": "node tests/links.mjs"
   },
   "devDependencies": {
