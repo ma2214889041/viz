@@ -832,6 +832,130 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
     占比: (wobble / drop * 100).toFixed(1) + "%" }));
 }
 
+/* ── 别把有争议的说法写成定论 ──
+   这一篇原来的结尾是「悬置 125 年的希尔伯特第六问题，核心部分就此解决」。
+   核对下来这话比实际满：菲尔兹奖引文写的是「从硬球动力学严格推导稀薄气体的
+   玻尔兹曼方程」，没提解决第六问题；邓煜本人说更大的愿景「我们还差得远」；
+   Scientific American 的标题是 Closer to Being Solved；还有公开异议
+   （arXiv:2504.06297）主张第六问题仍然敞着。
+   更难堪的是它紧跟在自己写的「说清楚它没有做到什么」后面，一句话推翻一整段。
+   这里把「说到什么程度」钉死。 */
+{
+  const text = html.replace(/<[^>]+>/g, "");
+
+  /* 不许把「第六问题解决了」当断言写。
+     注意要放过两类合法用法，否则守卫会咬到自己：
+     ① 引号里的引述（正文明确在说「你会看到这样的标题」）；
+     ② 否定句（「这不等于…已解决」）。
+     所以先把「…」整段挖掉，再排除前面带否定词的。 */
+  const assertive = text.replace(/[「『][^」』]*[」』]/g, "　");
+  const settled = [...assertive.matchAll(/第六问题[^。！\n]{0,40}(就此解决|已解决|已经解决|被解决|攻克|破解)/g)]
+    .filter((m) => !/[不未没别非]|等于/.test(assertive.slice(Math.max(0, m.index - 12), m.index + 8)))
+    .map((m) => m[0]);
+  check("没有把第六问题写成已解决", settled.length === 0, settled.join("；"));
+
+  /* 反过来，必须明说范围：硬球 + 稀薄气体。
+     而且要出现在**做出论断的那一章**里——页面别处随便提一句不算数，
+     读者看的是结尾那段。 */
+  {
+    const m = html.match(/\{id:'deng',t:'[^']*',\s*b:`([\s\S]*?)`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)/);
+    check("能取到结尾那一章", !!m, "找不到 deng 章正文");
+    if (m) {
+      /* 只看**主线**：details 是折叠的，默认不展开。
+         把限定条件全塞进折叠块里，等于对大多数读者没说。 */
+      const mainline = m[1].replace(/<details[\s\S]*?<\/details>/g, "").replace(/<[^>]+>/g, "");
+      check("结尾主线交代了「硬球 + 稀薄气体」这个范围",
+        /硬球/.test(mainline) && /稀薄气体/.test(mainline),
+        "限定条件只写在折叠块里，主线读起来仍是无保留的结论");
+      check("结尾主线点明了这话常被说满",
+        /比实际满|不等于|没有写|并没有/.test(mainline),
+        "主线没有提醒读者「第六问题被解决了」这种说法说满了");
+      /* 折叠块里也得有，那是给要细节的人看的 */
+      const deep = (m[1].match(/<details[\s\S]*?<\/details>/g) || []).join("").replace(/<[^>]+>/g, "");
+      check("折叠块里给出了具体的三条边界",
+        /整个物理学/.test(deep) && /稀薄气体|nr³|体积占比/.test(deep) && /解还存在|整体适定/.test(deep),
+        "折叠块没有把「问题更大 / 只到稀薄气体 / 解存在性仍是前提」三条说全");
+    }
+  }
+
+  /* 「任意长时间」不许裸奔，必须带着它的前提 */
+  const bare = [...html.matchAll(/任意长时间/g)].length;
+  const withCaveat = [...html.matchAll(/任意长时间[\s\S]{0,80}玻尔兹曼方程的解/g)].length
+    + [...html.matchAll(/玻尔兹曼方程的解[\s\S]{0,80}任意长时间/g)].length;
+  check("「任意长时间」都带着「只要解还存在」的前提", withCaveat >= bare - 1,
+    `出现 ${bare} 次，只有 ${withCaveat} 次带前提`);
+
+  /* 争议必须让读者自己能去核对：两边的链接都要在 */
+  check("给了菲尔兹奖引文的出处", html.includes("mathunion.org/imu-awards/fields-medal"),
+    "资料页没有 IMU 引文链接");
+  check("给了公开异议的出处", html.includes("arxiv.org/abs/2504.06297"),
+    "资料页没有那篇 Comment 的链接");
+  check("异议被注明是未经同行评议的预印本",
+    /2504\.06297[\s\S]{0,200}预印本/.test(html) || /预印本[\s\S]{0,200}2504\.06297/.test(html),
+    "引了异议却没说它的性质，等于把一家之言抬成结论");
+
+  /* 结尾那段「没有做到什么」不许被删掉 */
+  check("保留了「说清楚它没有做到什么」那一段", text.includes("说清楚它"),
+    "自我设限的那一段没了");
+
+  const cnt = settled.length;
+  console.log("措辞体检:", JSON.stringify({ 越界断言: cnt, 任意长时间: `${withCaveat}/${bare} 带前提` }));
+}
+
+/* ── 第 1 章：说「一个球」就得真的只有一个球 ──
+   原来这一章是 N=520 只渲染 1 个，那个可见的球一直被 519 个看不见的球撞：
+   实测 10 秒换向 41 次，其中 33 次没有任何可见原因。而这一章的全部论证是
+   「匀速直线、只在碰壁时反射、知道此刻的 (x,v) 就知道所有时刻」。
+   画面和文字对不上，读者会（正确地）以为球能凭空变向。 */
+{
+  const m = html.match(/\{id:'one',t:'[^']*',\s*b:`[\s\S]*?`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)\{([\s\S]*?)\}\}/);
+  check("能取到第 1 章的场景设置", !!m, "找不到 one 章的 en()");
+  if (m) {
+    check("第 1 章把粒子数真的设成 1", /GAS\.N=1\b/.test(m[1]),
+      `en() 里是：${m[1].replace(/\s+/g, " ").slice(0, 120)}`);
+    check("GAS.single 不再被当成「只算一个」用", !/GAS\.N=520/.test(m[1]),
+      "第 1 章仍在把 N 设成 520");
+  }
+  /* 行为验证：单球状态下跑 10 秒，速度只许在碰壁时变 */
+  GAS.N = 1; GAS.r = 0.045; GAS.single = true;
+  M.gasInit("same");
+  const L = GAS.L, r = GAS.r;
+  const atWall = () => Math.abs(Math.abs(GAS.px[0]) - (L - r)) < 3e-3
+    || Math.abs(Math.abs(GAS.py[0]) - (L - r)) < 3e-3
+    || Math.abs(Math.abs(GAS.pz[0]) - (L - r)) < 3e-3;
+  let wall = 0, mystery = 0;
+  let pv = [GAS.vx[0], GAS.vy[0], GAS.vz[0]];
+  const speed0 = Math.hypot(...pv);
+  for (let i = 0; i < 2000; i++) {
+    M.gasStep(0.005);
+    const nv = [GAS.vx[0], GAS.vy[0], GAS.vz[0]];
+    if (nv.some((v, k) => Math.abs(v - pv[k]) > 1e-6)) (atWall() ? wall++ : mystery++);
+    pv = nv;
+  }
+  check("单球不会凭空变向", mystery === 0, `有 ${mystery} 次换向不在墙上`);
+  check("单球确实在盒子里弹（不是静止）", wall > 0, `10 秒内一次墙都没碰到`);
+  /* 只有墙的话速率必须一直不变 —— 镜面反射不改变速率 */
+  check("单球速率恒定", Math.abs(Math.hypot(...pv) - speed0) < 1e-5,
+    `${speed0.toFixed(6)} → ${Math.hypot(...pv).toFixed(6)}`);
+  console.log("单球:", JSON.stringify({ 撞墙: wall, 凭空变向: mystery, 速率: +speed0.toFixed(4) }));
+  GAS.N = 520; GAS.single = false;
+
+  /* 第 2 章必须把球数加回来，否则会继承第 1 章的 N=1 */
+  const m2 = html.match(/\{id:'many',t:'[^']*',\s*b:`[\s\S]*?`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)\{([\s\S]*?)\}\}/);
+  check("第 2 章把粒子数加回来", m2 && /GAS\.N=\d{2,}/.test(m2[1]),
+    "第 2 章没设 N，会继承上一章的 1 个球");
+
+  /* 模拟的近似之处必须写在文章里，不能只在代码注释里 */
+  const text2 = html.replace(/<[^>]+>/g, "");
+  check("文章交代了「按时间步长推进，不是事件驱动」",
+    /事件驱动/.test(text2), "没告诉读者碰撞是按步长检测的");
+  check("文章交代了粒子数与真实气体的差距",
+    /10<sup>19<\/sup>|10\^19|十七个数量级/.test(html), "没说 520 个球和真实气体差多远");
+  check("文章点明了哪些结论是「长出来的」而非写死的",
+    /一行代码都没写|不是我写进去的|没有人把.*写进模拟/.test(text2),
+    "没说清哪些是涌现的、哪些是硬编码的");
+}
+
 /* ── 11. 章节结构与正文引用的 id 一致 ── */
 {
   const ids = [...html.matchAll(/\{id:'([a-z]+)',t:'/g)].map(m => m[1]);

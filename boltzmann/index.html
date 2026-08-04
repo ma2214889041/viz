@@ -431,7 +431,7 @@ canvas.chart{display:block;border-radius:3px;width:100%;
       <h4>Yu Deng, Zaher Hani &amp; Xiao Ma</h4>
       <div class="m">希尔伯特第六问题 · 2024.08 / 2025.03 · arXiv:2408.07818, 2503.01800</div>
       <p>1975 年 Lanford 证明：在 Boltzmann–Grad 标度（N→∞，r→0，Nr² 固定）下，硬球系统的 BBGKY 层级收敛到玻尔兹曼层级——但只在极短时间内成立。此后 50 年这个上界纹丝不动，难点在于重碰会制造粒子间的关联，而玻尔兹曼方程假定碰前速度始终独立（分子混沌）。</p>
-      <p style="margin-top:10px">三人对碰撞史做累积量展开与重整化，证明危险项之间存在系统性相消，把收敛推广到<b>任意长时间</b>（只要玻尔兹曼方程的解存在），并接力推出欧拉方程与纳维–斯托克斯–傅里叶方程，打通了牛顿力学 → 动理学 → 流体力学的完整链条。</p>
+      <p style="margin-top:10px">三人对碰撞史做累积量展开与重整化，证明危险项之间存在系统性相消，把收敛推广到<b>任意长时间</b>（只要玻尔兹曼方程的解存在），并接力推出欧拉方程与纳维–斯托克斯–傅里叶方程，<b>在硬球势、稀薄气体这一设定下</b>打通了牛顿力学 → 动理学 → 流体力学的完整链条。需要说清楚的是：这不等于「希尔伯特第六问题已解决」——第六问题原本要求把整个物理学公理化，而稠密流体不在 Boltzmann–Grad 极限的射程里。</p>
       <p style="margin-top:10px;color:var(--dim2);font-size:12px">关于常被引用的「1/5 个平均自由时间」：这个分数不出自 Lanford 原文，也不出自邓煜等人的摘要（他们写的是 "sufficiently short time"），而是后续文献复核 Lanford 级数收敛半径时给出的标准估计。下面「时间上界的出处」一栏给了可以直接核对的原文。</p>
     </div>
   </div>
@@ -440,8 +440,8 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   <div class="ev"><div class="yr">1872</div><div class="ct"><h4>玻尔兹曼方程与 H 定理</h4><p>玻尔兹曼写下 ∂<sub>t</sub>f + v·∇<sub>x</sub>f = Q(f,f)，并用分子混沌假设（Stoßzahlansatz）证明 H = ∫∫f log f 单调不增。争议随即开始：一个可逆的力学系统怎么会有单调量？</p></div></div>
   <div class="ev"><div class="yr">1876 / 1896</div><div class="ct"><h4>洛施密特与策梅洛的两次反驳</h4><p>洛施密特用时间反演、策梅洛用庞加莱回归，各自指出 H 定理不可能是纯力学结论。玻尔兹曼的回应把它改造成一个关于「绝大多数初态」的统计陈述。</p></div></div>
   <div class="ev"><div class="yr">1975</div><div class="ct"><h4>Lanford 的短时间推导</h4><p>Lanford 在 Boltzmann–Grad 标度下证明硬球系统收敛到玻尔兹曼方程，但只在充分短的时间内成立；后续文献把这个上界估到约一个平均自由时间的 1/5。此后 50 年无法突破。</p></div></div>
-  <div class="ev hot"><div class="yr">2025.03</div><div class="ct"><h4>Deng–Hani–Ma 攻克希尔伯特第六问题的核心</h4><p>把 Lanford 的“极短时间”推广到<b>任意长时间</b>，并接力推导出欧拉方程与纳维–斯托克斯–傅里叶方程。</p></div></div>
-  <div class="ev hot"><div class="yr">2026.07</div><div class="ct"><h4>邓煜获得菲尔兹奖</h4><p>其工作跨越偏微分方程、动力系统与统计物理，希尔伯特第六问题的突破成为最受关注的成果之一。</p></div></div>
+  <div class="ev hot"><div class="yr">2025.03</div><div class="ct"><h4>Deng–Hani–Ma 打通牛顿 → 玻尔兹曼 → 流体这条链</h4><p>把 Lanford 的“极短时间”推广到<b>任意长时间</b>（只要玻尔兹曼方程的解还存在），并接力推导出欧拉方程与纳维–斯托克斯–傅里叶方程。范围是<b>硬球势、稀薄气体</b>；这一支常被称作「希尔伯特纲领」，而第六问题本身要求的是把整个物理学公理化，比这条链大得多。</p></div></div>
+  <div class="ev hot"><div class="yr">2026.07</div><div class="ct"><h4>邓煜获得菲尔兹奖</h4><p>7 月 23 日于费城国际数学家大会颁出。引文表彰的是「从硬球动力学严格推导<b>稀薄气体</b>的玻尔兹曼方程」，以及他在波动理方程与非线性薛定谔方程概率方法上的工作。同届得主还有王虹——本站另一篇《一根针最少能扫过多大地方》讲的正是她的挂谷猜想。</p></div></div>
 
   <div class="srcs">
     <p style="margin-bottom:14px"><b>原始论文</b><br>
@@ -454,10 +454,15 @@ canvas.chart{display:block;border-radius:3px;width:100%;
     Uffink, Valente — Time's Arrow and Lanford's Theorem，Séminaire Poincaré XV «Le Temps» (2010), 141–173：「不超过平均自由时间的五分之一」。<span style="color:var(--dim2)">（这篇没有稳定的公开链接，按题名检索即可。）</span><br>
     <a href="https://www.ams.org/journals/bull/2015-52-03/S0273-0979-2015-01488-6/S0273-0979-2015-01488-6.pdf" target="_blank" rel="noopener">Gallagher, Saint-Raymond, Texier — From Newton to Boltzmann（AMS Bulletin 综述，交代了整套 BBGKY / 碰撞树框架）</a></p>
 
+    <p style="margin-bottom:14px"><b>「这算不算解决了第六问题」——两边的说法都在这儿</b><br>
+    <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">IMU：2026 年菲尔兹奖（引文写的是「从硬球动力学严格推导<b>稀薄气体</b>的玻尔兹曼方程」，没有写「解决第六问题」）</a><br>
+    <a href="https://arxiv.org/abs/2504.06297" target="_blank" rel="noopener">Shan Gao — Comment on “Hilbert's Sixth Problem…”（异议：体积占比趋零给出的是「被重新标度的气体」，第六问题仍然敞着。预印本，未经同行评议，尚未成为共识）</a><br>
+    <a href="https://www.scientificamerican.com/article/lofty-math-problem-called-hilberts-sixth-closer-to-being-solved/" target="_blank" rel="noopener">Scientific American 的标题措辞：<em>Closer to Being Solved</em>——离解决更近了，不是已经解决</a></p>
+
     <p style="margin-bottom:14px"><b>作者与合作者写给一般读者的解释</b><br>
     <a href="https://zhuanlan.zhihu.com/p/1892322673566126464" target="_blank" rel="noopener">马骁专访：破解百年数学难题，希尔伯特第六问题究竟是什么？（墨子沙龙，中文，无公式）</a><br>
     <a href="https://www.quantamagazine.org/epic-effort-to-ground-physics-in-math-opens-up-the-secrets-of-time-20250611/" target="_blank" rel="noopener">Quanta Magazine — Epic Effort to Ground Physics in Math Opens Up the Secrets of Time</a><br>
-    <a href="https://www.scientificamerican.com/article/lofty-math-problem-called-hilberts-sixth-closer-to-being-solved/" target="_blank" rel="noopener">Scientific American — Lofty Math Problem Called Hilbert's Sixth Closer to Being Solved</a></p>
+    </p>
 
     <p><b>奖项</b><br>
     <a href="https://www.mathunion.org/imu-awards/fields-medal/fields-medals-2026" target="_blank" rel="noopener">国际数学联盟 · 2026 菲尔兹奖</a></p>
@@ -1191,20 +1196,42 @@ const SC={
     steps:[
       {id:'one',t:'一个球，完全可预测',
        b:`<p class="lede">盒子里先放一个球，让它按牛顿定律飞。这一章只确认一件事：<b>这套规则不区分过去和未来。</b></p>
-          <p>匀速直线，碰壁弹性反射，没有摩擦，没有损耗。它身后那条淡蓝色的尾巴，就是它刚刚走过的路。</p>
+          <p>匀速直线，碰壁弹性反射，没有摩擦，没有损耗。它身后那条淡蓝色的尾巴，就是它刚刚走过的路——<b>全是直线段，只在墙上拐弯</b>。这一章盒子里确实只有这一个球在算，没有藏着别的。</p>
           <p>这套规则有两个性质：</p>
           <ul>
             <li><b>确定</b>——知道此刻的位置和速度，就知道所有时刻的位置和速度；</li>
             <li><b>可逆</b>——把速度反向，它会沿着这条尾巴一丝不差地退回去。</li>
           </ul>
           <p>第二条尤其要记住。整篇文章的谜题就是：<em>一堆各自可逆的球，凑在一起怎么会变得不可逆？</em></p>
+          <details class="deep"><summary>这个模拟到底算了什么？哪些地方是近似的</summary>
+            <p>先说<b>精确的</b>那部分——这几条不是「大概的样子」，是逐字实现的：</p>
+            <ul>
+              <li><b>碰撞定律</b>：两球接触时只交换<em>沿连心线方向</em>的相对速度分量，切向分量一动不动。这就是等质量硬球弹性碰撞的精确解，动量与动能逐次碰撞严格守恒（自检脚本量到 4000 步的相对漂移是 10<sup>−7</sup> 量级，全部来自 float32 的舍入）。</li>
+              <li><b>自由飞行</b>：两次碰撞之间就是 <b>x</b> ← <b>x</b> + <b>v</b>Δt，直线，没有任何阻力项。</li>
+              <li><b>碰壁</b>：镜面反射，法向分量取反。</li>
+              <li>只有<em>正在靠近</em>的一对才会碰（相对速度沿连心线为负），所以不会出现「已经分开还被判定成碰撞」的假事件。</li>
+            </ul>
+            <p>再说<b>近似的</b>那部分，这些是你该知道的：</p>
+            <ul>
+              <li><b>按时间步长推进，不是事件驱动。</b>真正的硬球动力学应该精确解出「下一次碰撞发生在哪一刻」再跳过去。本页是每一小步检查一次「有没有重叠」，所以碰撞总是<em>稍微晚一点</em>被处理，法线方向也是在已经轻微重叠的位置算的。这是本页最主要的误差来源，也正是第 7 章里说的「反演后不会精确落回原轨道」的<em>物理</em>那一条。</li>
+              <li><b>坐标存在 float32 里</b>，每碰一次舍入一次。</li>
+              <li><b>520 个球</b>。真实空气一立方厘米有 10<sup>19</sup> 个分子——差十七个数量级。所以本页所有统计量都带着可见的散粒噪声，这也是为什么好几处必须换个统计量才看得见物理（比如温度剖面用第一余弦模而不是最大值减最小值）。</li>
+            </ul>
+            <p><b>完全没有模拟的</b>：重力、球的自转、接触之外的任何相互作用势、量子与相对论效应。</p>
+            <p class="q"><b>那哪些东西是「长出来的」而不是我写进去的？</b>麦克斯韦分布、H 单调下降、傅里叶定律、重碰率随 r/λ 线性趋零——这四条模拟里一行代码都没写，它们是从上面那套碰撞规则里自己冒出来的。本页的自检脚本会拿它们去和理论值对，对不上就不让发布。这也是这篇文章敢让你「当场量一量」的底气。</p>
+          </details>
           <details class="deep"><summary>把「可逆」写精确</summary>
             <p>记相流为 Φ<sub>t</sub>（把 t=0 的状态推到时刻 t），记速度反号这个操作为 R:(<b>x</b>,<b>v</b>) ↦ (<b>x</b>,−<b>v</b>)。那么</p>
             <span class="fml">Φ<sub>−t</sub> = R ∘ Φ<sub>t</sub> ∘ R，　R² = id</span>
             <p>也就是说：<em>倒放一段演化</em>和<em>正放它的速度反号版本</em>，是同一件事。硬球满足这条——弹性碰撞的散射律对时间反演不变。</p>
             <p>第 7 章会拿这个式子来打脸。</p>
           </details>`,
-       en(){camTo(0.7,0.26,3.6,0,0,0);GAS.single=true;GAS.mode='micro';GAS.N=520;
+       /* N 必须真的设成 1。GAS.single 只管「画几个」，不管「算几个」——
+          之前这里是 N=520 只渲染 1 个，那个可见的球一直在被 519 个看不见的
+          球撞：实测 10 秒换向 41 次，其中 33 次没有任何可见原因。
+          而这一章的全部论证是「匀速直线、只在碰壁时反射」。画面和文字对不上，
+          等于当着读者的面撒谎。 */
+       en(){camTo(0.7,0.26,3.6,0,0,0);GAS.single=true;GAS.mode='micro';GAS.N=1;
             GAS.speed=1;CAM.spin=0.05;gasInit('same');GAS.running=true;trSet(1,110);}},
 
       {id:'many',t:'加到五百个',
@@ -1224,8 +1251,8 @@ const SC={
             <span class="fml">∂<sub>t</sub>ρ + {ρ, H} = 0</span>
             <p>整套动力学对 t → −t 依然对称（配上速度反号）。所以「粒子多了」本身，一个方向也变不出来。</p>
           </details>`,
-       en(){camTo(0.7,0.26,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;
-            CAM.spin=0.05;gasInit('same');GAS.running=true;}},
+       en(){camTo(0.7,0.26,3.9,0,0,0);GAS.single=false;GAS.mode='micro';GAS.N=520;
+            GAS.speed=1;CAM.spin=0.05;gasInit('same');GAS.running=true;}},
 
       {id:'vspace',t:'换一个空间：让每个球飞到自己的速度上',
        b:`<p class="lede">同样这 500 个球，现在把每一个都画到它<b>速度</b>所在的位置——不是它在哪儿，而是它多快、往哪飞。</p>
@@ -1527,7 +1554,16 @@ const SC={
           <span class="fml">分子混沌对<b>任意长时间</b>传播<br>（只要玻尔兹曼方程的解还存在）</span>
           <p>换句话说，<b>A3 不再是假设，而是 A1 + A2 + A4 的定理</b>。时间之矢没有被凭空造出来，它被追溯回了唯一那个不对称的输入——初态。</p>
           <p class="srcnote"><b>说清楚它<em>没有</em>做到什么：</b>这不是「证明了熵增」。初态混沌（A4）依然是外加条件，而且它对 t &gt; 0 和 t &lt; 0 同样有效——从 t=0 的混沌初态往<em>过去</em>推，H 同样单调下降。为什么现实世界只有一个方向，那是宇宙初始低熵（past hypothesis）的问题，不在这篇论文的射程里。这篇论文做到的是：把「为什么可以用玻尔兹曼方程」从物理直觉变成了硬球势下的定理。</p>
-          <p>随后他们把同一套控制接力用到 Kn → 0 的那一支，推出欧拉与纳维–斯托克斯–傅里叶方程。悬置 125 年的希尔伯特第六问题，核心部分就此解决。2026 年，邓煜获菲尔兹奖。</p>`,
+          <p>随后他们把同一套控制接力用到 Kn → 0 的那一支，在同一个设定下推出可压缩欧拉方程与纳维–斯托克斯–傅里叶方程。<b>牛顿 → 玻尔兹曼 → 流体这条链，第一次被完整地接通了</b>——在硬球势、稀薄气体这一档上。希尔伯特 1900 年提出的要求，在这一支上等了 125 年。</p>
+          <p>2026 年 7 月 23 日，邓煜在费城的国际数学家大会上获菲尔兹奖。</p>
+          <p>你大概会看到「希尔伯特第六问题被解决了」这样的标题。<em>这话说得比实际满一点</em>，而且分清楚它满在哪里，本身就是这篇文章最该留给你的东西。</p>
+          <details class="deep"><summary>「第六问题解决了」——这话满在哪里</summary>
+            <p><b>① 第六问题比这条链大得多。</b>希尔伯特 1900 年的原话要求把<em>整个物理学</em>公理化；牛顿 → 流体只是其中一支（动理学圈子里常单独称它「希尔伯特纲领」）。邓煜本人谈到那个更大的愿景时说的是：我们还差得远。</p>
+            <p><b>② 接通的是「硬球 + 稀薄气体」这一档。</b>菲尔兹奖引文的措辞是「从硬球动力学严格推导<em>稀薄气体</em>的玻尔兹曼方程」——它并没有写「解决了第六问题」。Boltzmann–Grad 极限要求体积占比 nr³ → 0，而真实的液体恰恰是稠密的多体系统。已有公开异议（Shan Gao，arXiv:2504.06297，预印本，未经同行评议）主张：占比趋零的极限给出的是「被重新标度的气体」而非真正的连续介质，因此第六问题仍然敞着。这个异议尚未成为共识，但它指出的边界是实打实的。</p>
+            <p><b>③ 玻尔兹曼那一头也带着前提。</b>「任意长时间」的完整表述是「<em>只要玻尔兹曼方程的解还存在</em>」——而一般初值下的整体适定性本身仍是开问题。</p>
+            <p>所以更稳妥的说法是：<b>这条链上最硬的一环被打通了</b>，不是整个问题被关上了。Scientific American 当时的标题就很克制——<em>Closer to Being Solved</em>（离解决更近了）。</p>
+            <p class="q">顺带一提，这正是读任何「百年难题被攻克」新闻时该做的动作：去看奖项引文和论文摘要<em>自己</em>怎么写。它们的措辞几乎总是比转述克制。</p>
+          </details>`,
        en(){camTo(0.95,0.20,3.3,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.07;
             vmixTo(1,1600,400);GAS.running=true;}}
     ],
