@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "viz-site",
+  "account_id": "b407b9a9f1270b220d0218bd64282d7d",
   "main": "src/worker.ts",
   "compatibility_date": "2026-07-29",
   "compatibility_flags": ["nodejs_compat"],
