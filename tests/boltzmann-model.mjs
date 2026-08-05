@@ -578,6 +578,45 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   trInst.reset(); M.trSet(0, 0); render();
   check("拖尾关闭后不提交实例", trInst.n === 0, `${trInst.n}`);
 
+/* ── 因果锥的三档外观 ──
+     第 11 章要读者「盯着颜色往外爬」，那就必须真的分成三档：白球、已牵进、
+     还没牵进。这个环境里画布永远是黑的，截图查不出来，所以把 gasRender
+     产出的实例逐个拦下来看（半径与颜色都是写进缓冲的那份值）。 */
+  {
+    M.gasInit("same"); M.gasStats();
+    GAS.vmix = 0;
+    const cone = new Uint8Array(GAS.N), gen = new Int16Array(GAS.N).fill(-1);
+    cone[0] = 1; gen[0] = 0;
+    GAS.cone = cone; GAS.coneGen = gen; GAS.tag = 0; GAS.tagCol = 0; GAS.coneOn = true;
+    GAS.pairLast = new Map();
+    for (let i = 0; i < 260; i++) { M.gasStep(0.01); M.gasStats(); }
+    let n = 0, mx = 0;
+    for (let i = 0; i < GAS.N; i++) if (cone[i]) { n++; if (gen[i] > mx) mx = gen[i]; }
+    GAS.coneN = n; GAS.coneMaxGen = mx;
+    if (GAS.flash) GAS.flash.fill(0);          // 闪光会把颜色混掉，先关
+    drawn.inst = null; render();
+    const p2 = drawn.inst.pts;
+    const tag = p2[0];
+    const inside = p2.filter((_, i) => cone[i] && i !== 0);
+    const outside = p2.filter((_, i) => !cone[i]);
+    check("因果锥这一章确实有三档球", n > 20 && n < GAS.N - 20 && inside.length && outside.length,
+      `锥 ${n}/${GAS.N}，已牵进 ${inside.length}，未牵进 ${outside.length}`);
+    check("被标记那颗是纯白且最大",
+      tag.r > 0.98 && tag.g > 0.98 && tag.b > 0.98 && tag.rad > inside[0].rad,
+      `色 ${[tag.r, tag.g, tag.b].map((v) => v.toFixed(2))} 半径 ${tag.rad.toFixed(4)}`);
+    check("还没牵进来的压暗压小",
+      outside[0].r < 0.3 && outside[0].g < 0.3 && outside[0].b < 0.35
+      && outside[0].rad < inside[0].rad,
+      `色 ${[outside[0].r, outside[0].g, outside[0].b].map((v) => v.toFixed(2))} 半径 ${outside[0].rad.toFixed(4)}`);
+    /* 已牵进的必须按「第几代」分色，否则「越暖＝越早被牵进来」是空话 */
+    const shades = new Set(inside.map((q) => `${q.r.toFixed(2)},${q.g.toFixed(2)},${q.b.toFixed(2)}`));
+    check("已牵进的按代分色", shades.size > 3, `只有 ${shades.size} 种颜色`);
+    console.log("因果锥渲染:", JSON.stringify({ 锥: n, 最深代: mx,
+      白球半径: +tag.rad.toFixed(4), 已牵进半径: +inside[0].rad.toFixed(4),
+      未牵进半径: +outside[0].rad.toFixed(4), 代际色数: shades.size }));
+    GAS.cone = null; GAS.coneOn = false;
+  }
+
   console.log("渲染实测:", JSON.stringify({
     xSpaceMax: +atX.rmax.toFixed(3), vShellR: +atV.rmax.toFixed(4),
     shellWidth: +shellW.toFixed(5), beamSpread: +(beamV.rmax - beamV.rmin).toFixed(4),
@@ -737,7 +776,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
     check("有数据的章节都在 CHARTS 里有条目", missing.length === 0, `漏了：${missing.join(", ")}`);
     const fat = Object.entries(map).filter(([, v]) => v.length > 2).map(([k, v]) => `${k}:${v.length}`);
     check("一章最多两张图", fat.length === 0, `过多：${fat.join(", ")}`);
-    const known = new Set(["mb", "wf", "q", "prof", "recol", "h", "tree", "both"]);
+    const known = new Set(["mb", "wf", "q", "prof", "recol", "h", "tree", "both", "cone"]);
     const unknown = Object.values(map).flat().filter(k => !known.has(k));
     check("引用的图都真实存在", unknown.length === 0, `未知图表：${unknown.join(", ")}`);
     /* 前三章没有可看的数据，不该硬摆一张图上去 */
@@ -747,7 +786,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
 
   /* 每张图必须有大白话标题，而且标题里不能有公式 */
   const cards = [...html.matchAll(/<section class="ckd" data-chart="(\w+)"[^>]*>\s*<h4>([^<]+)<\/h4>\s*<p class="ckd-how">([^<]+)</g)];
-  check("每张图都是一张带标题的卡片", cards.length === 8, `解析到 ${cards.length} 张`);
+  check("每张图都是一张带标题的卡片", cards.length === 9, `解析到 ${cards.length} 张`);
   const noQ = cards.filter(c => !/[？?]/.test(c[2])).map(c => c[1]);
   check("图表标题写成一个问句", noQ.length === 0, `不是问句：${noQ.join(", ")}`);
   const hasFml = cards.filter(c => /f\(|Q\(|∫|<sub>|δ|λ|⟨/.test(c[2])).map(c => c[1]);
@@ -802,6 +841,58 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   check("算完把模型还原", /gasInit\(saved\.preset\)[\s\S]{0,200}qbReset\(\)/.test(html),
     "双向实验算完没有还原本章的模型");
   console.log("双向时间:", JSON.stringify(rows));
+}
+
+/* ── 10g3. 第 11 章的因果锥：那棵碰撞树在气体里的实物 ──
+   正文列了一张 t/τ → 被牵进来的球数的表，并声称「每过一个自由时间大约翻一倍、
+   约 12τ 吃满整盒」。这几个数是这一章的动画本身，逐个核。
+   标记就发生在真正的碰撞那一行旁边（gasStep 内），所以量的是真事。 */
+{
+  const cone = new Uint8Array(GAS.N), gen = new Int16Array(GAS.N).fill(-1);
+  GAS.N = 520; GAS.r = 0.045; GAS.single = false; GAS.mode = "micro";
+  GAS.t = 0; GAS.collisions = 0; GAS.pairLast = new Map();
+  M.gasInit("same");
+  cone.fill(0); gen.fill(-1); cone[0] = 1; gen[0] = 0;
+  GAS.cone = cone; GAS.coneGen = gen; GAS.tag = 0; GAS.tagCol = 0;
+  M.gasStats();
+  const tau = M.kinetics().tau;
+  const marks = { 2: null, 4: null, 6: null, 8: null, 12: null };
+  let full = null;
+  for (let s = 0; s < 3000; s++) {
+    M.gasStep(0.01); M.gasStats();
+    let n = 0, mx = 0;
+    for (let i = 0; i < GAS.N; i++) if (cone[i]) { n++; if (gen[i] > mx) mx = gen[i]; }
+    const tt = GAS.t / tau;
+    for (const k of Object.keys(marks)) if (marks[k] === null && tt >= +k) marks[k] = { n, gen: mx };
+    if (n >= GAS.N && full === null) full = +tt.toFixed(1);
+    /* 不能一涨满就 break：整盒是在 ~11.9τ 涨满的，而正文最后一档写的是 12τ，
+       提前跳出就采不到那一档（第一版就这么误报了一次「t=12τ 没采到」）。 */
+    if (tt > 13.5) break;
+  }
+  const want = { 2: 5, 4: 64, 6: 257, 8: 465, 12: 520 };
+  const bad = [];
+  for (const k of Object.keys(want)) {
+    if (!marks[k]) { bad.push(`t=${k}τ 没采到`); continue; }
+    /* 允许 ±25%：碰撞是按格子分批处理的，步长一变数就会挪一点 */
+    const tol = Math.max(6, want[k] * 0.25);
+    if (Math.abs(marks[k].n - want[k]) > tol) bad.push(`t=${k}τ 正文写 ${want[k]}，实测 ${marks[k].n}`);
+  }
+  check("正文那张因果锥数据表逐档对得上", bad.length === 0, bad.join("；"));
+  check("大约 12τ 吃满整盒（正文引用值）", full !== null && full > 8 && full < 17, `实测 ${full}τ`);
+  check("确实是指数增长（每 τ 约翻一倍）",
+    marks[4] && marks[2] && marks[4].n / Math.max(1, marks[2].n) > 3, 
+    marks[2] && marks[4] ? `2τ→4τ 只涨了 ${(marks[4].n / marks[2].n).toFixed(1)} 倍` : "采样失败");
+  check("被标记那颗球碰够 6 次，树能长满六层", GAS.tagCol >= 6, `只碰了 ${GAS.tagCol} 次`);
+  check("正文写出了 12τ 与 0.2τ 的对比", /六十倍/.test(html), "正文没有把两个时间尺度摆在一起");
+  /* τ 还没定出来时 t/τ 是 Infinity，推进曲线就永久毒死它 —— 踩过一次 */
+  check("因果锥曲线挡住了 τ=0", /Number\.isFinite\(tt\)/.test(html),
+    "没有挡 Infinity，第一帧就可能把曲线钉死在一个点上");
+  check("换章会关掉因果锥", /GAS\.coneOn=false;GAS\.cone=null/.test(html),
+    "不关掉的话后面每一章的球都带着记号");
+  GAS.cone = null;
+  console.log("因果锥:", JSON.stringify({ τ: +tau.toFixed(3), 吃满: full + "τ",
+    档: Object.fromEntries(Object.entries(marks).map(([k, v]) => [k + "τ", v && v.n])),
+    最深代: marks[12] && marks[12].gen, 白球碰次数: GAS.tagCol }));
 }
 
 /* ── 10h. 舞台：画面主角必须真的存在 ──

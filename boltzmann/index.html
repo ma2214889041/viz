@@ -424,10 +424,16 @@ canvas.chart{display:block;border-radius:3px;width:100%;
       <canvas class="chart" id="ch8" width="520" height="300"></canvas>
       <p class="ckd-now" id="now_both"></p>
     </section>
+    <section class="ckd" data-chart="cone" style="--ac:#83c167">
+      <h4>这颗球的历史里，已经牵进多少个球？</h4>
+      <p class="ckd-how">横轴：过了几个平均自由时间　·　纵轴是对数刻度：牵进来的球数　·　每一格纵向都是十倍</p>
+      <canvas class="chart" id="ch9" width="520" height="300"></canvas>
+      <p class="ckd-now" id="now_cone"></p>
+    </section>
     <section class="ckd" data-chart="tree" style="--ac:#6fb7ff">
-      <h4>为什么时间一长就数不过来了？</h4>
-      <p class="ckd-how">纵轴：往下一行＝再多碰一次　·　线的条数按阶乘爆炸　·　红线＝撞回老相识</p>
-      <canvas class="chart" id="ch7" width="520" height="280"></canvas>
+      <h4>那这些历史一共有多少条？</h4>
+      <p class="ckd-how">纵轴：往下一行＝那颗球再多碰一次　·　它每碰一次，这棵树就长出一层　·　线的条数按阶乘爆炸，红线＝撞回老相识</p>
+      <canvas class="chart" id="ch7" width="520" height="300"></canvas>
       <p class="ckd-now" id="now_tree"></p>
     </section>
   </aside>
@@ -964,6 +970,10 @@ function gasInit(preset){
   GAS.wf=[];GAS.pairLast.clear();PROF.hist=[];PROF.contrast=1;
   GAS.recol=0;GAS.recolRecent=0;GAS.colRecent=0;GAS.recolRate=0;
   GAS.flash=new Float32Array(N);
+  /* 因果锥每次重放都从头来：0 号球做记号，其余清空 */
+  GAS.cone=null;GAS.coneGen=new Int16Array(N).fill(-1);GAS.tag=0;GAS.tagCol=0;
+  if(GAS.coneOn){GAS.cone=new Uint8Array(N);GAS.cone[0]=1;GAS.coneGen[0]=0;}
+  GAS.coneHist=[];
   GAS.H0=null;GAS.Hfloor=null;       // 纵轴的上下锚点，随每次重放复位
   trReset();
   /* 速度空间的标尺定死在初态的均方根速率上。若跟着当前 vrms 走，
@@ -1027,6 +1037,18 @@ function gasStep(dt){
           }
           GAS.pairLast.set(key,GAS.t);
         }
+        /* ── 因果锥 ──
+           Lanford 展开里那棵碰撞树，在气体里有一个实物：给一颗球做记号，
+           凡是和它碰过的球也做记号，和那些球碰过的再做记号……这个不断长大的
+           集合就是这颗球的「因果过去」，正是展开式必须逐项数清的东西。
+           标记就发生在真正的碰撞这一行旁边，所以它量的是真事，不是示意。 */
+        if(GAS.cone){
+          const ci=GAS.cone[i],cj=GAS.cone[j];
+          if(ci&&!cj){GAS.cone[j]=1;GAS.coneGen[j]=GAS.coneGen[i]+1;}
+          else if(cj&&!ci){GAS.cone[i]=1;GAS.coneGen[i]=GAS.coneGen[j]+1;}
+        }
+        /* 被标记那颗球自己碰了几次 —— 碰撞树该长到第几层由它决定 */
+        if(GAS.cone&&(i===GAS.tag||j===GAS.tag))GAS.tagCol++;
         /* 碰撞算符 Q(f,f) 的直接测量：
            损失项 = 以速率 v 进入碰撞的粒子数（碰前）
            产生项 = 以速率 v 离开碰撞的粒子数（碰后）
@@ -1207,10 +1229,25 @@ function gasRender(){
      半径没有物理含义，缩小才不会糊成一团 */
   const rad=lerp(GAS.r,Math.min(GAS.r,0.019),m);
   const fl=GAS.flash;
+  /* 因果锥模式：颜色不再编码速率，而是编码「离被标记那颗球有几代」。
+     这一章要看的不是谁跑得快，是这颗球的历史牵进了多少人。 */
+  const cone=GAS.coneOn?GAS.cone:null, cgen=GAS.coneGen;
+  const maxGen=Math.max(1,GAS.coneMaxGen||1);
   for(let i=0;i<lim;i++){
     const s=Math.hypot(GAS.vx[i],GAS.vy[i],GAS.vz[i]);
     let c=heat(clamp(s/(vs*1.85),0,1));
     let cr=c[0],cg=c[1],cb=c[2],rr=rad;
+    if(cone){
+      if(!cone[i]){                     // 还没被牵进来：压暗压小，退成背景
+        cr=0.17;cg=0.19;cb=0.24;rr=rad*0.55;
+      }else if(i===GAS.tag){            // 被标记的那一颗：白色、更大
+        cr=1;cg=1;cb=1;rr=rad*1.9;
+      }else{                            // 第 g 代：越晚被牵进来越冷
+        const g=Math.max(0,cgen[i]);
+        const cc=heat(clamp(1-g/maxGen,0,1)*0.82+0.10);
+        cr=cc[0];cg=cc[1];cb=cc[2];rr=rad*1.12;
+      }
+    }
     const f=fl?fl[i]:0;
     if(f>0.01){          // 刚发生重碰：亮一下、胀一下
       cr=lerp(cr,1,f);cg=lerp(cg,0.96,f);cb=lerp(cb,0.72,f);
@@ -1601,6 +1638,7 @@ const SC={
 
       {id:'lanford',t:'为什么卡了五十年',
        b:`<p class="lede">前面十章都是铺垫：唯一还没证的东西，是 A3 能撑多久。<b>1975 年 Lanford 撑到了 0.2 个自由时间，然后这个数字五十年没动过。</b></p>
+          <p>为什么这么短？这一章把那个「数不过来」在球上摆出来看。</p>
           <p>先说清楚极限怎么取。玻尔兹曼方程不是 N→∞ 的任意极限，而是 <b>Boltzmann–Grad 标度</b>：</p>
           <span class="fml">N → ∞，　r → 0，　N r² = const</span>
           <p>读数里的 <b>N·r²（Grad 不变量）</b>就是它——上一章你已经亲手拖过。</p>
@@ -1616,18 +1654,35 @@ const SC={
 
           <p class="subh">为什么会卡在一个自由时间以内</p>
           <p>症结在于：<b>不封闭</b>。从 N 粒子刘维尔方程出发，写 1 个粒子的方程时右端会冒出 2 个粒子的分布，写 2 个的又会冒出 3 个的……这条链叫 BBGKY 层级。玻尔兹曼方程相当于在第一层强行截断——用 A3 把两粒子分布换成单粒子分布之积。整个问题就是：<em>这一步截断合不合法。</em></p>
-          <p>Lanford 不截断，而是把层级一路展开：f(t) 写成一列积分之和，第 n 项是「恰好经历 n 次碰撞的所有历史」。这些历史可以画成一棵树——每次碰撞添一个新粒子做分支。<b>画面正中就是这棵树。</b></p>
-          <button type="button" class="open-charts" data-open-charts="tree">🌲 把碰撞树放回画面中央</button>
+          <p>Lanford 不截断，而是把层级一路展开：f(t) 写成一列积分之和，第 n 项是「恰好经历 n 次碰撞的所有历史」。这些历史可以画成一棵树——每次碰撞添一个新粒子做分支。</p>
+
+          <p class="subh">那棵树在这盒球里是有实物的</p>
+          <p>画面里有一颗<b>白球</b>。凡是和它碰过的球，都被做上记号；和那些球碰过的，也被做上记号；一路传下去。这个不断长大的集合就是<b>这颗球的因果过去</b>——正是展开式必须逐项数清的东西。</p>
+          <p class="watch">盯着颜色往外爬。暗灰的是还没被牵进来的球；越暖的颜色代表越早被牵进来。</p>
+          <p>实测下来：头一个自由时间里什么也不发生（白球还没碰上人），之后<b>每过一个自由时间大约翻一倍</b>——</p>
+          <div class="tbar">
+            <div class="tbar-row"><span>t = 2 τ</span><div class="tt"><i style="width:1%"></i></div><span class="tv">5</span></div>
+            <div class="tbar-row"><span>t = 4 τ</span><div class="tt"><i style="width:12%"></i></div><span class="tv">64</span></div>
+            <div class="tbar-row"><span>t = 6 τ</span><div class="tt"><i style="width:49%"></i></div><span class="tv">257</span></div>
+            <div class="tbar-row"><span>t = 8 τ</span><div class="tt"><i style="width:89%"></i></div><span class="tv">465</span></div>
+            <div class="tbar-row"><span>t = 12 τ</span><div class="tt"><i class="full" style="width:100%"></i></div><span class="tv">520</span></div>
+            <div class="tcap">被牵进这颗球历史里的球数（共 520 个）。同一个 seed 跑出来的数，侧栏那条曲线就是它 —— 纵轴是对数刻度，所以指数增长在上面是一条直线。</div>
+          </div>
+          <p>而这只是「有多少个球参与」。真正要数的是<b>这些参与可以按多少种顺序发生</b>：那颗白球每多碰一次，碰撞树就长出一层，条数按阶乘走 —— 1、2、6、24、120、720、5040……</p>
           <p>问题出在计数：往下每一层的分支数按 <b>n!</b> 增长，而 n 重时间积分只给出 <b>t<sup>n</sup>/n!</b>。两者刚好抵消，于是每一项都是 O((Ct)<sup>n</sup>)——<b>只有 t &lt; 1/C 才收敛</b>。把常数 C 算出来，就是那个约 0.2τ。这不是估计得不够仔细，而是这套展开方式的<em>固有半径</em>。</p>
+          <p class="q">对一下时间尺度就知道有多窘：Lanford 能保证的是 <b>0.2τ</b>——那颗白球连第一次碰撞都还没发生。而它的因果过去要吃满整盒，需要 <b>12τ</b>，是这个上界的六十倍。</p>
 
           <p class="subh">真正的敌人还是重碰</p>
           <p>树上绝大多数分支对应「每次都撞上新粒子」的历史，这类项在 Grad 极限下正好收敛到玻尔兹曼层级，没有问题。出问题的是那些<span style="color:#fc6255">红色</span>的分支：<b>重碰分支</b>。</p>
           <p>单个重碰项确实是小量（第 9 章你亲手把它拖下去过，量级 ~ r/λ）。但树的分支数在涨。<em>时间越长，重碰构型越多</em>——小量乘以巨大的计数，逐项估计就顶不住了。这就是 50 年没人推进的原因：<b>不是不知道敌人是谁，是数不过来。</b></p>
 
           <p><em>下一章看他们是怎么绕过去的。</em></p>`,
-       /* 卡了五十年的原因是计数，那棵按阶乘分叉的树就是全部论证 */
-       st:'tree',
-       en(){camTo(0.7,0.28,4.0,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.04;}},
+       /* 主角是那盒球本身 —— 这一章要看的是记号在球上铺开。
+          曾经把碰撞树放上主舞台：它是全篇唯一一张不是实测的图，放大只是把
+          稀疏放大，而且把球赶下了台。两条曲线退到侧栏，动画交给气体。 */
+       st:'3d',
+       en(){camTo(0.7,0.28,4.0,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.04;
+            GAS.coneOn=true;GAS.speed=1.4;gasInit();GAS.running=true;}},
 
       {id:'deng',t:'邓煜–Hani–马骁：把符号找回来',
        b:`<p class="lede">卡住五十年的不是几何，是<b>计数</b>。突破一句话就能说清：<em>逐项取绝对值，等于假定所有误差都朝同一个方向累加——而它们其实会互相抵消。</em></p>
@@ -1802,6 +1857,8 @@ function gotoStep(i){
      翻到后面几章画面就是错的。宁可每章从同一个零点重新出发。
      只有 vmix 例外——它是连续形变，硬切回去就把「同一批粒子换个空间看」
      这层意思弄丢了。所以让每章自己声明目标，没声明的才淡回位置空间。 */
+  /* 因果锥只属于第 11 章：不关掉，后面每一章的球都会带着记号 */
+  GAS.coneOn=false;GAS.cone=null;GAS.coneN=0;GAS.coneMaxGen=0;GAS.tagCol=0;
   resetGasChapterState();
   trSet(0,0);
   if(GAS.flash)GAS.flash.fill(0);
@@ -1922,7 +1979,7 @@ const CHARTS={
   assumptions:['both'],
   recollision:['recol'],
   fluid:['prof','h'],
-  lanford:['tree'],
+  lanford:['cone','tree'],
   deng:['mb','both']
 };
 const CK={
@@ -1971,7 +2028,7 @@ function syncCtrl(){
    甚至是塞在正文里的一张小画布），等于让读者自己去角落里找论据。 */
 const STAGE={key:'3d',sec:null,avail:300,pin:false};
 const CHART_NAME={mb:'速率分布',wf:'演化史',q:'碰撞收支',prof:'温度剖面',
-                  recol:'重碰率',h:'H 曲线',both:'双向时间',tree:'碰撞树'};
+                  recol:'重碰率',h:'H 曲线',both:'双向时间',cone:'因果锥',tree:'碰撞树'};
 const chartSection=k=>(k&&k!=='3d')?document.querySelector(`.ckd[data-chart="${k}"]`):null;
 
 /* 舞台至少要有 330px 宽才配叫舞台。视口一窄（iPad 横屏再窄一点就是这样），
@@ -2096,7 +2153,7 @@ function hud(items){
 }
 
 /* 图表 */
-const c1=$('#ch1'),c2=$('#ch2'),c3=$('#ch3'),c4=$('#ch4'),c5=$('#ch5'),c6=$('#ch6'),c7=$('#ch7'),c8=$('#ch8');
+const c1=$('#ch1'),c2=$('#ch2'),c3=$('#ch3'),c4=$('#ch4'),c5=$('#ch5'),c6=$('#ch6'),c7=$('#ch7'),c8=$('#ch8'),c9=$('#ch9');
 function fitChart(c,w,h){
   const dpr=Math.min(2,devicePixelRatio||1);
   w=Math.round(w);h=Math.round(h);
@@ -2499,13 +2556,18 @@ function drawBoth(){
    那句话要靠这张图才立得住，它不该只有巴掌大。现在它是一张能上舞台的卡片。 */
 function drawTree(){
   const [W,H]=chartBox(c7,0.52,150,190),x=fitChart(c7,W,H),S=chartScale(W);
-  /* 第 k 次碰撞后的历史条数取 k!（1,2,6,24）—— 这就是那个压垮级数的组合因子 */
-  const level=[1,2,6,24], depth=level.length-1;
+  /* 第 k 次碰撞后的历史条数取 k!（1,2,6,24,120,720）—— 这就是那个压垮级数的
+     组合因子。原来只画到 24：4 层线摊在整块画面上又空又看不出「爆炸」，
+     而爆炸恰好是这一章的全部内容。最后一行 720 条会糊成一条带，那才是重点。 */
+  const level=[1,2,6,24,120,720], depth=level.length-1;
+  /* 长到第几层由**被标记那颗球实际碰了几次**决定 —— 这棵树因此是动画，
+     而且是被模型驱动的动画，不是我按秒表放的。 */
+  const grown=clamp(GAS.tagCol||0,0,depth);
   const padT=26*S, padB=20*S;
   const rowH=(H-padT-padB)/depth;
   const yOf=k=>padT+k*rowH;
   x.font=`${(9.5*S).toFixed(1)}px ui-monospace,monospace`;x.textAlign='left';
-  for(let k=0;k<depth;k++){
+  for(let k=0;k<Math.max(1,grown);k++){
     const a=level[k], b=level[k+1], per=b/a;
     const ya=yOf(k), yb=yOf(k+1);
     for(let i=0;i<a;i++){
@@ -2514,23 +2576,71 @@ function drawTree(){
         const idx=i*per+j;
         const xb=W*(idx+0.5)/b;
         const reco=(j===per-1);           // 每个分叉里最后一支代表「撞回老相识」
-        x.strokeStyle=reco?'rgba(252,98,85,.7)':'rgba(88,196,221,.34)';
-        x.lineWidth=(reco?1.5:0.9)*S;
+        x.strokeStyle=reco?'rgba(252,98,85,.62)':'rgba(88,196,221,.26)';
+        x.lineWidth=(reco?1.2:0.7)*S;
         x.beginPath();x.moveTo(xa,ya+3*S);x.lineTo(xb,yb-3*S);x.stroke();
       }
     }
   }
-  for(let k=0;k<=depth;k++){
+  for(let k=0;k<=Math.max(1,grown);k++){
     const a=level[k], y=yOf(k);
-    for(let i=0;i<a;i++){
+    /* 点太密就不画圆了，画一条带 —— 720 个圆既慢又只会糊成一片 */
+    if(a>200){
+      x.fillStyle='rgba(88,196,221,.55)';
+      x.fillRect(0,y-1.4*S,W,2.8*S);
+    }else{
       x.fillStyle='#58c4dd';
-      x.beginPath();x.arc(W*(i+0.5)/a,y,(a>8?1.5:2.5)*S,0,7);x.fill();
+      for(let i=0;i<a;i++){x.beginPath();x.arc(W*(i+0.5)/a,y,(a>8?1.3:2.5)*S,0,7);x.fill();}
     }
-    x.fillStyle='rgba(179,167,148,.85)';
+    x.fillStyle=k===grown?'rgba(255,181,71,.95)':'rgba(179,167,148,.8)';
     x.fillText(k===0?'初始 · 1 条历史':`碰 ${k} 次 · ${a} 条历史 (${k}!)`,4*S,y-7*S);
+  }
+  if(grown<depth){
+    x.fillStyle='rgba(179,167,148,.45)';
+    x.fillText(`还没碰到第 ${grown+1} 次 —— 碰了这棵树就再长一层`,4*S,yOf(Math.max(1,grown))+16*S);
   }
   x.fillStyle='rgba(252,98,85,.9)';
   x.fillText('红 = 重碰分支：分子混沌在这里失效',4*S,H-6*S);
+}
+/* ── 因果锥的增长曲线 ──
+   横轴 t/τ，纵轴取对数：指数增长在对数轴上是一条直线，读者一眼看出
+   「每过一个自由时间就翻一倍」。数据是当场量的，不是拟合的。 */
+function drawCone(){
+  const [W,H]=chartBox(c9,0.60,140,220),x=fitChart(c9,W,H),S=chartScale(W);
+  const padL=30*S,padR=10*S,padT=13*S,padB=20*S;
+  const gw=W-padL-padR, gh=H-padT-padB;
+  const rows=GAS.coneHist||[];
+  const TMAX=14, NMAX=GAS.N;
+  const X=t=>padL+clamp(t/TMAX,0,1)*gw;
+  const Y=n=>padT+gh-clamp(Math.log10(Math.max(1,n))/Math.log10(NMAX),0,1)*gh;
+  x.lineWidth=1*S;x.strokeStyle='rgba(255,255,255,.10)';
+  x.beginPath();x.moveTo(padL,padT);x.lineTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
+  /* 十倍一格的横线 —— 对数轴必须把刻度标出来，否则「翻倍」无从判断 */
+  x.setLineDash([2*S,4*S]);
+  for(const n of [1,10,100,NMAX]){
+    x.strokeStyle='rgba(255,255,255,.08)';
+    x.beginPath();x.moveTo(padL,Y(n));x.lineTo(padL+gw,Y(n));x.stroke();
+    x.fillStyle='rgba(152,162,189,.6)';
+    x.fillText(String(n),3*S,Y(n)+3.5*S);
+  }
+  x.setLineDash([]);
+  if(rows.length>1){
+    x.strokeStyle='#83c167';x.lineWidth=2.2*S;x.beginPath();
+    rows.forEach((p,i)=>{const px=X(p[0]),py=Y(p[1]);i?x.lineTo(px,py):x.moveTo(px,py);});
+    x.stroke();
+    const last=rows[rows.length-1];
+    x.fillStyle='#83c167';
+    x.beginPath();x.arc(X(last[0]),Y(last[1]),3.4*S,0,7);x.fill();
+  }else{
+    x.fillStyle='rgba(131,193,103,.9)';
+    x.fillText('等那颗白球碰上第一个人，曲线就开始了',padL+6*S,padT+gh*0.5);
+  }
+  x.fillStyle='rgba(152,162,189,.75)';
+  x.fillText('刚开始',padL+1*S,H-5*S);
+  x.textAlign='right';x.fillText(TMAX+' τ',padL+gw,H-5*S);x.textAlign='left';
+  x.fillStyle='rgba(131,193,103,.75)';
+  x.fillText('整盒 '+NMAX+' 个',padL+6*S,Y(NMAX)-4*S);
 }
 /* δ→0 的标度数据：与交互参数无关，算一次即可 */
 let scaleData=null;
@@ -2595,6 +2705,19 @@ function frame(now){
         for(let i=0;i<GAS.N;i++)if(fa[i]>0.004)fa[i]*=kf;else fa[i]=0;}
       /* 拖尾每 2 帧采一次：再密也看不出来，白烧带宽 */
       if(GAS.tr&&(GAS.trTick=(GAS.trTick+1)%2)===0)trPush();
+      /* 因果锥：数一下已经被牵进来多少个、最深几代，并记一条增长曲线 */
+      if(GAS.cone){
+        let n=0,mx=0;
+        for(let i=0;i<GAS.N;i++)if(GAS.cone[i]){n++;if(GAS.coneGen[i]>mx)mx=GAS.coneGen[i];}
+        GAS.coneN=n;GAS.coneMaxGen=mx;
+        /* τ 在第一次碰撞之前可能还是 0（vrms 未更新），t/τ 就是 Infinity。
+           一旦把 Infinity 推进曲线，之后 Infinity-Infinity=NaN，比较永远为假，
+           这条曲线就永久停在一个点上 —— 实测踩到过。所以显式挡住。 */
+        const K=kinetics(), tt=K.tau>1e-9?GAS.t/K.tau:0;
+        const h=GAS.coneHist;
+        if(Number.isFinite(tt)&&(!h.length||tt-h[h.length-1][0]>0.06))h.push([tt,n]);
+        if(h.length>400)h.shift();
+      }
       /* 演化史每 3 帧记一行，150 行大约覆盖最近 7 秒 */
       if((wfTick=(wfTick+1)%3)===0){
         if(!GAS.wf.length)GAS.wfTop=Math.max(2.9*(GAS.vrms||1),0.001);
@@ -2671,11 +2794,22 @@ function frame(now){
             : `往未来落 ${BOTH.drop[0].toFixed(3)}，往过去落 ${BOTH.drop[1].toFixed(3)} —— `+
               `差 ${(Math.abs(BOTH.drop[0]-BOTH.drop[1])/Math.max(1e-9,BOTH.drop[0])*100).toFixed(1)}%。这个初态的过去，熵一样更高`;
         }
+        if(want.includes('cone')&&shown('cone')){
+          drawCone();
+          const n=GAS.coneN||0, g=GAS.coneMaxGen||0;
+          $('#now_cone').textContent=n<=1
+            ? '那颗白球还没碰上任何人　·　它一碰，记号就开始往外传'
+            : n>=GAS.N
+            ? `整盒 ${GAS.N} 个球全被牵进来了 —— 用了 ${(GAS.t/Math.max(1e-9,K.tau)).toFixed(1)} 个自由时间，最深 ${g} 代`
+            : `已牵进 ${n} / ${GAS.N} 个球，最深 ${g} 代　·　在对数轴上是直线，就是每过一个自由时间翻一倍`;
+        }
         if(want.includes('tree')&&shown('tree')){
           drawTree();
-          $('#now_tree').textContent=K.tau>0
-            ? `本次模拟已跑到 ${(GAS.t/K.tau).toFixed(1)} τ　·　Lanford 只能保证到 0.2 τ`
-            : '往下每一行的分支数是上一行的阶乘倍';
+          const c=GAS.tagCol||0;
+          $('#now_tree').textContent=c<1
+            ? '等那颗白球碰第一次，这棵树就长出第一层'
+            : `那颗白球已经碰了 ${c} 次　·　${Math.min(c,6)} 层的历史条数是 ${[1,1,2,6,24,120,720][Math.min(c,6)]} 条`+
+              (c>=6?' —— 再往下画不动了，这就是「数不过来」':'');
         }
         if(want.includes('mb')&&shown('mb')){
           drawMB();

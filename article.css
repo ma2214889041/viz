@@ -702,8 +702,10 @@ body.staged.stage-in #stage{opacity:1;transform:none}
 #stage canvas.chart{flex:1;min-height:0}
 
 /* 三维退到背景，但不停 —— 图表就是从它身上量出来的，停下来就不诚实了 */
-body.staged:not(.home) #gl{opacity:.24}
-body.staged:not(.home) #labels{opacity:.3}
+/* 0.24 试过，太狠：读者的原话是「画面里没有球了」。三维是这些图的来源，
+   它得一直在场，只是不抢焦点。 */
+body.staged:not(.home) #gl{opacity:.42}
+body.staged:not(.home) #labels{opacity:.4}
 body.staged:not(.home) #hint{opacity:0}
 
 /* 主角切换器。「放大到画面中央」不能是一条单行道：
