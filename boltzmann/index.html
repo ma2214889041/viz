@@ -118,10 +118,6 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
   font-size:11px;color:var(--ok)}
 #story .body .ax .ax-break{color:var(--hot)}
 .ax-hot{border-color:rgba(252,98,85,.45);background:rgba(252,98,85,.07)}
-/* 碰撞树示意图 */
-.treewrap{margin:12px 0 14px;padding:10px;border:1px solid var(--line);border-radius:9px;
-  background:rgba(0,0,0,.26)}
-.treewrap canvas{display:block;width:100%}
 /* 数字出处的旁注：正文里凡是引了别人一个具体数字，就地说明它从哪来 */
 #story .body .srcnote{margin:13px 0;padding:11px 12px;border-left:2px solid var(--amber);
   background:rgba(255,181,71,.07);border-radius:0 8px 8px 0;font-size:12.5px;line-height:1.8;color:#b9c1d4}
@@ -359,7 +355,7 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   </div>
   <p class="foot">
     可逆的粒子 → 时间之箭 → 从模型到定理<br>
-    3 幕 · 12 步 · 主线约 25 分钟 · 含推导约 35 分钟
+    3 幕 · 12 步 · 主线约 30 分钟 · 含推导约 40 分钟
   </p>
 </section>
 
@@ -382,7 +378,9 @@ canvas.chart{display:block;border-radius:3px;width:100%;
     <div id="ctrlbody"></div>
   </aside>
   <!-- 每张图是一张卡片：标题写成一个大白话问题，副题说怎么读，
-       底下一行是当下的读数。只显示本章用得上的那几张（见 CHARTS）。 -->
+       底下一行是当下的读数。只显示本章用得上的那几张（见 CHARTS）。
+       这些 <section> 会被舞台整块搬走再搬回来（见 setStage），
+       所以绘制代码里不许出现写死的宽高 —— 一律问当前容器要。 -->
   <aside id="charts" class="panel">
     <section class="ckd" data-chart="mb" style="--ac:#ffb547">
       <h4>跑多快的球最多？</h4>
@@ -420,8 +418,25 @@ canvas.chart{display:block;border-radius:3px;width:100%;
       <canvas class="chart" id="ch2" width="520" height="180"></canvas>
       <p class="ckd-now" id="now_h"></p>
     </section>
+    <section class="ckd" data-chart="both" style="--ac:#9a72ac">
+      <h4>往过去推，熵会不会反过来变小？</h4>
+      <p class="ckd-how">横轴：正中间是初始时刻，往左是过去、往右是未来　·　纵轴就是 H　·　两条支线用同一个颜色，因为它们是同一个形状</p>
+      <canvas class="chart" id="ch8" width="520" height="300"></canvas>
+      <p class="ckd-now" id="now_both"></p>
+    </section>
+    <section class="ckd" data-chart="tree" style="--ac:#6fb7ff">
+      <h4>为什么时间一长就数不过来了？</h4>
+      <p class="ckd-how">纵轴：往下一行＝再多碰一次　·　线的条数按阶乘爆炸　·　红线＝撞回老相识</p>
+      <canvas class="chart" id="ch7" width="520" height="280"></canvas>
+      <p class="ckd-now" id="now_tree"></p>
+    </section>
   </aside>
 </div>
+
+<!-- 舞台：一次只有一个主角。叙述讲到哪张图，那张图就搬到这里放大，
+     三维退成还在跑的背景。位置每帧由 layoutStage() 算，见下方脚本。 -->
+<div id="stagepick" aria-label="画面主角"><b>画面主角</b></div>
+<aside id="stage" class="panel" aria-live="polite"><div id="stagehost"></div></aside>
 
 <!-- 数据 -->
 <aside id="hud" class="panel" style="display:none"></aside>
@@ -431,7 +446,7 @@ canvas.chart{display:block;border-radius:3px;width:100%;
 <!-- 背景 -->
 <section id="tl" class="hide"><div class="tlin">
   <h2>从粒子到流体的一百二十五年</h2>
-  <p class="lead">1900 年，希尔伯特要求从原子的力学出发，严格推导出连续介质的方程。问题听起来像是“把尺度放大”，真正的困难却在于碰撞会不断制造粒子之间的关联。</p>
+  <p class="lead">1900 年，希尔伯特要求从原子的力学出发，严格推导出连续介质的方程。问题听起来像是「把尺度放大」，真正的困难却在于碰撞会不断制造粒子之间的关联。</p>
 
   <div class="bios">
     <div class="bio" style="grid-column:1/-1">
@@ -447,7 +462,7 @@ canvas.chart{display:block;border-radius:3px;width:100%;
   <div class="ev"><div class="yr">1872</div><div class="ct"><h4>玻尔兹曼方程与 H 定理</h4><p>玻尔兹曼写下 ∂<sub>t</sub>f + v·∇<sub>x</sub>f = Q(f,f)，并用分子混沌假设（Stoßzahlansatz）证明 H = ∫∫f log f 单调不增。争议随即开始：一个可逆的力学系统怎么会有单调量？</p></div></div>
   <div class="ev"><div class="yr">1876 / 1896</div><div class="ct"><h4>洛施密特与策梅洛的两次反驳</h4><p>洛施密特用时间反演、策梅洛用庞加莱回归，各自指出 H 定理不可能是纯力学结论。玻尔兹曼的回应把它改造成一个关于「绝大多数初态」的统计陈述。</p></div></div>
   <div class="ev"><div class="yr">1975</div><div class="ct"><h4>Lanford 的短时间推导</h4><p>Lanford 在 Boltzmann–Grad 标度下证明硬球系统收敛到玻尔兹曼方程，但只在充分短的时间内成立；后续文献把这个上界估到约一个平均自由时间的 1/5。此后 50 年无法突破。</p></div></div>
-  <div class="ev hot"><div class="yr">2025.03</div><div class="ct"><h4>Deng–Hani–Ma 打通牛顿 → 玻尔兹曼 → 流体这条链</h4><p>把 Lanford 的“极短时间”推广到<b>任意长时间</b>（只要玻尔兹曼方程的解还存在），并接力推导出欧拉方程与纳维–斯托克斯–傅里叶方程。范围是<b>硬球势、稀薄气体</b>；这一支常被称作「希尔伯特纲领」，而第六问题本身要求的是把整个物理学公理化，比这条链大得多。</p></div></div>
+  <div class="ev hot"><div class="yr">2025.03</div><div class="ct"><h4>Deng–Hani–Ma 打通牛顿 → 玻尔兹曼 → 流体这条链</h4><p>把 Lanford 的「极短时间」推广到<b>任意长时间</b>（只要玻尔兹曼方程的解还存在），并接力推导出欧拉方程与纳维–斯托克斯–傅里叶方程。范围是<b>硬球势、稀薄气体</b>；这一支常被称作「希尔伯特纲领」，而第六问题本身要求的是把整个物理学公理化，比这条链大得多。</p></div></div>
   <div class="ev hot"><div class="yr">2026.07</div><div class="ct"><h4>邓煜获得菲尔兹奖</h4><p>7 月 23 日于费城国际数学家大会颁出。引文表彰的是「从硬球动力学严格推导<b>稀薄气体</b>的玻尔兹曼方程」，以及他在波动理方程与非线性薛定谔方程概率方法上的工作。同届得主还有王虹——本站另一篇《一根针最少能扫过多大地方》讲的正是她的挂谷猜想。</p></div></div>
 
   <div class="srcs">
@@ -693,11 +708,22 @@ function drawLines(vbo,count,model,col,width){
 /* --- 相机 --- */
 const CAM={az:0.9,el:0.45,dist:4.2,tx:0,ty:0,tz:0,
            taz:0.9,tel:0.45,tdist:4.2,ttx:0,tty:0,ttz:0,spin:0.05,drag:false,ox:0,oy:0};
-/* 每帧算出「没有被面板盖住的那块画面」，把镜头平移过去 —— 从根本上杜绝遮挡 */
-function safeCenter(){
+/* 「没有被面板盖住的那块画面」。镜头和舞台共用它 —— 于是这两件东西
+   永远落在同一块空地上，也就永远压不到讲解面板和读数上。 */
+function freeRect(){
   const W=innerWidth,H=innerHeight;
   let l=0,r=W,t=56,b=H;
-  const vis=el=>el&&el.offsetParent!==null&&getComputedStyle(el).display!=='none';
+  /* 这三块面板全是 position:fixed，而 offsetParent 对 fixed 元素一律返回 null。
+     所以原来那句 `el.offsetParent!==null` 永远是 false，整个函数一直在走
+     「什么都没挡住」的兜底分支 —— 也就是说它一直没生效过，注释里写的
+     「从根本上杜绝遮挡」是一句空话。改成量它自己的盒子。 */
+  const vis=el=>{
+    if(!el)return false;
+    const cs=getComputedStyle(el);
+    if(cs.display==='none'||cs.visibility==='hidden')return false;
+    const b2=el.getBoundingClientRect();
+    return b2.width>0&&b2.height>0;
+  };
   const st=$('#story'),rt=$('#right'),hu=$('#hud');
   if(W>900){
     if(vis(st))l=Math.max(l,st.getBoundingClientRect().right+18);
@@ -710,7 +736,12 @@ function safeCenter(){
   }
   if(r-l<160){l=0;r=W;}
   if(b-t<140){t=56;b=H;}
-  return[((l+r)/2/W)*2-1, -(((t+b)/2/H)*2-1)];
+  return{l,r,t,b,W,H};
+}
+/* 把镜头平移到那块空地的中心（NDC） */
+function safeCenter(){
+  const R=freeRect();
+  return[((R.l+R.r)/2/R.W)*2-1, -(((R.t+R.b)/2/R.H)*2-1)];
 }
 function camUpdate(dt){
   if(!CAM.drag)CAM.taz+=CAM.spin*dt;
@@ -1273,7 +1304,7 @@ const SC={
       {id:'vspace',t:'换一个空间：让每个球飞到自己的速度上',
        b:`<p class="lede">同样这 500 个球，现在把每一个都画到它<b>速度</b>所在的位置——不是它在哪儿，而是它多快、往哪飞。</p>
           <p>这一步是整篇文章的枢纽，值得说清楚为什么要走。</p>
-          <p>上一章那盒球，看着热闹，但它没告诉你任何东西：球在盒子里本来就该是均匀撒开的，从头到尾都一样。<b>真正在变的东西不在位置里，在速度里。</b>整套动理学理论关心的对象只有一个：</p>
+          <p>上一章那盒球看着热闹，可它其实没在变：球在盒子里本来就该是均匀撒开的，从头到尾都一样。<b>真正在变的东西不在位置里，在速度里。</b>整套动理学理论关心的对象只有一个：</p>
           <span class="fml">f(<b>v</b>)　＝　速度分布</span>
           <p>所以我把画面换了个坐标：第 i 个球不再画在 <b>x</b><sub>i</sub>，而是画在 <b>v</b><sub>i</sub>。盒子淡出，取而代之的是速度坐标系，那三个圆是<em>均方根速率</em>所在的位置。同一批球，同一个瞬间，只是换了一个问题去问它们。</p>
           <p>看这个形状：<b>一层空心的壳。</b></p>
@@ -1296,17 +1327,21 @@ const SC={
       {id:'relax',t:'壳自己塌成麦克斯韦分布',
        b:`<p class="lede">什么都不做，只让它们互相碰。<b>那层壳会自己塌掉。</b></p>
           <p>让读数里的 <b>碰撞 / 粒子</b> 走到 2–3，盯着这团点云：壳先变糊（速率不再唯一），再往里填实，最后成为一团<em>中间厚、边缘稀</em>的云。</p>
-          <p>这团云的径向分布，就是<b>麦克斯韦–玻尔兹曼分布</b>。</p>
-          <button type="button" class="open-charts" data-open-charts>📊 打开速率分布图</button>
+          <p>这团云的径向分布，就是<b>麦克斯韦–玻尔兹曼分布</b>。壳塌完之后，画面正中会换成这张分布图。</p>
+          <button type="button" class="open-charts" data-open-charts="mb">📊 现在就把速率分布图放到画面中央</button>
           <span class="fml">F(<span class="v-amber">v</span>) = √(2/π) <span class="v-amber">v</span>² (k<sub>B</sub>T/m)<sup>−3/2</sup> e<sup>−m<span class="v-amber">v</span>²/2k<sub>B</sub>T</sup></span>
           <p>红线是理论，柱子是实测。<b>没有人安排它</b>——模拟里只有硬球碰撞，麦氏分布是碰撞自己找到的终点。</p>
           <p class="subh">一个几乎人人踩过的坑，现在能直接看出来</p>
           <p>速度分布 f(<b>v</b>) ∝ e<sup>−mv²/2k<sub>B</sub>T</sup> 在 <b>v</b>=0 处<em>最大</em>；可速率分布 F(v) 在 v=0 处却<em>是零</em>。哪来的矛盾？</p>
-          <p>看画面：球心附近的点确实最密（那正是 f 最大）。但速率恰好是 v 的那些粒子住在<b>半径为 v 的那层壳上</b>，而壳的面积是 4πv²——v 越小壳越小，装得下的粒子就越少。</p>
+          <p>这一段要看的是那团<em>点云</em>本身，不是直方图：</p>
+          <button type="button" class="open-charts" data-open-charts="3d">🔮 把点云切回画面中央</button>
+          <p>球心附近的点确实最密（那正是 f 最大）。但速率恰好是 v 的那些粒子住在<b>半径为 v 的那层壳上</b>，而壳的面积是 4πv²——v 越小壳越小，装得下的粒子就越少。</p>
           <span class="fml">F(<span class="v-amber">v</span>) = 4π<span class="v-amber">v</span>² · f(<b>v</b>)</span>
           <p>这个 4πv² 不是配平用的常数，它就是<em>你正在看的那层壳的面积</em>。两条曲线的最大值不在同一处，是因为它们回答的是两个问题：「哪个速度矢量最常见」和「哪个速率最常见」。</p>
           <p class="subh">从哪儿出发都一样</p>
-          <p>图表面板第二张是<b>演化瀑布图</b>：横轴速率，纵轴时间（上面是现在，往下是过去），亮度是该速率的粒子占比。换一个低熵初态再回来看——</p>
+          <p>旁边还有一张<b>演化瀑布图</b>：横轴速率，纵轴时间（上面是现在，往下是过去），亮度是该速率的粒子占比。想看大的就把它换到画面中央——</p>
+          <button type="button" class="open-charts" data-open-charts="wf">🌊 把演化瀑布图放到画面中央</button>
+          <p>换一个低熵初态再回来看——</p>
           <ul>
             <li><b>同速率球壳</b>：起手一条竖直亮线，往上摊成麦氏那个鼓包；</li>
             <li><b>同向束流</b>：同样从一条线出发，但方向也有序，摊开得更慢；</li>
@@ -1321,6 +1356,8 @@ const SC={
             <span class="fml">log f = a + <b>b</b>·<b>v</b> + c v²　⟹　f 是高斯型</span>
             <p>在固定质量、动量、能量的条件下，这个解是<b>唯一</b>的。麦氏分布不是众多平衡态里最可能的一个，它是唯一一个。</p>
           </details>`,
+       /* 壳先塌给三维看，5.2 秒后直方图接棒 —— 那时正文正好讲到「柱子贴上红线」 */
+       st:['3d','mb',5200],
        /* 必须重放：这一章看的是「壳塌下去」这个过程本身。
           读者一路读过来时气体早就平衡了，不重置的话什么也看不到。 */
        /* 半速播放：弛豫本身只有一两个自由时间，按 1× 跑 1.5 秒就演完了，
@@ -1338,8 +1375,8 @@ const SC={
             <li><span style="color:#fc6255">损失</span>：速率恰为 <span class="v-amber">v</span> 的粒子撞上了别人，于是<b>离开</b>这一格；</li>
             <li><span style="color:#5cd0b3">产生</span>：别处的一对粒子撞完之后，<b>落进</b>这一格。</li>
           </ul>
-          <p><b>这笔账可以直接数，不用做任何积分。</b>每发生一次碰撞，我把两个粒子<em>碰前</em>的速率记进损失、<em>碰后</em>的速率记进产生，逐格相减。图里那条曲线就是这么来的。</p>
-          <button type="button" class="open-charts" data-open-charts>📊 打开 Q(f,f) 实测图</button>
+          <p><b>这笔账可以直接数，不用做任何积分。</b>每发生一次碰撞，我把两个粒子<em>碰前</em>的速率记进损失、<em>碰后</em>的速率记进产生，逐格相减。<b>画面正中那条曲线</b>就是这么来的。</p>
+          <button type="button" class="open-charts" data-open-charts="q">📊 把这本账放回画面中央</button>
           <p>从同速率球壳出发时你会看到：<span style="color:#fc6255">初速率那一格深深地负</span>（粒子正被从那里搬走），两侧<span style="color:#5cd0b3">正</span>（正在被填上）。这就是上一章那层壳塌下去的<em>受力图</em>。</p>
           <p>随着系统接近平衡，整条曲线会<b>压回零轴</b>。读数里的 <b>|Q| 失衡度</b> 就是它离零有多远：</p>
           <span class="fml">Q(f,f) = 0 ⟺ f 是麦克斯韦分布</span>
@@ -1352,6 +1389,8 @@ const SC={
             <span class="fml"><b>v</b>′ = <b>v</b> − ((<b>v</b>−<b>v</b><sub>*</sub>)·ω)ω，　<b>v</b>′<sub>*</sub> = <b>v</b><sub>*</sub> + ((<b>v</b>−<b>v</b><sub>*</sub>)·ω)ω</span>
             <p>注意这是个<b>二次</b>算符——玻尔兹曼方程是非线性的，难就难在这里。</p>
           </details>`,
+       /* 这一章的主角是那本账，不是又看一遍上一章的壳 */
+       st:'q',
        /* 同样要重放：Q 的形状只有在弛豫过程中才有东西可看，
           平衡之后它就是一条躺在噪声带里的平线。 */
        en(){camTo(0.8,0.24,3.4,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=0.5;CAM.spin=0.06;
@@ -1361,7 +1400,8 @@ const SC={
        b:`<p class="lede">给这团点云配一个数。玻尔兹曼证明：<b>这个数只会往一个方向走。</b></p>
           <span class="fml"><span class="v-H">H</span>(t) = ∫∫ f log f  d<b>x</b> d<b>v</b></span>
           <p>它就是负的熵：S = −k<sub>B</sub><span class="v-H">H</span>。玻尔兹曼证明沿着方程的解，<span class="v-H">H</span> <em>单调不增</em>。</p>
-          <button type="button" class="open-charts" data-open-charts>📈 打开 H(t) 曲线</button>
+          <p><b>画面正中就是这条曲线，它正在往下掉。</b>这一章的全部内容就是那个形状。</p>
+          <button type="button" class="open-charts" data-open-charts="h">📈 把 H 曲线放回画面中央</button>
           <p>直观上它量的是「这团点云有多集中」：壳是极端集中的（H 大），摊开的麦氏云是最分散的（H 最小）。上一章看到的塌缩，在这里就是一条往下走的曲线。</p>
           <p><b>取等的时刻只有一个</b>：f 是麦氏分布的时候。所以 H 定理和上一章的结论是同一件事的两种说法——一个说「账只能在那里平」，一个说「坡只能滑到那里」。</p>
           <p class="q"><b>本页画的是什么：</b>盒子里空间是均匀的，所以我只算速度空间那一份，把 f 归一到 ∫f d³<b>v</b>=1。它和真正的 ∫∫f log f d<b>x</b>d<b>v</b> 只差一个常数因子与 log n 的平移。用「冷热两半」时空间不再均匀，那条曲线就<em>不再是</em> H 定理里的 H——图注会提醒你。</p>
@@ -1373,6 +1413,8 @@ const SC={
             <p>被积函数是 (a−b)·log(a/b) 的形式。a&gt;b 时两个因子都正，a&lt;b 时两个因子都负，所以乘积恒 ≥ 0，整体 ≤ 0。</p>
             <p>取等当且仅当 f′f′<sub>*</sub> = ff<sub>*</sub> 处处成立——正是上一章那个细致平衡条件。</p>
           </details>`,
+       /* 「有没有一个只往一个方向走的量」，答案就是这条线的形状，必须从头看它掉 */
+       st:'h',
        /* H 曲线要从高处落下来才叫「只往一个方向走」，所以也重放 */
        en(){camTo(0.9,0.18,3.3,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=0.5;CAM.spin=0.05;
             vmixTo(1,800);gasInit('same');GAS.running=true;}},
@@ -1389,7 +1431,9 @@ const SC={
           <p class="watch">现在验一下。在「参数」里按 <b>早期反演</b>：系统会重置、只跑一小会儿、然后整体反向。<em>盯着那些尾巴。</em></p>
           <button type="button" class="open-controls" data-open-controls>⏪ 打开反演按钮</button>
           <p>你会看见它们<b>沿着自己刚画出来的那条线走回去</b>。这不是比喻，这就是第 1 章那个式子在 500 个粒子上照样成立。</p>
-          <p>同时 H 曲线<b>真的会爬升</b>。下面那个「峰值回升」是<em>你这次运行当场量到的</em> H 最大值，每跑一次都不一样，不是我事先填在页面里的数字。</p>
+          <p>同时 H 曲线<b>真的会爬升</b>。它就在旁边——想把那个尖峰看大一点：</p>
+          <button type="button" class="open-charts" data-open-charts="h">📈 把 H 曲线放到画面中央看那个尖峰</button>
+          <p>下面那个「峰值回升」是<em>你这次运行当场量到的</em> H 最大值，每跑一次都不一样，不是我事先填在页面里的数字。</p>
           <p>然后 H 会再次下降，原因有两个，得分清楚：</p>
           <ul>
             <li><b>物理的</b>——反演后的态并没有精确落在原轨道上（本页碰撞是按格子分批处理的，不是精确的事件驱动），系统很快重新混合；</li>
@@ -1464,18 +1508,41 @@ const SC={
               <p class="ax-v">时间对称 ✗ —— 它是对<em>某一端</em>提的条件，不是对两端。</p>
             </div>
           </div>
+
+          <p>只有一条被判了 ✗ 而且判得干净：<b>A3</b>。画面正中那个 V 字是这一章的落点，等下面推到 A4 你就会知道它在说什么。</p>
+
+          <p class="subh">不对称是在 A3 进来的</p>
           <p><b>A3 就是第 5 章埋的那个伏笔。</b>「两个 f 相乘」这一步，用掉的正是它。</p>
           <p>而关键全在「<em>碰前</em>」这两个字。如果把同一条独立性假设改写在<b>碰后</b>的一对上，同样的推导会给出一个反玻尔兹曼方程，H 定理变成 <span class="v-H">dH/dt ≥ 0</span>——熵单调<em>减少</em>。两条路数学上一样干净。</p>
           <p><b>是「碰前而非碰后」这个选择，而不是牛顿定律，定出了时间的方向。</b></p>
-          <p>于是问题被推到下一层：凭什么是碰前？答案在 A4。碰撞会<em>制造</em>关联，关联随粒子四散出去、越摊越薄，不会自己聚回来。只要系统出发时是不相关的，那么在任何后续时刻，「即将相撞」的一对就仍然近似不相关——而「刚刚撞完」的一对不是。</p>
-          <p>所以 A3 不该是一条独立假设，它<b>应该是 A1 + A2 + A4 的推论</b>。这正是数学上要证的东西，有个名字：</p>
+
+          <p class="subh">那凭什么是碰前？答案在 A4</p>
+          <p>碰撞会<em>制造</em>关联，关联随粒子四散出去、越摊越薄，不会自己聚回来。只要系统出发时是不相关的，那么在任何后续时刻，「即将相撞」的一对就仍然近似不相关——而「刚刚撞完」的一对不是。</p>
+          <p>于是整条链就压在 A4 这一条上了：<em>是它，而不是别的什么，替这个世界挑了一个方向。</em>而 A4 的判词是「它是对某一端提的条件」——听起来像文字游戏。</p>
+
+          <p class="subh">那句「对某一端」，就是画面正中那个 V 字</p>
+          <p>它可以当场量。拿<b>同一个</b>混沌低熵初态，做两件事：</p>
+          <ul>
+            <li>一份<b>往未来</b>推：H 往下掉，这是第 6 章看过的；</li>
+            <li>一份把 t=0 的速度<b>全部取反</b>再往前推——那就是<b>往过去</b>推。</li>
+          </ul>
+          <p><em>两边的 H 都往下掉，而且落差几乎一模一样。</em>顶点就是那个初态。</p>
+          <button type="button" class="open-charts" data-open-charts="both">📉 把这个 V 字放回画面中央</button>
+          <p>所以这个初态<b>的过去，熵一样更高</b>。定律没有偏好任何方向——是「在这一端<em>指定</em>它是混沌的」这个动作，单方面挑出了一个方向。<b>换个低熵初态再看，V 字照样是 V 字。</b></p>
+          <p class="q">这也把「熵增」这件事说清楚了：玻尔兹曼这套东西能解释的是「<em>离开</em>一个低熵态之后熵会涨」，它解释不了「为什么<em>过去</em>有一个低熵态」。后者叫 past hypothesis，不在这篇文章、也不在最后那篇论文的射程里。</p>
+
+          <p class="subh">于是 A3 应该是一条定理，不是一条假设</p>
+          <p>A3 不该单独列在这张表上，它<b>应该是 A1 + A2 + A4 的推论</b>。这正是数学上要证的东西，有个名字：</p>
           <span class="fml">分子混沌的传播 (propagation of chaos)<br>f<sub>N</sub>(0) ≈ f<sub>0</sub><sup>⊗N</sup> ⟹ f<sub>N</sub>(t) ≈ f(t)<sup>⊗N</sup></span>
           <p>Lanford 1975 把它证到了 0.2τ。邓煜–Hani–马骁把它证到了任意长时间。<em>下一章先看看它是怎么坏掉的。</em></p>`,
+       /* 这一章的论证是那张 V 字图 —— A4 的判词「它是对某一端提的条件」全靠它立住。
+          在这之前这一章一个画面都没有：屏幕上摆着一盒和本章无关的球。 */
+       st:'both',
        en(){camTo(0.95,0.20,3.7,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.02;}},
 
       {id:'recollision',t:'分子混沌是怎么坏掉的：重碰',
        b:`<p class="lede">A3 说「即将相撞的一对速度无关」。有一种情形它一定不成立：<b>这一对刚才已经碰过一次。</b></p>
-          <p>它们现在的速度正是上次碰撞的产物，彼此高度相关。这类事件叫<b>重碰</b>（recollision），它是分子混沌唯一真正的敌人。</p>
+          <p>它们现在的速度正是上次碰撞的产物，彼此高度相关。这类事件叫<b>重碰</b>（recollision）。在这套框架里它是分子混沌<b>唯一</b>真正的敌人——第 11 章你会看到，其余那些分支都乖乖地收敛到玻尔兹曼层级，只有带重碰的那些不听话。</p>
           <p class="watch">画面上现在每闪一下白光，就是一次重碰。<em>数一数，你会发现并不罕见。</em></p>
           <p>读数里的 <b>重碰率</b> 是当场统计的：一对粒子在 3τ 之内再次相撞，就记一次。现在它大约是百分之几。</p>
           <div class="predict">
@@ -1485,8 +1552,9 @@ const SC={
             <button type="button" data-pick data-why="会<b>下降</b>，而且大致按 r/λ 线性地趋于零。关键在于 λ 没变而 r 变小了：重碰要求一个粒子被第三者精准地弹回来，撞上一个半径为 r 的目标。目标越小，这种「撞回同一个人」的事就越难发生。这正是 Boltzmann–Grad 极限在做的事——它不是把气体变稀，而是让粒子相对于自由程越来越小。">不变——λ 没变，气体的性格就没变</button>
           </div>
           <p class="subh">现在做那个决定性的实验</p>
-          <p>在「参数」里打开 <b>Grad 标度锁</b>，然后把半径 r 往小拖：</p>
+          <p>在「参数」里打开 <b>Grad 标度锁</b>，然后把半径 r 往小拖。每拖一次，画面正中那张图上就落下一个点——<em>那条下降的趋势线是你自己连出来的</em>。</p>
           <button type="button" class="open-controls" data-open-controls>🔒 打开 Grad 标度锁</button>
+          <button type="button" class="open-charts" data-open-charts="recol">📉 把你画的那张图放到画面中央</button>
           <ul>
             <li>N 会自动增大，让 <b>N·r²</b> 保持不变——这正是 A1 的取极限方式；</li>
             <li>λ 和 τ 几乎不动，气体的宏观「性格」不变；</li>
@@ -1503,6 +1571,8 @@ const SC={
             <div class="tcap">四组的 τ 分别是 0.454 / 0.464 / 0.468 / 0.466 —— 气体的「性格」没变，变的只有重碰。</div>
           </div>
           <p>可惜「趋于零」不等于「可以忽略」。碰撞历史越长，可能的重碰构型越多，两者是赛跑关系。<em>时间一长，谁赢就不显然了。</em>这正是最后两章的全部内容。</p>`,
+       /* 先看闪光有多密，再看你自己拖出来的那条趋势线 */
+       st:['3d','recol',6000],
        en(){camTo(0.6,0.22,3.2,0,0,0);GAS.single=false;GAS.mode='micro';GAS.speed=1;CAM.spin=0.03;
             GAS.running=true;}},
 
@@ -1512,23 +1582,25 @@ const SC={
           <p class="watch">在「参数」里点 <b>冷热两半</b>：左热右冷，看热量扩散、温度抹平。</p>
           <p>控制这一步的是<b>克努森数</b> Kn = λ/L（平均自由程比上宏观尺度）。Kn → 0 时，矩方程闭合成流体方程：领头阶给出可压缩欧拉方程，留到一阶就得到<b>纳维–斯托克斯–傅里叶方程</b>。</p>
           <span class="fml">牛顿力学 —(Boltzmann–Grad)→ 玻尔兹曼方程 —(Kn→0)→ 流体方程</span>
-          <p>注意这是<b>两个不同的极限</b>，箭头上的小字不一样。希尔伯特在 1900 年的第六问题里要求：把两支箭头都<b>严格地</b>补上。物理系的推导一直做得很顺，数学上的证明卡了 125 年。</p>
+          <p>注意这是<b>两个不同的极限</b>，箭头上的小字不一样。希尔伯特 1900 年的第六问题里就包含这一项：把两支箭头都<b>严格地</b>补上（它要求的其实比这多得多——第 12 章会说清楚）。物理系的推导一直做得很顺，数学上的证明卡了 125 年。</p>
           <p class="subh">当场验一条傅里叶定律</p>
-          <p>右端那一步不必只当口号。图表面板里有一张 <b>温度剖面 T(x)</b>：把盒子沿 x 切成 16 条，各自统计局域温度。</p>
-          <button type="button" class="open-charts" data-open-charts>🌡 打开温度剖面 T(x)</button>
+          <p>右端那一步不必只当口号。<b>温度剖面 T(x)</b>：把盒子沿 x 切成 16 条，各自统计局域温度。热量摊开之后它会接过画面正中。</p>
+          <button type="button" class="open-charts" data-open-charts="prof">🌡 现在就把温度剖面放到画面中央</button>
           <p>按下 <b>冷热两半</b> 的瞬间，剖面是一个<em>台阶</em>。松手之后台阶的棱角先被磨圆，再整体塌成一条平线——这正是热传导方程</p>
           <span class="fml">∂<sub>t</sub>T = κ ∂<sub>x</sub>²T</span>
-          <p>在做的事。图里的<b>对比度</b>实测从 105% 掉到 7%，在 log 图上是一条直线。</p>
+          <p>在做的事。读数里的<b>温度不均匀度</b>实测从 105% 掉到 7%，在 log 图上是一条直线。</p>
           <p><em>没有人把热传导方程写进模拟</em>——里面只有硬球碰撞。傅里叶定律是从碰撞里长出来的，和麦氏分布一样。</p>
           <details class="deep"><summary>两个技术细节：为什么是余弦模，以及 Kn 到底多大</summary>
-            <p>绝热壁下热传导方程的本征模是 cos(nπ(x+L)/2L)，其中 <b>n=1 衰减最慢</b>，所以台阶很快退化成一条余弦，之后整体按指数塌下去。图里的对比度就是这个第一模的振幅除以平均温度。</p>
+            <p>绝热壁下热传导方程的本征模是 cos(nπ(x+L)/2L)，其中 <b>n=1 衰减最慢</b>，所以台阶很快退化成一条余弦，之后整体按指数塌下去。读数里那个「温度不均匀度」就是这个第一模的振幅除以平均温度。</p>
             <p>用第一模的投影而不是 T<sub>max</sub>−T<sub>min</sub>，是因为每格只有三十来个粒子，max−min 的散粒噪声就有 40%，足以把整个衰减盖掉。投影对 16 个格子求平均，噪声小 √16 倍。这类「换个统计量才看得见物理」的取舍，在数值实验里比公式推导更常遇到。</p>
             <p>本页 λ ≈ 0.43，盒子尺度 L = 2，所以 Kn ≈ 0.2——<em>不算小</em>。真实空气在常温常压下 λ ≈ 68 nm，对厘米级容器 Kn ≈ 10<sup>−5</sup>，那才是流体近似真正站得住的地方。<b>Kn 不够小时纳维–斯托克斯就开始失效</b>：稀薄气体、微流控、再入大气层的飞行器都撞在这上面。</p>
           </details>`,
+       /* 先看热量在盒子里摊开，再看剖面上的台阶怎么被抹平 */
+       st:['3d','prof',5500],
        en(){camTo(0.85,0.35,4.3,0,0,0);GAS.mode='macro';GAS.single=false;CAM.spin=0.06;gasInit('hot');}},
 
       {id:'lanford',t:'为什么卡了五十年',
-       b:`<p class="lede">前面九章搭好了舞台：唯一还没证的东西，是 A3 能撑多久。<b>1975 年 Lanford 撑到了 0.2 个自由时间，然后这个数字五十年没动过。</b></p>
+       b:`<p class="lede">前面十章都是铺垫：唯一还没证的东西，是 A3 能撑多久。<b>1975 年 Lanford 撑到了 0.2 个自由时间，然后这个数字五十年没动过。</b></p>
           <p>先说清楚极限怎么取。玻尔兹曼方程不是 N→∞ 的任意极限，而是 <b>Boltzmann–Grad 标度</b>：</p>
           <span class="fml">N → ∞，　r → 0，　N r² = const</span>
           <p>读数里的 <b>N·r²（Grad 不变量）</b>就是它——上一章你已经亲手拖过。</p>
@@ -1544,15 +1616,17 @@ const SC={
 
           <p class="subh">为什么会卡在一个自由时间以内</p>
           <p>症结在于：<b>不封闭</b>。从 N 粒子刘维尔方程出发，写 1 个粒子的方程时右端会冒出 2 个粒子的分布，写 2 个的又会冒出 3 个的……这条链叫 BBGKY 层级。玻尔兹曼方程相当于在第一层强行截断——用 A3 把两粒子分布换成单粒子分布之积。整个问题就是：<em>这一步截断合不合法。</em></p>
-          <p>Lanford 不截断，而是把层级一路展开：f(t) 写成一列积分之和，第 n 项是「恰好经历 n 次碰撞的所有历史」。这些历史可以画成一棵树——每次碰撞添一个新粒子做分支。</p>
-          <div class="treewrap"><canvas id="treeCv"></canvas></div>
-          <p>问题出在计数：第 n 层的分支数按 <b>n!</b> 增长，而 n 重时间积分只给出 <b>t<sup>n</sup>/n!</b>。两者刚好抵消，于是每一项都是 O((Ct)<sup>n</sup>)——<b>只有 t &lt; 1/C 才收敛</b>。把常数 C 算出来，就是那个约 0.2τ。这不是估计得不够仔细，而是这套展开方式的<em>固有半径</em>。</p>
+          <p>Lanford 不截断，而是把层级一路展开：f(t) 写成一列积分之和，第 n 项是「恰好经历 n 次碰撞的所有历史」。这些历史可以画成一棵树——每次碰撞添一个新粒子做分支。<b>画面正中就是这棵树。</b></p>
+          <button type="button" class="open-charts" data-open-charts="tree">🌲 把碰撞树放回画面中央</button>
+          <p>问题出在计数：往下每一层的分支数按 <b>n!</b> 增长，而 n 重时间积分只给出 <b>t<sup>n</sup>/n!</b>。两者刚好抵消，于是每一项都是 O((Ct)<sup>n</sup>)——<b>只有 t &lt; 1/C 才收敛</b>。把常数 C 算出来，就是那个约 0.2τ。这不是估计得不够仔细，而是这套展开方式的<em>固有半径</em>。</p>
 
           <p class="subh">真正的敌人还是重碰</p>
-          <p>树上绝大多数分支对应「每次都撞上新粒子」的历史，这类项在 Grad 极限下正好收敛到玻尔兹曼层级，没有问题。出问题的是图中<span style="color:#fc6255">红色</span>那类：<b>重碰分支</b>。</p>
+          <p>树上绝大多数分支对应「每次都撞上新粒子」的历史，这类项在 Grad 极限下正好收敛到玻尔兹曼层级，没有问题。出问题的是那些<span style="color:#fc6255">红色</span>的分支：<b>重碰分支</b>。</p>
           <p>单个重碰项确实是小量（第 9 章你亲手把它拖下去过，量级 ~ r/λ）。但树的分支数在涨。<em>时间越长，重碰构型越多</em>——小量乘以巨大的计数，逐项估计就顶不住了。这就是 50 年没人推进的原因：<b>不是不知道敌人是谁，是数不过来。</b></p>
 
           <p><em>下一章看他们是怎么绕过去的。</em></p>`,
+       /* 卡了五十年的原因是计数，那棵按阶乘分叉的树就是全部论证 */
+       st:'tree',
        en(){camTo(0.7,0.28,4.0,0,0,0);GAS.mode='micro';GAS.single=false;CAM.spin=0.04;}},
 
       {id:'deng',t:'邓煜–Hani–马骁：把符号找回来',
@@ -1569,8 +1643,9 @@ const SC={
           <p>结论就是第 8 章那个还没证完的命题：</p>
           <span class="fml">分子混沌对<b>任意长时间</b>传播<br>（只要玻尔兹曼方程的解还存在）</span>
           <p>换句话说，<b>A3 不再是假设，而是 A1 + A2 + A4 的定理</b>。时间之矢没有被凭空造出来，它被追溯回了唯一那个不对称的输入——初态。</p>
-          <p class="srcnote"><b>说清楚它<em>没有</em>做到什么：</b>这不是「证明了熵增」。初态混沌（A4）依然是外加条件，而且它对 t &gt; 0 和 t &lt; 0 同样有效——从 t=0 的混沌初态往<em>过去</em>推，H 同样单调下降。为什么现实世界只有一个方向，那是宇宙初始低熵（past hypothesis）的问题，不在这篇论文的射程里。这篇论文做到的是：把「为什么可以用玻尔兹曼方程」从物理直觉变成了硬球势下的定理。</p>
+          <p class="srcnote"><b>说清楚它<em>没有</em>做到什么：</b>这不是「证明了熵增」。初态混沌（A4）依然是外加条件，而且它对 t &gt; 0 和 t &lt; 0 同样有效——从 t=0 的混沌初态往<em>过去</em>推，H 同样单调下降（第 8 章那个 V 字就是当场量出来的这件事）。为什么现实世界只有一个方向，是第 8 章说过的 past hypothesis 问题，不在这篇论文的射程里。这篇论文做到的是：把「为什么可以用玻尔兹曼方程」从物理直觉变成了硬球势下的定理。</p>
           <p>随后他们把同一套控制接力用到 Kn → 0 的那一支，在同一个设定下推出可压缩欧拉方程与纳维–斯托克斯–傅里叶方程。<b>牛顿 → 玻尔兹曼 → 流体这条链，第一次被完整地接通了</b>——在硬球势、稀薄气体这一档上。希尔伯特 1900 年提出的要求，在这一支上等了 125 年。</p>
+          <button type="button" class="open-charts" data-open-charts="both">📉 再看一次那个 V 字：这个初态的过去，熵一样更高</button>
           <p>2026 年 7 月 23 日，邓煜在费城的国际数学家大会上获菲尔兹奖。</p>
           <p>你大概会看到「希尔伯特第六问题被解决了」这样的标题。<em>这话说得比实际满一点</em>，而且分清楚它满在哪里，本身就是这篇文章最该留给你的东西。</p>
           <details class="deep"><summary>「第六问题解决了」——这话满在哪里</summary>
@@ -1679,6 +1754,10 @@ function setScene(name){
     buildDots();
   }else{
     labels([]);
+    /* 离开演示就把舞台撤掉。setScene 是整块重写 body.className 的，
+       所以 staged / has-stagepick 这些标记必须在这里显式收拾干净。 */
+    setStage('3d');
+    document.body.classList.remove('has-stagepick');
     if(name==='home'){CAM.spin=0.035;camTo(CAM.taz,0.16,3.5,0,0,0);}
   }
   if(name==='gas'&&!GAS.px)gasInit('same');
@@ -1710,6 +1789,7 @@ function gotoStep(i){
   const S=SC[scene].steps;si=clamp(i,0,S.length-1);
   const s=S[si];
   clearShow();
+  bothAbort();
   const act=actForStep(si);
   $('#stepno').innerHTML=`<span class="act">${act.k} · ${act.t}</span><span class="count">${String(si+1).padStart(2,'0')} / ${String(S.length).padStart(2,'0')}</span>`;
   $('#stepno').setAttribute('aria-label',`${act.k} ${act.t}，第 ${si+1} 步，共 ${S.length} 步`);
@@ -1728,6 +1808,8 @@ function gotoStep(i){
   GAS.vmixSet=false;
   s.en&&s.en();
   if(!GAS.vmixSet)to(GAS,'vmix',0,520);
+  /* 主角在 en() 之后指派：en() 里的 beat() 已经排完了，applyStage 要接在它后面 */
+  applyStage(s);
   syncCtrl();
 }
 $('#prev').onclick=()=>gotoStep(si-1);
@@ -1831,16 +1913,17 @@ function paintRange(el){
    把本章相关的那组提亮，其余压暗（不是藏起来——想用随时能用）。 */
 /* 每章显示哪几张图。原则是一章一张主图，最多再配一张辅图——
    五张一起堆着的时候，读者的原话是「右边这 3 个图像分别是什么」。 */
+/* 数组的第一项同时也是这一章的候选主角（见各章的 st 字段） */
 const CHARTS={
   relax:['mb','wf'],
   qop:['q','mb'],
   htheorem:['h','mb'],
   loschmidt:['h'],
-  assumptions:[],
+  assumptions:['both'],
   recollision:['recol'],
   fluid:['prof','h'],
-  lanford:[],
-  deng:['mb']
+  lanford:['tree'],
+  deng:['mb','both']
 };
 const CK={
   one:['run','view'], many:['gas','preset','run'],
@@ -1878,6 +1961,128 @@ function syncCtrl(){
   }
 }
 
+/* =====================================================================
+   5b. 舞台：这一章的画面主角是谁
+   ===================================================================== */
+/* 多数章节的主角是那盒球。但有几章的论证本身就是一张图 —— 第 6 章问
+   「有没有一个只往一个方向走的量」，那句话的全部答案是 H 曲线的形状；
+   第 11 章解释为什么卡了五十年，答案是那棵按阶乘分叉的碰撞树。
+   这种时候图必须走到画面正中并且放大；塞在 330px 的侧栏里（碰撞树以前
+   甚至是塞在正文里的一张小画布），等于让读者自己去角落里找论据。 */
+const STAGE={key:'3d',sec:null,avail:300,pin:false};
+const CHART_NAME={mb:'速率分布',wf:'演化史',q:'碰撞收支',prof:'温度剖面',
+                  recol:'重碰率',h:'H 曲线',both:'双向时间',tree:'碰撞树'};
+const chartSection=k=>(k&&k!=='3d')?document.querySelector(`.ckd[data-chart="${k}"]`):null;
+
+/* 舞台至少要有 330px 宽才配叫舞台。视口一窄（iPad 横屏再窄一点就是这样），
+   讲解面板和控制面板之间只剩两百来像素 —— 那时把图搬过去并不比留在侧栏好，
+   而且离撞上面板只差一点。所以窄了就不搬，保持原来的行为。 */
+function stageFits(){
+  const R=freeRect();
+  /* 量不到视口（启动的头一两帧可能是 0）时先别降级，下一帧会自己纠正 */
+  if(!(R.W>0&&R.H>0))return true;
+  return R.W<=900?(R.b-R.t)>=210:(R.r-R.l-24)>=330;
+}
+function layoutStage(force){
+  const st=$('#stage'),pk=$('#stagepick');
+  if(!st)return;
+  const R=freeRect(), wide=R.W>900;
+  const padX=wide?12:6, gapTop=wide?46:40, padB=wide?10:6;
+  const l=R.l+padX, r=R.r-padX;
+  const t=R.t+gapTop, b=R.b-padB;
+  const w=Math.max(240,r-l), h=Math.max(150,b-t);
+  const ww=wide?Math.min(w,1040):w;
+  const x=l+(w-ww)/2;
+  /* 视口被缩窄之后舞台可能已经放不下了 —— 那就当场把主角退回三维，
+     免得它压到面板上。key 已经是 3d 时 setStage 不会再回头调这里，不递归。 */
+  if(STAGE.key!=='3d'&&!stageFits()){setStage('3d');return;}
+  const sig=[x,t,ww,h].map(Math.round).join(',');
+  if(!force&&sig===layoutStage.sig)return;
+  layoutStage.sig=sig;
+  st.style.left=Math.round(x)+'px';st.style.top=Math.round(t)+'px';
+  st.style.width=Math.round(ww)+'px';st.style.height=Math.round(h)+'px';
+  pk.style.left=Math.round(l+w/2)+'px';pk.style.top=Math.round(R.t+(wide?5:1))+'px';
+  /* 卡片里除画布还有标题、读法、读数三行 */
+  STAGE.avail=Math.max(130,h-(wide?134:104));
+}
+/* 侧栏只留本章的配角：台上那张图是同一个 DOM 节点，不能在两处同时出现。 */
+function syncRail(){
+  const id=(SC.gas.steps[si]||{}).id||'';
+  const rail=(scene==='gas'?(CHARTS[id]||[]):[]).filter(k=>k!==STAGE.key);
+  const on=rail.length>0;
+  $('#charts').classList.toggle('show',on);
+  document.body.classList.toggle('has-charts',on);
+  $$('#charts .ckd').forEach(s=>{
+    const k=rail.indexOf(s.dataset.chart);
+    s.style.display=k<0?'none':'';s.style.order=k;
+  });
+}
+function setStage(key,opt){
+  opt=opt||{};
+  key=key||'3d';
+  if(key!=='3d'&&(!chartSection(key)||!stageFits()))key='3d';
+  if(opt.pin)STAGE.pin=true;
+  /* 主角没变也要走一遍收尾：换章时开场主角常常还是三维，早退的话
+     侧栏就留着上一章的图，要等下一帧才被收掉 —— 那一帧读者看得见。 */
+  if(key===STAGE.key){layoutStage(true);syncRail();paintStagePick();return;}
+  STAGE.key=key;
+  if(STAGE.sec){$('#charts').appendChild(STAGE.sec);STAGE.sec=null;}
+  const sec=chartSection(key);
+  if(sec){
+    sec.style.display='';sec.style.order='';
+    $('#stagehost').appendChild(sec);STAGE.sec=sec;
+    /* 两个类必须分两次生效，否则浏览器合成一帧，淡入就变成硬切。
+       中间强制一次重排来分隔 —— 不用 rAF，因为标签页在后台时它不触发，
+       那种情况下舞台会永远停在 opacity:0。 */
+    document.body.classList.add('staged');
+    void $('#stage').offsetWidth;
+    document.body.classList.add('stage-in');
+  }else{
+    document.body.classList.remove('staged','stage-in');
+  }
+  layoutStage(true);
+  syncRail();
+  paintStagePick();
+}
+function stageOpts(){
+  const id=(SC.gas.steps[si]||{}).id||'';
+  return (CHARTS[id]||[]).filter(k=>chartSection(k));
+}
+function buildStagePick(){
+  const pk=$('#stagepick'),opts=stageOpts();
+  document.body.classList.toggle('has-stagepick',scene==='gas'&&opts.length>0&&stageFits());
+  pk.innerHTML='<b>画面主角</b>'+[['3d','那盒球'],...opts.map(k=>[k,CHART_NAME[k]||k])]
+    .map(([k,t])=>`<button type="button" data-stage="${k}">${t}</button>`).join('');
+  $$('#stagepick button').forEach(b=>b.onclick=()=>setStage(b.dataset.stage,{pin:true}));
+  paintStagePick();
+}
+function paintStagePick(){
+  $$('#stagepick button').forEach(b=>{
+    const on=b.dataset.stage===STAGE.key;
+    b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));
+  });
+}
+/* 每章的开场主角。写成 ['3d','mb',5200] 就是「先看那盒球，5.2 秒后直方图接棒」——
+   前半句的画面到那时已经说完了它要说的，叙述正好走到图上。
+   读者一旦自己动手切过（pin），这一章就不再自动改主角。 */
+function applyStage(step){
+  STAGE.pin=false;
+  const s=step.st||'3d';
+  if(Array.isArray(s)){
+    setStage(s[0]);
+    beat(s[2],()=>{if(!STAGE.pin)setStage(s[1]);});
+  }else setStage(s);
+  buildStagePick();
+}
+/* 正文里的「把这张图放到画面中央」按钮走这里（见 article-shell.js）。
+   返回 false 表示这个视口放不下舞台，让 shell 回退到原来的「闪一下侧栏 /
+   跳到图表那一档」—— 按钮在任何宽度下都必须有反应。 */
+window.vizStage=k=>{
+  if(!stageFits())return false;
+  setStage(k,{pin:true});
+  return true;
+};
+
 /* HUD */
 let hudSig='';
 function hud(items){
@@ -1891,7 +2096,7 @@ function hud(items){
 }
 
 /* 图表 */
-const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d'),c3=$('#ch3'),c4=$('#ch4'),c5=$('#ch5'),c6=$('#ch6');
+const c1=$('#ch1'),c2=$('#ch2'),c3=$('#ch3'),c4=$('#ch4'),c5=$('#ch5'),c6=$('#ch6'),c7=$('#ch7'),c8=$('#ch8');
 function fitChart(c,w,h){
   const dpr=Math.min(2,devicePixelRatio||1);
   w=Math.round(w);h=Math.round(h);
@@ -1899,12 +2104,17 @@ function fitChart(c,w,h){
   c.style.width=w+'px';c.style.height=h+'px';
   const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return x;
 }
-/* 图表宽度跟着面板走：手机上「图表」那一档是整屏宽的，写死 248px 会只占半边 */
-function chartW(){
-  const box=$('#charts');
-  const w=box?box.clientWidth-30:248;   // 减掉 #charts 左右各 15px 的 padding
-  return clamp(w,180,560);
+/* 图表的尺寸由它当前待的地方决定：在侧栏里是一张小卡片，上了舞台就铺开。
+   写死宽高的话，「放大到画面中央」就只是把同一张邮票搬了个位置。 */
+function chartBox(cv,ratio,minH,railH){
+  const host=cv.parentElement;                       // .ckd
+  const onStage=!!(STAGE.sec&&STAGE.sec.contains(cv));
+  /* .ckd 只有左内边距（侧栏 11px / 舞台 15px），多减几像素当安全余量 */
+  const w=clamp((host?host.clientWidth:300)-(onStage?19:14),180,onStage?1024:560);
+  return[w,clamp(w*ratio,minH,onStage?STAGE.avail:railH)];
 }
+/* 放大不是把小图拉伸：字号、内边距、线宽都得跟着一起长 */
+const chartScale=W=>clamp(W/300,1,2);
 /* 图上方原本挂着两个完整公式 + 六行符号表。用户的原话是「图像上面公式有必要吗」——
    没有。正文里已经写过一遍，堆在这儿只会让人认不出下面那几张图是什么。
    换成每张图自己的一行「现在」读数，用大白话说清此刻该注意什么。 */
@@ -1929,42 +2139,42 @@ function recolSample(){
   if(RECOL.pts.size>40){const k0=RECOL.pts.keys().next().value;RECOL.pts.delete(k0);}
 }
 function drawRecol(){
-  const W=chartW(),H=clamp(W*0.50,120,180),x=fitChart(c6,W,H);
-  const padL=34,padB=26,padT=14,padR=10;
+  const [W,H]=chartBox(c6,0.50,120,180),x=fitChart(c6,W,H),S=chartScale(W);
+  const padL=34*S,padB=26*S,padT=14*S,padR=10*S;
   const gw=W-padL-padR, gh=H-padB-padT;
   const pts=[...RECOL.pts.values()].filter(p=>p.n>4);
   const xmax=0.20, ymax=0.09;                 // 覆盖滑块能到的全范围，坐标轴不跟着数据跳
   const X=v=>padL+clamp(v/xmax,0,1)*gw, Y=v=>padT+gh-clamp(v/ymax,0,1)*gh;
-  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1*S;
   x.beginPath();x.moveTo(padL,padT);x.lineTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
-  x.font='10px ui-monospace,monospace';
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
   /* 原点那条虚线：Grad 极限要去的地方就是左下角 */
-  x.setLineDash([3,3]);x.strokeStyle='rgba(111,183,255,.30)';
+  x.setLineDash([3*S,3*S]);x.strokeStyle='rgba(111,183,255,.30)';
   x.beginPath();x.moveTo(X(0),Y(0));x.lineTo(X(xmax),Y(xmax*0.45));x.stroke();x.setLineDash([]);
   for(const p of pts){
     x.fillStyle='rgba(111,183,255,.85)';
-    x.beginPath();x.arc(X(p.x),Y(p.y),3.2,0,7);x.fill();
+    x.beginPath();x.arc(X(p.x),Y(p.y),3.2*S,0,7);x.fill();
   }
   // 当前这一点单独highlight
   const K=kinetics();
   if(K.mfp>0&&GAS.recolRate>0){
-    x.strokeStyle='#ffd866';x.lineWidth=2;
-    x.beginPath();x.arc(X(GAS.r/K.mfp),Y(GAS.recolRate),5.5,0,7);x.stroke();
+    x.strokeStyle='#ffd866';x.lineWidth=2*S;
+    x.beginPath();x.arc(X(GAS.r/K.mfp),Y(GAS.recolRate),5.5*S,0,7);x.stroke();
   }
   x.fillStyle='rgba(152,162,189,.9)';
-  x.fillText('小球',padL-2,H-8);
-  x.fillText('大球',padL+gw-26,H-8);
-  x.save();x.translate(11,padT+gh*0.5+22);x.rotate(-Math.PI/2);
+  x.fillText('小球',padL-2*S,H-8*S);
+  x.fillText('大球',padL+gw-26*S,H-8*S);
+  x.save();x.translate(11*S,padT+gh*0.5+22*S);x.rotate(-Math.PI/2);
   x.fillText('重碰越多 →',0,0);x.restore();
   x.fillStyle='rgba(111,183,255,.75)';
-  x.fillText('目标：拖到左下角',padL+6,padT+11);
+  x.fillText('目标：拖到左下角',padL+6*S,padT+11*S);
   if(pts.length<2){
     x.fillStyle='rgba(255,216,102,.9)';
-    x.fillText('拖「半径 r」滑块，点会自己出现',padL+6,padT+gh*0.5);
+    x.fillText('拖「半径 r」滑块，点会自己出现',padL+6*S,padT+gh*0.5);
   }
 }
 function drawMB(){
-  const W=chartW(),H=clamp(W*0.54,128,190),x=fitChart(c1,W,H);
+  const [W,H]=chartBox(c1,0.54,128,190),x=fitChart(c1,W,H),S=chartScale(W);
   const NB=GAS.NB,h=GAS.hist,N=GAS.N,bw=GAS.binw||1;
   let mx=0;for(let i=0;i<NB;i++)mx=Math.max(mx,h[i]/N);
   const a=Math.sqrt((GAS.vrms*GAS.vrms)/3)||1;
@@ -1972,9 +2182,10 @@ function drawMB(){
   for(let i=0;i<=120;i++){const v=i/120*GAS.top;
     const f=Math.sqrt(2/Math.PI)*v*v/(a*a*a)*Math.exp(-v*v/(2*a*a))*bw;cur.push(f);mc=Math.max(mc,f);}
   const top=Math.max(mx,mc)*1.18;
-  const X=v=>10+(v/GAS.top)*(W-16), Y=p=>H-18-(p/top)*(H-28);
-  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
-  x.beginPath();x.moveTo(10,H-18);x.lineTo(W-6,H-18);x.stroke();
+  const padB=18*S;
+  const X=v=>10*S+(v/GAS.top)*(W-16*S), Y=p=>H-padB-(p/top)*(H-28*S);
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1*S;
+  x.beginPath();x.moveTo(10*S,H-padB);x.lineTo(W-6*S,H-padB);x.stroke();
   /* 每根柱子用「该速率的粒子」在画面上的颜色 —— 直方图因此是屏幕颜色的普查，
      柱子的位置、颜色与球的颜色由同一个色标决定。 */
   const vs=GAS.vrms||1;
@@ -1984,27 +2195,27 @@ function drawMB(){
     const c=heat(clamp(v/(vs*1.85),0,1));
     x.fillStyle=`rgba(${Math.round(c[0]*255)},${Math.round(c[1]*255)},${Math.round(c[2]*255)},.72)`;
     const x0=X(i*bw),x1_=X((i+1)*bw);
-    x.fillRect(x0,Y(p),Math.max(1,x1_-x0-1),H-18-Y(p));
+    x.fillRect(x0,Y(p),Math.max(1,x1_-x0-1),H-padB-Y(p));
   }
-  x.strokeStyle='#ffb547';x.lineWidth=1.8;x.beginPath();
+  x.strokeStyle='#ffb547';x.lineWidth=1.8*S;x.beginPath();
   for(let i=0;i<=120;i++){const v=i/120*GAS.top;const p=cur[i];
     i?x.lineTo(X(v),Y(p)):x.moveTo(X(v),Y(p));}
   x.stroke();
   /* 画布内只留必要的锚点：坐标轴的意思卡片标题已经说过了 */
-  x.font='10px ui-monospace,monospace';
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
   x.fillStyle='rgba(255,181,71,.95)';
-  x.fillText('← 理论预言的形状',W-108,15);
+  x.fillText('← 理论预言的形状',W-108*S,15*S);
   x.fillStyle='rgba(152,162,189,.7)';
-  x.fillText('慢',12,H-5);x.fillText('快',W-20,H-5);
+  x.fillText('慢',12*S,H-5*S);x.fillText('快',W-20*S,H-5*S);
 }
 /* 演化瀑布图：纵轴是时间（上=现在），横轴是速率，亮度=该速率的粒子占比。
    低熵初态是一条竖亮线，往下（时间推进）逐渐摊成麦氏分布的形状。 */
 function drawWF(){
-  const W=chartW(),H=clamp(W*0.46,110,170),x=fitChart(c3,W,H);
+  const [W,H]=chartBox(c3,0.46,110,170),x=fitChart(c3,W,H),S=chartScale(W);
   const rows=GAS.wf,NB=GAS.NB;
   if(!rows.length)return;
-  const padL=8,padB=14,padT=12;
-  const gw=W-padL-6, gh=H-padB-padT;
+  const padL=8*S,padB=14*S,padT=12*S;
+  const gw=W-padL-6*S, gh=H-padB-padT;
   let mx=0;for(const r of rows)if(r.mx>mx)mx=r.mx;
   if(mx<=0)return;
   const cw=gw/NB, rh=gh/GAS.WFMAX;
@@ -2023,21 +2234,21 @@ function drawWF(){
       x.fillRect(padL+b*cw,y,Math.max(1,cw+0.5),Math.max(1,rh+0.6));
     }
   }
-  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1*S;
   x.strokeRect(padL,padT,gw,gh);
-  x.font='10px ui-monospace,monospace';
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
   x.fillStyle='rgba(152,162,189,.75)';
-  x.fillText('慢',padL+2,H-4);x.fillText('快',W-20,H-4);
+  x.fillText('慢',padL+2*S,H-4*S);x.fillText('快',W-20*S,H-4*S);
   x.fillStyle='rgba(255,181,71,.92)';
-  x.fillText('▲ 现在',padL+4,padT+11);
+  x.fillText('▲ 现在',padL+4*S,padT+11*S);
   x.fillStyle='rgba(152,162,189,.6)';
-  x.fillText('▼ 更早',padL+4,padT+gh-4);
+  x.fillText('▼ 更早',padL+4*S,padT+gh-4*S);
 }
 /* 碰撞算符 Q(f,f) 的实测图：产生项在上、损失项在下，净值是那条实线。
    平衡态下两者逐格相消，实线压在零轴上；弛豫过程中它清楚地指出
    「哪些速率在被清空、哪些在被填充」。 */
 function drawQ(){
-  const W=chartW(),H=clamp(W*0.44,110,165),x=fitChart(c4,W,H);
+  const [W,H]=chartBox(c4,0.44,110,165),x=fitChart(c4,W,H),S=chartScale(W);
   const NB=QB.NB;
   /* 纵轴以「散粒噪声」为单位，而不是按当前最大值自动缩放。
      自动缩放的后果是：平衡态剩下的全是计数噪声，却被拉满整幅画，
@@ -2050,8 +2261,8 @@ function drawQ(){
   for(let b=0;b<NB;b++)den+=QB.gAcc[b]+QB.lAcc[b];
   const sig=Math.sqrt(Math.max(den,1)/NB);
   const mx=16*sig, band=2.5*sig;
-  const padL=10,padB=15,padT=10;
-  const gw=W-padL-8, gh=H-padB-padT;
+  const padL=10*S,padB=15*S,padT=10*S;
+  const gw=W-padL-8*S, gh=H-padB-padT;
   const y0=padT+gh*0.5;                       // 零轴在中间
   const X=b=>padL+(b+0.5)/NB*gw;
   const Y=v=>y0-clamp(v/mx,-1,1)*(gh*0.46);
@@ -2059,12 +2270,12 @@ function drawQ(){
   /* 噪声带：曲线整个躺进去，就说明剩下的只是计数涨落 */
   const bh=(band/mx)*(gh*0.46);
   x.fillStyle='rgba(255,255,255,.07)';
-  x.fillRect(padL,y0-bh,W-8-padL,bh*2);
-  x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;x.setLineDash([2,3]);
-  x.beginPath();x.moveTo(padL,y0-bh);x.lineTo(W-8,y0-bh);
-  x.moveTo(padL,y0+bh);x.lineTo(W-8,y0+bh);x.stroke();x.setLineDash([]);
-  x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1;
-  x.beginPath();x.moveTo(padL,y0);x.lineTo(W-8,y0);x.stroke();
+  x.fillRect(padL,y0-bh,W-8*S-padL,bh*2);
+  x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1*S;x.setLineDash([2*S,3*S]);
+  x.beginPath();x.moveTo(padL,y0-bh);x.lineTo(W-8*S,y0-bh);
+  x.moveTo(padL,y0+bh);x.lineTo(W-8*S,y0+bh);x.stroke();x.setLineDash([]);
+  x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1*S;
+  x.beginPath();x.moveTo(padL,y0);x.lineTo(W-8*S,y0);x.stroke();
   // 柱：正=产生占优（该速率在被填充），负=损失占优（在被清空）
   const bw=gw/NB;
   for(let b=0;b<NB;b++){
@@ -2073,20 +2284,20 @@ function drawQ(){
     x.fillStyle=v>0?'rgba(92,208,179,.75)':'rgba(252,98,85,.72)';
     x.fillRect(X(b)-bw*0.42,Math.min(y0,yy),Math.max(1,bw*0.84),Math.abs(yy-y0));
   }
-  x.strokeStyle='rgba(255,181,71,.9)';x.lineWidth=1.6;x.beginPath();
+  x.strokeStyle='rgba(255,181,71,.9)';x.lineWidth=1.6*S;x.beginPath();
   for(let b=0;b<NB;b++){const px=X(b),py=Y(QB.q[b]);b?x.lineTo(px,py):x.moveTo(px,py);}
   x.stroke();
-  x.font='10px ui-monospace,monospace';
-  x.fillStyle='rgba(92,208,179,.95)';x.fillText('↑ 这个速率的球在变多',padL+2,padT+9);
-  x.fillStyle='rgba(252,98,85,.95)';x.fillText('↓ 在变少',padL+2,H-padB+12);
-  x.fillStyle='rgba(255,255,255,.36)';x.fillText('灰带内＝只剩统计噪声',W-134,y0+bh+11);
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
+  x.fillStyle='rgba(92,208,179,.95)';x.fillText('↑ 这个速率的球在变多',padL+2*S,padT+9*S);
+  x.fillStyle='rgba(252,98,85,.95)';x.fillText('↓ 在变少',padL+2*S,H-padB+12*S);
+  x.fillStyle='rgba(255,255,255,.36)';x.fillText('灰带内＝只剩统计噪声',W-134*S,y0+bh+11*S);
   x.fillStyle='rgba(152,162,189,.7)';
-  x.fillText('慢',padL+1,y0-4);x.fillText('快',W-22,y0-4);
+  x.fillText('慢',padL+1*S,y0-4*S);x.fillText('快',W-22*S,y0-4*S);
 }
 /* 温度剖面 T(x)：当前那条画实线，过去若干条淡出叠在后面。
    冷热两半松手后，能看到台阶被抹成一条平线——热传导方程在动。 */
 function drawProfile(){
-  const W=chartW(),H=clamp(W*0.44,110,165),x=fitChart(c5,W,H);
+  const [W,H]=chartBox(c5,0.44,110,165),x=fitChart(c5,W,H),S=chartScale(W);
   const NX=PROF.NX,hist=PROF.hist;
   if(!hist.length)return;
   let mn=1e9,mx=-1e9;
@@ -2094,38 +2305,38 @@ function drawProfile(){
     mn=Math.min(mn,row[b]);mx=Math.max(mx,row[b]);}
   if(!(mx>mn)){mx=mn+1;}
   const pad=(mx-mn)*0.18;mn-=pad;mx+=pad;
-  const padL=26,padB=15,padT=10;
-  const gw=W-padL-8, gh=H-padB-padT;
+  const padL=26*S,padB=15*S,padT=10*S;
+  const gw=W-padL-8*S, gh=H-padB-padT;
   const X=b=>padL+(b+0.5)/NX*gw, Y=v=>padT+gh-(v-mn)/(mx-mn)*gh;
-  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1;
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1*S;
   x.strokeRect(padL,padT,gw,gh);
   // 历史：越旧越淡
   for(let k=0;k<hist.length-1;k++){
     const a=0.06+0.20*(k/hist.length);
-    x.strokeStyle=`rgba(255,181,71,${a.toFixed(3)})`;x.lineWidth=1;
+    x.strokeStyle=`rgba(255,181,71,${a.toFixed(3)})`;x.lineWidth=1*S;
     x.beginPath();
     for(let b=0;b<NX;b++){const py=Y(hist[k][b]);b?x.lineTo(X(b),py):x.moveTo(X(b),py);}
     x.stroke();
   }
   // 当前
   const cur=hist[hist.length-1];
-  x.lineWidth=2;x.beginPath();
+  x.lineWidth=2*S;x.beginPath();
   for(let b=0;b<NX;b++){
     const py=Y(cur[b]);
     x.strokeStyle=heatCss(cur[b]);
     b?x.lineTo(X(b),py):x.moveTo(X(b),py);
   }
   x.strokeStyle='#ffb547';x.stroke();
-  x.font='10px ui-monospace,monospace';
-  x.fillStyle='rgba(252,98,85,.9)';x.fillText('热',6,padT+10);
-  x.fillStyle='rgba(88,196,221,.9)';x.fillText('冷',6,padT+gh);
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
+  x.fillStyle='rgba(252,98,85,.9)';x.fillText('热',6*S,padT+10*S);
+  x.fillStyle='rgba(88,196,221,.9)';x.fillText('冷',6*S,padT+gh);
   x.fillStyle='rgba(152,162,189,.7)';
-  x.fillText('盒子左端',padL,H-4);x.fillText('右端',W-34,H-4);
+  x.fillText('盒子左端',padL,H-4*S);x.fillText('右端',W-34*S,H-4*S);
 }
 function heatCss(T){const c=heat(clamp((T-0.2)/1.4,0,1));
   return `rgb(${Math.round(c[0]*255)},${Math.round(c[1]*255)},${Math.round(c[2]*255)})`;}
 function drawH(){
-  const W=clamp(chartW(),180,560),H=clamp(W*0.34,86,132),x=fitChart(c2,W,H);
+  const [W,H]=chartBox(c2,0.34,86,132),x=fitChart(c2,W,H),S=chartScale(W);
   const A=GAS.H;if(A.length<2)return;
   /* 纵轴锚在「初始 H」和「本次跑到过的最低点」之间，不按当前窗口自动缩放。
      自动缩放的后果是：到了平衡，剩下的只有涨落，却被拉满整幅画——
@@ -2138,50 +2349,162 @@ function drawH(){
   mn=GAS.Hfloor;
   if(mx-mn<1e-6){mx+=0.5;mn-=0.5;}
   const pad=(mx-mn)*0.16;mn-=pad;mx+=pad;
-  const X=i=>8+i/(A.length-1)*(W-14), Y=v=>H-14-((v-mn)/(mx-mn))*(H-24);
-  x.strokeStyle='rgba(255,255,255,.10)';x.beginPath();x.moveTo(8,H-14);x.lineTo(W-6,H-14);x.stroke();
+  const X=i=>8*S+i/(A.length-1)*(W-14*S), Y=v=>H-14*S-((v-mn)/(mx-mn))*(H-24*S);
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1*S;
+  x.beginPath();x.moveTo(8*S,H-14*S);x.lineTo(W-6*S,H-14*S);x.stroke();
   // 反演发生的时刻
   if(GAS.revIdx>0&&GAS.revIdx<A.length){
     const rx=X(GAS.revIdx);
-    x.strokeStyle='rgba(255,216,102,.55)';x.setLineDash([3,3]);x.lineWidth=1;
-    x.beginPath();x.moveTo(rx,10);x.lineTo(rx,H-14);x.stroke();x.setLineDash([]);
-    x.fillStyle='rgba(255,216,102,.9)';x.font='9px ui-monospace,monospace';
-    x.fillText('反演',Math.min(rx+3,W-30),20);
+    x.strokeStyle='rgba(255,216,102,.55)';x.setLineDash([3*S,3*S]);x.lineWidth=1*S;
+    x.beginPath();x.moveTo(rx,10*S);x.lineTo(rx,H-14*S);x.stroke();x.setLineDash([]);
+    x.fillStyle='rgba(255,216,102,.9)';x.font=`${(9*S).toFixed(1)}px ui-monospace,monospace`;
+    x.fillText('反演',Math.min(rx+3*S,W-30*S),20*S);
   }
   /* 起点与终点两条参照线：一眼看出「从这儿掉到了那儿，然后不动了」 */
-  x.strokeStyle='rgba(255,255,255,.13)';x.setLineDash([2,4]);x.lineWidth=1;
-  x.beginPath();x.moveTo(8,Y(GAS.H0));x.lineTo(W-6,Y(GAS.H0));x.stroke();
-  x.beginPath();x.moveTo(8,Y(GAS.Hfloor));x.lineTo(W-6,Y(GAS.Hfloor));x.stroke();
+  x.strokeStyle='rgba(255,255,255,.13)';x.setLineDash([2*S,4*S]);x.lineWidth=1*S;
+  x.beginPath();x.moveTo(8*S,Y(GAS.H0));x.lineTo(W-6*S,Y(GAS.H0));x.stroke();
+  x.beginPath();x.moveTo(8*S,Y(GAS.Hfloor));x.lineTo(W-6*S,Y(GAS.Hfloor));x.stroke();
   x.setLineDash([]);
-  x.font='10px ui-monospace,monospace';
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
   x.fillStyle='rgba(255,255,255,.34)';
-  x.fillText('出发',W-34,Y(GAS.H0)-4);
-  x.fillText('最低',W-34,Y(GAS.Hfloor)+12);
+  x.fillText('出发',W-34*S,Y(GAS.H0)-4*S);
+  x.fillText('最低',W-34*S,Y(GAS.Hfloor)+12*S);
   const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#ffd866');g.addColorStop(1,'#ffb547');
-  x.strokeStyle=g;x.lineWidth=1.8;x.beginPath();
+  x.strokeStyle=g;x.lineWidth=1.8*S;x.beginPath();
   A.forEach((v,i)=>i?x.lineTo(X(i),Y(v)):x.moveTo(X(i),Y(v)));x.stroke();
-  x.font='10px ui-monospace,monospace';
   x.fillStyle='rgba(154,165,189,.7)';
-  x.fillText('早',10,H-3);x.fillText('现在',W-32,H-3);
+  x.fillText('早',10*S,H-3*S);x.fillText('现在',W-32*S,H-3*S);
 }
 /* 碰撞树：Duhamel 展开的第 n 项，就是所有「n 次碰撞的历史」之和。
    树的分支数按 n! 爆炸，只有 t 小到能被 1/n! 压住，级数才收敛 —— 这就是 0.2τ 的来历。
    红色分支表示重碰（同一对再碰一次），正是它破坏分子混沌。 */
+/* ── 往未来推一遍，往过去也推一遍 ──────────────────────────
+   第 8 章给 A4（初态是混沌的）判的是「时间对称 ✗ —— 它是对某一端提的条件，
+   不是对两端」。这句话是整篇文章的落点，而它在页面上一直只是一行字。
+
+   它可以直接验：拿同一个混沌低熵初态，一份往未来推，一份把速度全部取反再
+   往前推（那就是往过去推）。两边的 H 都单调下降 —— 落差实测只差 0.1%。
+   于是「时间之矢在初态里，不在定律里」变成了画面上一个 V 字：
+   这个初态的过去，熵同样更高。
+
+   算一次 2×450 步大约 0.3 秒，一帧塞不下，所以分帧推进并显示进度；
+   期间主循环不再自己步进模型（BOTH.busy），算完把这一章的模型重新起一遍。 */
+const BOTH={state:'idle',fwd:[],bwd:[],pct:0,drop:[0,0],preset:'',tick:null,
+            STEPS:450,DT:0.01,SAMPLE:4};
+function bothStart(){
+  if(BOTH.state==='running')return;
+  BOTH.state='running';BOTH.pct=0;BOTH.preset=GAS.preset;
+  const saved={N:GAS.N,r:GAS.r,single:GAS.single,mode:GAS.mode,speed:GAS.speed,preset:GAS.preset};
+  const series=[[],[]];
+  let branch=0,step=0;
+  const startBranch=(rev)=>{
+    GAS.N=520;GAS.r=0.045;GAS.single=false;GAS.mode='micro';
+    GAS.pairLast=new Map();
+    gasInit(saved.preset);
+    /* 往过去推 = 把 t=0 的速度全部取反再往前跑（第 1 章那个 Φ₋ₜ = R∘Φₜ∘R） */
+    if(rev)for(let i=0;i<GAS.N;i++){GAS.vx[i]*=-1;GAS.vy[i]*=-1;GAS.vz[i]*=-1;}
+    gasStats();
+    series[rev?1:0]=[GAS.Hcur];
+  };
+  startBranch(false);
+  BOTH.tick=()=>{
+    let n=0;
+    while(n<30&&step<BOTH.STEPS){
+      gasStep(BOTH.DT);step++;n++;
+      if(step%BOTH.SAMPLE===0){gasStats();series[branch].push(GAS.Hcur);}
+    }
+    BOTH.pct=Math.round((branch*BOTH.STEPS+step)/(2*BOTH.STEPS)*100);
+    if(step<BOTH.STEPS)return;
+    if(branch===0){branch=1;step=0;startBranch(true);return;}
+    BOTH.fwd=series[0];BOTH.bwd=series[1];
+    const drop=a=>a[0]-Math.min(...a);
+    BOTH.drop=[drop(BOTH.fwd),drop(BOTH.bwd)];
+    BOTH.state='done';BOTH.tick=null;
+    /* 还原：把这一章的模型重新起一遍，别把实验用的状态留给读者 */
+    GAS.N=saved.N;GAS.r=saved.r;GAS.single=saved.single;GAS.mode=saved.mode;GAS.speed=saved.speed;
+    GAS.pairLast=new Map();
+    gasInit(saved.preset);
+    GAS.H.length=0;GAS.H0=null;GAS.Hfloor=null;GAS.revIdx=-1;GAS.reversed=0;
+    qbReset();
+  };
+}
+/* 换章 / 换初态时半途放弃。不放弃的话 BOTH.tick 一直在，主循环就再也不
+   自己步进模型了 —— 后面每一章的气体都会看起来卡住。
+   模型状态不用在这里收拾：gotoStep 紧接着的 resetGasChapterState() 会重起。 */
+function bothAbort(){
+  if(BOTH.state!=='running')return;
+  BOTH.state='idle';BOTH.tick=null;
+}
+function drawBoth(){
+  const [W,H]=chartBox(c8,0.52,140,210),x=fitChart(c8,W,H),S=chartScale(W);
+  const padL=10*S,padR=8*S,padT=13*S,padB=17*S;
+  const gw=W-padL-padR, gh=H-padT-padB;
+  const cx=padL+gw/2;
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
+  if(BOTH.state!=='done'){
+    /* 还在算：把进度画出来，不留空白 */
+    x.fillStyle='rgba(154,114,172,.9)';
+    x.fillText(BOTH.state==='running'?`正在把同一个初态往两个方向各推一遍… ${BOTH.pct}%`
+                                     :'把它放到画面中央，就开始跑这两条支线',padL+4*S,padT+gh*0.5);
+    if(BOTH.state==='running'){
+      x.strokeStyle='rgba(255,255,255,.12)';x.lineWidth=1*S;
+      x.strokeRect(padL,padT+gh*0.5+8*S,gw,6*S);
+      x.fillStyle='rgba(154,114,172,.75)';
+      x.fillRect(padL,padT+gh*0.5+8*S,gw*BOTH.pct/100,6*S);
+    }
+    return;
+  }
+  const F=BOTH.fwd,B=BOTH.bwd;
+  if(F.length<2||B.length<2)return;
+  /* 纵轴锚在「出发的 H」与「两支跑到过的最低点」之间 —— 不按当前窗口自动缩放 */
+  const H0=F[0];
+  let mn=Math.min(Math.min(...F),Math.min(...B));
+  let mx=Math.max(H0,Math.max(...F),Math.max(...B));
+  const pad=(mx-mn)*0.14;mn-=pad;mx+=pad;
+  const half=gw/2;
+  const X=(i,len,dir)=>cx+dir*(i/(len-1))*half;
+  const Y=v=>padT+gh-(v-mn)/(mx-mn)*gh;
+  // 底线与中轴
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1*S;
+  x.beginPath();x.moveTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
+  x.strokeStyle='rgba(255,255,255,.26)';x.setLineDash([3*S,3*S]);
+  x.beginPath();x.moveTo(cx,padT);x.lineTo(cx,padT+gh);x.stroke();x.setLineDash([]);
+  // 出发那条水平参照线
+  x.strokeStyle='rgba(255,255,255,.13)';x.setLineDash([2*S,4*S]);
+  x.beginPath();x.moveTo(padL,Y(H0));x.lineTo(padL+gw,Y(H0));x.stroke();x.setLineDash([]);
+  /* 两支用同一个颜色 —— 这张图的论点就是「它们是同一个形状」，
+     分成两色反而在暗示它们不一样。 */
+  const col='#c9a6dc';
+  x.strokeStyle=col;x.lineWidth=2*S;
+  for(const [arr,dir] of [[F,1],[B,-1]]){
+    x.beginPath();
+    arr.forEach((v,i)=>{const px=X(i,arr.length,dir),py=Y(v);i?x.lineTo(px,py):x.moveTo(px,py);});
+    x.stroke();
+  }
+  // 顶点
+  x.fillStyle='#fff';x.beginPath();x.arc(cx,Y(H0),3.2*S,0,7);x.fill();
+  x.fillStyle='rgba(255,255,255,.42)';
+  x.fillText('出发',padL+2*S,Y(H0)-5*S);
+  x.fillStyle='rgba(201,166,220,.95)';
+  x.textAlign='right';x.fillText('← 往过去',cx-10*S,padT+11*S);
+  x.textAlign='left';x.fillText('往未来 →',cx+10*S,padT+11*S);
+  x.fillStyle='rgba(154,165,189,.72)';
+  x.fillText('更早',padL+1*S,H-4*S);
+  x.textAlign='center';x.fillText('初始时刻',cx,H-4*S);
+  x.textAlign='right';x.fillText('更晚',padL+gw,H-4*S);
+  x.textAlign='left';
+}
+/* 碰撞树以前是塞在正文里的一张 ~300px 小画布 —— 而第 11 章的全部论证就是
+   「分支数按 n! 涨，时间积分只给 tⁿ/n!，两者刚好抵消，所以收敛半径是常数」。
+   那句话要靠这张图才立得住，它不该只有巴掌大。现在它是一张能上舞台的卡片。 */
 function drawTree(){
-  const cv=document.getElementById('treeCv');
-  if(!cv)return;
-  const box=cv.parentElement;
-  const W=clamp((box?box.clientWidth:300),200,560),H=Math.round(W*0.52);
-  const dpr=Math.min(2,devicePixelRatio||1);
-  if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr;cv.height=H*dpr;}
-  cv.style.width=W+'px';cv.style.height=H+'px';
-  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+  const [W,H]=chartBox(c7,0.52,150,190),x=fitChart(c7,W,H),S=chartScale(W);
   /* 第 k 次碰撞后的历史条数取 k!（1,2,6,24）—— 这就是那个压垮级数的组合因子 */
   const level=[1,2,6,24], depth=level.length-1;
-  const padT=26, padB=20;
+  const padT=26*S, padB=20*S;
   const rowH=(H-padT-padB)/depth;
   const yOf=k=>padT+k*rowH;
-  x.font='9px ui-monospace,monospace';x.textAlign='left';
+  x.font=`${(9.5*S).toFixed(1)}px ui-monospace,monospace`;x.textAlign='left';
   for(let k=0;k<depth;k++){
     const a=level[k], b=level[k+1], per=b/a;
     const ya=yOf(k), yb=yOf(k+1);
@@ -2192,8 +2515,8 @@ function drawTree(){
         const xb=W*(idx+0.5)/b;
         const reco=(j===per-1);           // 每个分叉里最后一支代表「撞回老相识」
         x.strokeStyle=reco?'rgba(252,98,85,.7)':'rgba(88,196,221,.34)';
-        x.lineWidth=reco?1.5:0.9;
-        x.beginPath();x.moveTo(xa,ya+3);x.lineTo(xb,yb-3);x.stroke();
+        x.lineWidth=(reco?1.5:0.9)*S;
+        x.beginPath();x.moveTo(xa,ya+3*S);x.lineTo(xb,yb-3*S);x.stroke();
       }
     }
   }
@@ -2201,13 +2524,13 @@ function drawTree(){
     const a=level[k], y=yOf(k);
     for(let i=0;i<a;i++){
       x.fillStyle='#58c4dd';
-      x.beginPath();x.arc(W*(i+0.5)/a,y,a>8?1.5:2.5,0,7);x.fill();
+      x.beginPath();x.arc(W*(i+0.5)/a,y,(a>8?1.5:2.5)*S,0,7);x.fill();
     }
     x.fillStyle='rgba(179,167,148,.85)';
-    x.fillText(k===0?'初始 · 1':`碰 ${k} 次 · ${a} 条历史 (${k}!)`,4,y-7);
+    x.fillText(k===0?'初始 · 1 条历史':`碰 ${k} 次 · ${a} 条历史 (${k}!)`,4*S,y-7*S);
   }
   x.fillStyle='rgba(252,98,85,.9)';
-  x.fillText('红 = 重碰分支：分子混沌在这里失效',4,H-6);
+  x.fillText('红 = 重碰分支：分子混沌在这里失效',4*S,H-6*S);
 }
 /* δ→0 的标度数据：与交互参数无关，算一次即可 */
 let scaleData=null;
@@ -2224,7 +2547,7 @@ function getScaleData(){
 /* =====================================================================
    6. 主循环
    ===================================================================== */
-let last=performance.now(), acc=0, wfTick=0, treeTick=0, chartTick=0;
+let last=performance.now(), acc=0, wfTick=0, chartTick=0;
 function resize(){
   const dpr=Math.min(2,devicePixelRatio||1);
   const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
@@ -2242,7 +2565,7 @@ function frame(now){
   requestAnimationFrame(frame);
   if(document.hidden||scene!=='gas'){last=now;return;}
   const dt=Math.min(0.05,(now-last)/1000);last=now;
-  resize();stepAnims();camUpdate(dt);
+  resize();stepAnims();camUpdate(dt);layoutStage();
   gl.viewport(0,0,cv.width,cv.height);
   gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);
   gl.useProgram(P_BG);
@@ -2257,7 +2580,9 @@ function frame(now){
   if(scene==='gas'||scene==='home'){
     const K0=kinetics();
     GAS.recolWin=K0.tau>0?3*K0.tau:1.5;
-    if(GAS.running){
+    /* 双向实验在跑的时候由它独占模型：主循环再步进一次就是两个人同时开车 */
+    if(BOTH.tick)BOTH.tick();
+    else if(GAS.running){
       const sub=2, dts=dt*GAS.speed/sub;
       for(let s=0;s<sub;s++)gasStep(Math.min(0.02,dts));
       gasStats();
@@ -2305,7 +2630,6 @@ function frame(now){
     if(id==='lanford'){
       const tn=document.getElementById('tauNow');
       if(tn)tn.textContent=K.tau>0?(GAS.t/K.tau).toFixed(1)+' τ':'—';
-      if(treeTick++%30===0)drawTree();
     }
     /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0。
        图表都是统计量，20Hz 足够；手机上省下的这几毫秒都是 3D 那边的。
@@ -2321,30 +2645,46 @@ function frame(now){
        改章节顺序时序号会错位，id 不会。 */
     const want=CHARTS[id]||[];
     if(want.length){
-      const box=$('#charts');
-      box.classList.add('show');document.body.classList.add('has-charts');
-      /* 只留本章用得上的那几张。以前是五张一起堆着，谁也认不出谁。 */
-      /* 显示顺序跟着 CHARTS 数组走：主图排最前。DOM 顺序是固定的，
-         不设 order 的话「本章主图」可能被辅图压在下面。 */
-      $$('#charts .ckd').forEach(s=>{
-        const k=want.indexOf(s.dataset.chart);
-        s.style.display=k<0?'none':'';
-        s.style.order=k;
-      });
+      /* 主角在台上时侧栏只留配角 —— 台上那张图是同一个 DOM 节点，
+         不能在两处同时出现。顺序跟着 CHARTS 数组走：主图排最前。 */
+      syncRail();
       /* 采样必须在可见性判断之外：手机上读者是在「参数」档拖滑块的，
          那时图表面板是隐藏的，放在里面就一个点也记不到。 */
       if(want.includes('recol'))recolSample();
-      const visible=box.offsetParent!==null;
-      if(visible&&(chartTick++%3)===0){
+      /* 双向实验：第一次进这一章开算；读者换了低熵初态就按新初态重算。
+         放在节流之外，否则最多要等 3 帧才开始。 */
+      /* 只有它自己在台上时才自动开算 —— 它会独占模型半秒，而第 12 章的主角
+         是那团点云，让它在后台被抢走会看起来像卡了一下。第 12 章的读者按了
+         正文里那个按钮，主角就换成它，于是这里自然开算。 */
+      if(STAGE.key==='both'&&(BOTH.state==='idle'||(BOTH.state==='done'&&BOTH.preset!==GAS.preset)))bothStart();
+      /* 一张图只有真的看得见才画：舞台上的和侧栏里的都算。
+         用 offsetParent 判可见性这里是对的 —— 这些 .ckd 不是 fixed 定位。 */
+      const shown=k=>{const s=chartSection(k);return s&&s.offsetParent!==null;};
+      if((chartTick++%3)===0){
         const T=(GAS.vrms*GAS.vrms)/3||0, a=Math.sqrt(T)||1;
-        if(want.includes('mb')){
+        if(want.includes('both')&&shown('both')){
+          drawBoth();
+          $('#now_both').textContent=BOTH.state==='idle'
+            ? '还没开始算　·　把它放到画面中央就会跑'
+            : BOTH.state!=='done'
+            ? `正在跑两条支线… ${BOTH.pct}%`
+            : `往未来落 ${BOTH.drop[0].toFixed(3)}，往过去落 ${BOTH.drop[1].toFixed(3)} —— `+
+              `差 ${(Math.abs(BOTH.drop[0]-BOTH.drop[1])/Math.max(1e-9,BOTH.drop[0])*100).toFixed(1)}%。这个初态的过去，熵一样更高`;
+        }
+        if(want.includes('tree')&&shown('tree')){
+          drawTree();
+          $('#now_tree').textContent=K.tau>0
+            ? `本次模拟已跑到 ${(GAS.t/K.tau).toFixed(1)} τ　·　Lanford 只能保证到 0.2 τ`
+            : '往下每一行的分支数是上一行的阶乘倍';
+        }
+        if(want.includes('mb')&&shown('mb')){
           drawMB();
           /* 一行大白话读数，代替原来那面公式墙 */
           $('#now_mb').textContent=QB.net>0.12
             ? `现在还在变形中：柱子还没贴上红线`
             : `现在已经贴住理论曲线了　·　最常见的速率约 ${(a*Math.SQRT2).toFixed(2)}`;
         }
-        if(want.includes('wf')){
+        if(want.includes('wf')&&shown('wf')){
           drawWF();
           $('#now_wf').textContent=GAS.preset==='hot'
             ? '「冷热两半」起手是两条亮线，看它们并成一条'
@@ -2352,24 +2692,24 @@ function frame(now){
             ? '「同向束流」起手也是一条线，但方向也有序，摊得更慢'
             : '起手是一条竖直亮线（所有球同速率），往上逐渐摊开';
         }
-        if(want.includes('q')){
+        if(want.includes('q')&&shown('q')){
           drawQ();
           $('#now_q').textContent=`离平衡还有 ${(QB.net*100).toFixed(0)}%　·　`+
             (QB.net<0.08?'曲线已经压回零轴，这就是麦克斯韦分布':'红色那格在被搬空，绿色那格在被填上');
         }
-        if(want.includes('prof')){
+        if(want.includes('prof')&&shown('prof')){
           drawProfile();
           $('#now_prof').textContent=`温差还剩 ${(PROF.contrast*100).toFixed(0)}%　·　`+
             (PROF.contrast<0.15?'台阶基本抹平了':'看棱角先被磨圆，再整体塌下去');
         }
-        if(want.includes('recol')){
+        if(want.includes('recol')&&shown('recol')){
           drawRecol();
           const n=[...RECOL.pts.values()].filter(p=>p.n>4).length;
           $('#now_recol').textContent=n<2
             ? '还没有点　·　打开「Grad 标度锁」再拖半径，效果最干净'
             : `已记下 ${n} 个半径　·　当前重碰率 ${(GAS.recolRate*100).toFixed(1)}%`;
         }
-        if(want.includes('h')){
+        if(want.includes('h')&&shown('h')){
           drawH();
           /* 冷热两半时空间不均匀，这条 H 取自全局速率分布，不是 H 定理里的 ∫∫f log f dx dv */
           $('#now_h').textContent=GAS.preset==='hot'
@@ -2380,7 +2720,7 @@ function frame(now){
         }
       }
     }
-    else {$('#charts').classList.remove('show');document.body.classList.remove('has-charts');}
+    else syncRail();
     const GL2_=[];
     if(id==='fluid'){
       GL2_.push({p:[-0.55,1.22,0],t:'热（快）',c:'#fc6255',dot:1});

@@ -622,6 +622,24 @@ body.home .srcs a:hover{color:#0a0a0a}
   body.mobile-charts #charts canvas.chart{height:auto}
   body.mobile-charts .charts-empty{display:block}
   body.mobile-charts #charts.show ~ .charts-empty{display:none}
+
+  /* ── 手机上的舞台 ──
+     竖屏里「画面正中」就是读数条和讲解面板之间那一块。它本来只有 ~30vh，
+     装不下一张能看清的图，所以主角在台上时讲解面板让出一截。
+     另外两档（图表 / 参数）会盖满整屏，那时舞台必须整个撤掉 ——
+     它的 z-index 比 #right 高，不撤就会浮在参数面板上面。
+
+     只有这两组放在这里：一组靠更高的选择器权重取胜，一组带 !important。
+     纯尺寸的那几条搬到了文件末尾的媒体块 —— 舞台的桌面定义在本块之后，
+     媒体查询不加权重，写在前面会被后面的同名规则整条盖掉（写第一版时就是
+     这么错的：手机上舞台仍在用桌面的内边距和字号）。 */
+  body.staged:not(.home) #story{max-height:37vh}
+  @supports(height:100dvh){
+    body.staged:not(.home) #story{max-height:37dvh}
+  }
+  body.mobile-charts #stage,body.mobile-controls #stage,
+  body.mobile-charts #stagepick,body.mobile-controls #stagepick,
+  body.story-expanded #stage,body.story-expanded #stagepick{display:none!important}
 }
 
 /* 展开键只在手机上有意义：电脑上讲解面板本来就是整条侧栏 */
@@ -639,6 +657,93 @@ body.home .srcs a:hover{color:#0a0a0a}
   cursor:pointer;
 }
 #storyExpand:hover{background:rgba(255,255,255,.14)}
+
+/* ── 舞台：一次只有一个主角 ────────────────────────────────
+   画面重心必须跟着叙述走。正文讲到某张图的时候，那张图就该走到画面正中
+   并且放大 —— 三维退成还在跑的背景。以前所有图都挤在 274px 的侧栏里，
+   于是「先看实测数据，看体积怎么变」这句话，读者得先去角落里把那张
+   邮票大的图找出来；找到之后也看不清。那句话等于没写。
+
+   位置由每篇自己的 layoutStage() 按「没有被面板盖住的那块画面」算出来 ——
+   和镜头用的是同一块矩形，所以舞台永远压不到讲解面板或读数上。 */
+#stage{
+  position:fixed;
+  z-index:12;
+  display:none;
+  flex-direction:column;
+  padding:17px 19px 13px;
+  opacity:0;
+  transform:translateY(10px) scale(.986);
+  transition:opacity .34s ease,transform .34s cubic-bezier(.2,.8,.3,1);
+  overflow:hidden;
+}
+body.staged #stage{display:flex}
+body.staged.stage-in #stage{opacity:1;transform:none}
+#stagehost{display:flex;flex:1;flex-direction:column;min-height:0}
+/* 舞台上的图表卡片：同一个 DOM 节点，只是换了个家。
+   所以图表的绘制代码一份都不用改，尺寸由它当前的容器决定。 */
+#stage .ckd{
+  display:flex!important;
+  flex:1;
+  flex-direction:column;
+  min-height:0;
+  margin:0;
+  padding-left:15px;
+  border-left-width:3px;
+}
+#stage .ckd h4{
+  margin-bottom:7px;
+  font-size:clamp(17px,1.55vw,23px);
+  line-height:1.3;
+  letter-spacing:-.015em;
+}
+#stage .ckd .ckd-how{margin-bottom:13px;font-size:12.5px;line-height:1.65}
+#stage .ckd .ckd-now{margin-top:12px;font-size:13.5px}
+#stage canvas.chart{flex:1;min-height:0}
+
+/* 三维退到背景，但不停 —— 图表就是从它身上量出来的，停下来就不诚实了 */
+body.staged:not(.home) #gl{opacity:.24}
+body.staged:not(.home) #labels{opacity:.3}
+body.staged:not(.home) #hint{opacity:0}
+
+/* 主角切换器。「放大到画面中央」不能是一条单行道：
+   读者随时要能把镜头切回三维，或者换看另一张图。 */
+#stagepick{
+  position:fixed;
+  z-index:13;
+  display:none;
+  align-items:center;
+  gap:3px;
+  padding:4px;
+  /* layoutStage() 给的 left 是那块空地的中心线，不是左边缘 */
+  transform:translateX(-50%);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  background:rgba(8,10,18,.86);
+  backdrop-filter:blur(18px);
+  box-shadow:0 12px 30px rgba(0,0,0,.45);
+}
+body.has-stagepick:not(.home) #stagepick{display:flex}
+#stagepick>b{
+  padding:0 7px 0 9px;
+  color:#7d879b;
+  font:500 10px/1 var(--sans);
+  font-weight:500;
+  letter-spacing:.1em;
+  white-space:nowrap;
+}
+#stagepick button{
+  border:0;
+  border-radius:999px;
+  background:transparent;
+  color:#98a2b6;
+  padding:6px 12px;
+  font:500 11.5px/1 var(--sans);
+  white-space:nowrap;
+  cursor:pointer;
+}
+#stagepick button:hover{color:#f2f5fa}
+#stagepick button.on{background:rgba(255,255,255,.14);color:#fff}
 
 /* ── 分层阅读 ──────────────────────────────────────────────
    同一篇文章要同时喂饱两种读者：想跟住主线的，和想看推导的。
@@ -810,6 +915,13 @@ details.deep>*:last-child{margin-bottom:12px}
   text-align:left;
   cursor:pointer;
 }
+/* 带明确目标的那种（data-open-charts="mb"）不是「去角落里找」，
+   而是「把这张图搬到画面正中」—— 电脑上同样需要，所以放出来。 */
+.open-charts[data-open-charts]:not([data-open-charts=""]){display:block}
+.open-charts[data-open-charts]:not([data-open-charts=""]):hover{
+  border-color:rgba(255,196,87,.7);
+  background:rgba(255,196,87,.16);
+}
 .charts-empty{
   display:none;
   margin:0;
@@ -855,6 +967,15 @@ body.ctrl-all .ckgrp.ck-dim:hover,body.ctrl-all .ckgrp.ck-dim:focus-within{opaci
 }
 
 @media(max-width:900px){
+  /* 舞台在手机上的排版。必须写在舞台的桌面定义之后 —— 见上面那段注释。 */
+  #stage{padding:12px 13px 10px}
+  #stage .ckd{padding-left:11px;border-left-width:2px}
+  #stage .ckd h4{font-size:15.5px}
+  #stage .ckd .ckd-how{margin-bottom:9px;font-size:11px}
+  #stage .ckd .ckd-now{margin-top:9px;font-size:12px}
+  #stagepick>b{display:none}
+  #stagepick button{padding:6px 10px;font-size:11px}
+
   .open-charts,.open-controls{display:block}
   /* 手机上「参数」是独立一档，屏幕整个归它，不必收起来 */
   .ckgrp.ck-dim{display:block;opacity:1}

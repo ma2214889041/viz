@@ -4,8 +4,11 @@
   "question": "一盒气体为什么知道时间方向？",
   "description": "观察粒子碰撞、速率分布与 H 函数，理解微观可逆与宏观不可逆如何同时成立。",
   "date": "2026-07-29",
-  "category": ["物理", "数学"],
-  "duration": "25 分钟",
+  "category": [
+    "物理",
+    "数学"
+  ],
+  "duration": "30 分钟",
   "chapters": 12,
   "featured": false,
   "accent": "#f3c84b"

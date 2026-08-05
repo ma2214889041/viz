@@ -79,7 +79,10 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
    纯 CSS，不依赖任何测量或主循环 —— 视口再矮也压不到读数上。 */
 #story{left:22px;top:74px;bottom:112px;width:min(352px,calc(48vw - 30px));
   padding:20px 20px 18px;display:flex;flex-direction:column;overflow:hidden}
-#story .step{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--dim2);margin-bottom:9px}
+#story .step{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--dim2);margin-bottom:9px}
+#story .step .act{color:var(--k1);letter-spacing:.12em}
+#story .step .count{flex:none;letter-spacing:.16em}
 #story h2{font-family:var(--serif);font-size:26px;line-height:1.28;font-weight:600;margin-bottom:12px;letter-spacing:.01em}
 #story .body{font-size:13.5px;line-height:1.85;color:#c3cbe0;overflow-y:auto;flex:1;padding-right:6px}
 #story .body p{margin-bottom:11px}
@@ -131,12 +134,17 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 .g #story .body em{border-color:rgba(255,196,87,.5)}
 
 #nav2{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-#dots{display:flex;gap:5px;flex:1;min-width:0}
-#dots i{flex:1 1 0;min-width:6px;max-width:22px;height:3px;border-radius:2px;
-  background:rgba(255,255,255,.14);cursor:pointer;transition:.3s}
-#dots i:hover{background:rgba(255,255,255,.34)}
-#dots i.on{background:var(--k1);box-shadow:0 0 10px rgba(94,231,255,.6)}
-.g #dots i.on{background:var(--g1);box-shadow:0 0 10px rgba(255,196,87,.6)}
+/* 进度条按幕分组：15 章排成一条没有刻度的线，读者不知道自己在哪一段、
+   还剩多远。幕之间留一个明显的间隙，它就成了一张地图。 */
+#dots{display:flex;gap:10px;flex:1;min-width:0}
+#dots .dot-act{display:flex;gap:4px;flex:1;min-width:0}
+#dots button{position:relative;flex:1 1 0;min-width:6px;max-width:22px;height:20px;
+  padding:0;border:0;background:transparent;color:var(--dim2);cursor:pointer}
+#dots button::after{content:'';position:absolute;left:0;right:0;top:8px;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.14);transition:background .3s,box-shadow .3s}
+#dots button:hover::after{background:rgba(255,255,255,.34)}
+#dots button.on::after{background:var(--k1);box-shadow:0 0 10px rgba(94,231,255,.6)}
+.g #dots button.on::after{background:var(--g1);box-shadow:0 0 10px rgba(255,196,87,.6)}
 .nbtn{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--ink);
   width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:13px;transition:.2s;
   display:grid;place-items:center;flex:none}
@@ -332,14 +340,14 @@ canvas.chart{display:block;border-radius:8px;width:100%}
   </p>
   <div id="cards">
     <div class="card kk" data-go="kakeya" style="width:520px">
-      <div class="who"><h3>开始互动演示 ↗</h3><span>11 章 · 约 8 分钟</span></div>
+      <div class="who"><h3>开始互动演示 ↗</h3><span>3 幕 15 章 · 约 25 分钟</span></div>
       <div class="tag">三维挂谷猜想</div>
       <p class="prob">从一根针转一圈开始，一步步看它怎么被压到几乎没有体积，而每个方向仍在里面。所有数值实时计算。</p>
       <div class="go">进入 →</div>
     </div>
   </div>
   <p class="foot">
-    11 章 · 约 8 分钟 · 可以预测、寻找证明裂缝并检验盒维数
+    3 幕 15 章 · 约 25 分钟 · 可以预测、亲手造一个黏性构型、寻找证明裂缝
   </p>
 </section>
 
@@ -362,8 +370,22 @@ canvas.chart{display:block;border-radius:8px;width:100%}
     <div id="ctrlbody"></div>
   </aside>
   <!-- 每张图是一张卡片：标题是一个大白话问题，副题说怎么读，
-       底下一行是当下的读数。原来那面公式墙已经拆掉。 -->
+       底下一行是当下的读数。原来那面公式墙已经拆掉。
+       这些 <section> 节点会被舞台整块搬走再搬回来（见 setStage），
+       所以绘制代码里不许出现写死的宽高 —— 一律问当前容器要。 -->
   <aside id="charts" class="panel">
+    <section class="ckd" data-chart="depth" style="--ac:#ffd866">
+      <h4>再多切一层，还能省下多少？</h4>
+      <p class="ckd-how">横轴：切了几层　·　纵轴：还剩最初那束光的百分之几　·　竖线＝你现在的层数</p>
+      <canvas class="chart" id="ch3" width="520" height="300"></canvas>
+      <p class="ckd-now" id="now_depth"></p>
+    </section>
+    <section class="ckd" data-chart="dirs" style="--ac:#5cd0b3">
+      <h4>所有方向都还在里面吗？</h4>
+      <p class="ckd-how">这是一张「方向的地图」：横轴纵轴合起来标出一个方向，圆心是竖直、圆周是水平　·　等面积，所以圆盘被填掉多少比例，就是多少比例的方向被覆盖了　·　一个亮点＝一个已经在集合里的方向</p>
+      <canvas class="chart" id="ch4" width="520" height="380"></canvas>
+      <p class="ckd-now" id="now_dirs"></p>
+    </section>
     <section class="ckd" data-chart="vol" style="--ac:#5ee7ff">
       <h4>针越细，它占的地方缩得有多快？</h4>
       <p class="ckd-how">横轴：针越往右越细　·　纵轴：它占的地方　·　虚线＝一张纸该有的缩法</p>
@@ -379,6 +401,11 @@ canvas.chart{display:block;border-radius:8px;width:100%}
   </aside>
 </div>
 
+<!-- 舞台：一次只有一个主角。叙述讲到哪张图，那张图就搬到这里放大，
+     三维退成还在跑的背景。位置每帧由 layoutStage() 算，见下方脚本。 -->
+<div id="stagepick" aria-label="画面主角"><b>画面主角</b></div>
+<aside id="stage" class="panel" aria-live="polite"><div id="stagehost"></div></aside>
+
 <!-- 数据 -->
 <aside id="hud" class="panel" style="display:none"></aside>
 
@@ -387,20 +414,20 @@ canvas.chart{display:block;border-radius:8px;width:100%}
 <!-- 背景 -->
 <section id="tl" class="hide"><div class="tlin">
   <h2>一根针的一百年</h2>
-  <p class="lead">1917 年，一个听起来像几何游戏的问题开启了漫长旅程：包含每个方向单位线段的集合，究竟可以有多小？面积与体积会消失，但“维数”留下了更顽固的结构。</p>
+  <p class="lead">1917 年，一个听起来像几何游戏的问题开启了漫长旅程：包含每个方向单位线段的集合，究竟可以有多小？面积与体积会消失，但「维数」留下了更顽固的结构。</p>
 
   <div class="bios">
     <div class="bio" style="grid-column:1/-1">
       <h4>Hong Wang &amp; Joshua Zahl</h4>
       <div class="m">三维挂谷集猜想 · 2025.02 · arXiv:2502.17655</div>
-      <p>2022 年两人先攻下“黏性挂谷集”这一最难的特殊情形——这类集合具有近似的多尺度自相似性，正是 1999 年 Katz–Łaba–Tao 工作里的关键概念。2025 年 2 月，他们用一篇 127 页的论文给出完整证明：ℝ³ 中任何挂谷集的豪斯多夫维数与闵可夫斯基维数都等于 3。Nets Katz 评价说，这是“百年一遇”的成果。</p>
+      <p>2022 年两人先攻下「黏性挂谷集」这一最难的特殊情形——这类集合具有近似的多尺度自相似性，正是 1999 年 Katz–Łaba–Tao 工作里的关键概念。2025 年 2 月，他们用一篇 127 页的论文给出完整证明：ℝ³ 中任何挂谷集的豪斯多夫维数与闵可夫斯基维数都等于 3。Nets Katz 评价说，这是「百年一遇」的成果。</p>
       <p style="margin-top:10px">王虹 1991 年生，MIT 博士（导师 Larry Guth），现为 IHES 终身教授与 NYU 柯朗所教授；Zahl 任教于英属哥伦比亚大学。</p>
     </div>
   </div>
 
-  <div class="ev"><div class="yr">1917</div><div class="ct"><h4>挂谷宗一提出“转针问题”</h4><p>一根单位长的针要在平面内转过 180°，扫过的面积最小是多少？两年后 Besicovitch 给出了惊人的答案：可以任意小。</p></div></div>
+  <div class="ev"><div class="yr">1917</div><div class="ct"><h4>挂谷宗一提出「转针问题」</h4><p>一根单位长的针要在平面内转过 180°，扫过的面积最小是多少？两年后 Besicovitch 给出了惊人的答案：可以任意小。</p></div></div>
   <div class="ev"><div class="yr">1971</div><div class="ct"><h4>Davies 解决二维挂谷猜想</h4><p>平面上的挂谷集必定有满维数 2。三维情形从此成为这个领域最硬的骨头之一。</p></div></div>
-  <div class="ev"><div class="yr">1999</div><div class="ct"><h4>Katz–Łaba–Tao 引入“黏性”</h4><p>他们发现最难对付的是那些具有近似多尺度自相似性的挂谷集，并把它们命名为“黏性”的。这个概念成了 26 年后破局的关键。</p></div></div>
+  <div class="ev"><div class="yr">1999</div><div class="ct"><h4>Katz–Łaba–Tao 引入「黏性」</h4><p>他们发现最难对付的是那些具有近似多尺度自相似性的挂谷集，并把它们命名为「黏性」的。这个概念成了 26 年后破局的关键。</p></div></div>
   <div class="ev hot"><div class="yr">2025.02</div><div class="ct"><h4>Wang &amp; Zahl 解决三维挂谷猜想</h4><p>127 页论文证明：ℝ³ 中任何挂谷集的豪斯多夫维数与闵可夫斯基维数都等于 3。</p></div></div>
   <div class="ev hot"><div class="yr">2026.07</div><div class="ct"><h4>王虹获得菲尔兹奖</h4><p>她因调和分析与几何测度论中的突破性工作获奖，成为菲尔兹奖历史上的第三位女性得主。</p></div></div>
 
@@ -640,12 +667,31 @@ function drawLines(vbo,count,model,col,width){
 
 /* --- 相机 --- */
 const CAM={az:0.9,el:0.45,dist:4.2,tx:0,ty:0,tz:0,
-           taz:0.9,tel:0.45,tdist:4.2,ttx:0,tty:0,ttz:0,spin:0.05,drag:false,ox:0,oy:0};
-/* 每帧算出「没有被面板盖住的那块画面」，把镜头平移过去 —— 从根本上杜绝遮挡 */
-function safeCenter(){
+           taz:0.9,tel:0.45,tdist:4.2,ttx:0,tty:0,ttz:0,spin:0.05,drag:false,ox:0,oy:0,
+           userZoom:false};
+/* 两个「贴在画面边上」的卫星元素的位置。渲染、屏幕标签、取景计算都用这一份 ——
+   以前它们是三处各写一遍的字面量，改一处就会对不上。 */
+const SHADOW_X=-1.55, SHADOW_S=0.70, GLOBE_X=1.15, GLOBE_S=0.86;
+/* 三维方向球只在电脑上画。手机上那块空地的 NDC 半宽是 1.0，而球心实测落在
+   2.40 —— 整个跑到屏幕外去了，而第 7、8 两章正是让读者去看它。
+   手机上由平面版方向地图（drawDirs）接手，那张图一个方向都不藏。 */
+function globeOn(){return innerWidth>900;}
+/* 「没有被面板盖住的那块画面」。镜头和舞台共用它 —— 于是这两件东西
+   永远落在同一块空地上，也就永远压不到讲解面板和读数上。 */
+function freeRect(){
   const W=innerWidth,H=innerHeight;
   let l=0,r=W,t=56,b=H;
-  const vis=el=>el&&el.offsetParent!==null&&getComputedStyle(el).display!=='none';
+  /* 这三块面板全是 position:fixed，而 offsetParent 对 fixed 元素一律返回 null。
+     所以原来那句 `el.offsetParent!==null` 永远是 false，整个 freeRect 一直在走
+     「什么都没挡住」的兜底分支 —— 也就是说这个函数一直没生效过，注释里写的
+     「从根本上杜绝遮挡」是一句空话。改成量它自己的盒子。 */
+  const vis=el=>{
+    if(!el)return false;
+    const cs=getComputedStyle(el);
+    if(cs.display==='none'||cs.visibility==='hidden')return false;
+    const b2=el.getBoundingClientRect();
+    return b2.width>0&&b2.height>0;
+  };
   const st=$('#story'),rt=$('#right'),hu=$('#hud');
   if(W>900){
     if(vis(st))l=Math.max(l,st.getBoundingClientRect().right+18);
@@ -658,12 +704,40 @@ function safeCenter(){
   }
   if(r-l<160){l=0;r=W;}
   if(b-t<140){t=56;b=H;}
-  return[((l+r)/2/W)*2-1, -(((t+b)/2/H)*2-1)];
+  return{l,r,t,b,W,H};
+}
+/* 把镜头平移到那块空地的中心（NDC） */
+function safeCenter(){
+  const R=freeRect();
+  return[((R.l+R.r)/2/R.W)*2-1, -(((R.t+R.b)/2/R.H)*2-1)];
+}
+/* 画面上真正有东西的那一段（世界坐标里相对镜头目标点的半径）。
+   常量就是上面那几个，渲染时用的同一份。 */
+function contentRadius(){
+  let lo=-0.62,hi=0.62;                                  // 居中之后的针束
+  if(KAK.shadow>0.2)lo=Math.min(lo,SHADOW_X-SHADOW_S*0.5-0.05);
+  if(KAK.dirGlobe>0.2&&globeOn())hi=Math.max(hi,GLOBE_X+GLOBE_S*0.5);
+  return Math.max(Math.abs(lo-CAM.tx),Math.abs(hi-CAM.tx));
+}
+/* 让内容整个落进那块空地所需要的最小距离。
+   透视矩阵的 ox/oy 只是把画面平移过去，内容的大小一点没变 —— 所以「镜头躲开
+   面板」只解决了一半：东西还是可能大到伸进面板底下，或者在手机上伸出屏幕。
+   实测过的两处：第 7 章的方向球在 1280×720 上落到 NDC 0.74（参数面板底下），
+   第 1 章扫出的球在手机上左右各切掉一点。 */
+function fitDist(){
+  const R=freeRect();
+  const asp=(cv.width/cv.height)||1.78, T=1/Math.tan(0.86/2);
+  const halfW=Math.max(0.08,(R.r-R.l)/R.W), halfH=Math.max(0.08,(R.b-R.t)/R.H);
+  return Math.max((T/asp)*contentRadius()/halfW, T*0.58/halfH);
 }
 function camUpdate(dt){
   if(!CAM.drag)CAM.taz+=CAM.spin*dt;
   CAM.az=damp(CAM.az,CAM.taz,9,dt);CAM.el=damp(CAM.el,CAM.tel,9,dt);
-  CAM.dist=damp(CAM.dist,CAM.tdist,6,dt);
+  /* 只往外推，不往里拉：作者给的距离本来就够宽时一动不动。上限 2.4 倍，
+     免得极端视口把某一章推到看不清。读者自己滚过滚轮之后不再插手。 */
+  let tdist=CAM.tdist;
+  if(!CAM.userZoom)tdist=Math.max(tdist,Math.min(fitDist(),CAM.tdist*2.4));
+  CAM.dist=damp(CAM.dist,tdist,6,dt);
   CAM.tx=damp(CAM.tx,CAM.ttx,6,dt);CAM.ty=damp(CAM.ty,CAM.tty,6,dt);CAM.tz=damp(CAM.tz,CAM.ttz,6,dt);
   const sc=safeCenter();
   CAM.ox=damp(CAM.ox,sc[0],7,dt);CAM.oy=damp(CAM.oy,sc[1],7,dt);
@@ -673,7 +747,7 @@ function camUpdate(dt){
   VP=M4.mul(M4.persp(0.86,asp,0.05,80,CAM.ox,CAM.oy),M4.look(EYE,[CAM.tx,CAM.ty,CAM.tz],[0,1,0]));
 }
 function camTo(az,el,dist,tx,ty,tz){CAM.taz=az;CAM.tel=el;CAM.tdist=dist;
-  CAM.ttx=tx||0;CAM.tty=ty||0;CAM.ttz=tz||0;}
+  CAM.ttx=tx||0;CAM.tty=ty||0;CAM.ttz=tz||0;CAM.userZoom=false;}
 (function(){
   let px=0,py=0,pid=null,pd=0;
   const pts=new Map();
@@ -682,14 +756,14 @@ function camTo(az,el,dist,tx,ty,tz){CAM.taz=az;CAM.tel=el;CAM.tdist=dist;
   cv.addEventListener('pointermove',e=>{
     if(!pts.has(e.pointerId))return;pts.set(e.pointerId,[e.clientX,e.clientY]);
     if(pts.size>=2){const v=[...pts.values()];const d=Math.hypot(v[0][0]-v[1][0],v[0][1]-v[1][1]);
-      if(pd)CAM.tdist=clamp(CAM.tdist*(pd/d),0.7,26);pd=d;return;}
+      if(pd){CAM.tdist=clamp(CAM.tdist*(pd/d),0.7,26);CAM.userZoom=true;}pd=d;return;}
     if(e.pointerId!==pid)return;
     CAM.taz-=(e.clientX-px)*0.0055;CAM.tel=clamp(CAM.tel+(e.clientY-py)*0.0048,-1.42,1.42);
     px=e.clientX;py=e.clientY;});
   const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pd=0;if(e.pointerId===pid){CAM.drag=false;pid=null;}};
   cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
   cv.addEventListener('wheel',e=>{e.preventDefault();
-    CAM.tdist=clamp(CAM.tdist*(1+Math.sign(e.deltaY)*0.09),0.7,26);},{passive:false});
+    CAM.tdist=clamp(CAM.tdist*(1+Math.sign(e.deltaY)*0.09),0.7,26);CAM.userZoom=true;},{passive:false});
 })();
 
 /* --- 屏幕标签 --- */
@@ -1104,7 +1178,7 @@ function kakRender(dt){
   if(blend){gl.depthMask(true);gl.disable(gl.BLEND);}
   // ④ Perron 树投影（并排的侧面板，避免被针本身挡住）
   if(KAK.shadow>0.01){
-    const s=0.70, X=-1.55;
+    const s=SHADOW_S, X=SHADOW_X;
     drawLines(shadowFrame,8,M4.trs(X,0,-0.02,s),[0.37,0.9,1,0.18*KAK.shadow],1);
     drawLines(refTri,6,M4.trs(X-s*0.5,0,-0.01,s),[1,1,1,0.34*KAK.shadow],1);
     drawShadow(KAK.shadow,M4.trs(X-s*cx,0,0,s));
@@ -1120,8 +1194,8 @@ function kakRender(dt){
     drawInstanced(MESH.tube,kakOne,md,{glow:0.9});
   }
   // ⑥ 方向罗盘：整个方向球（暗）+ 被针覆盖的方向（亮）
-  if(KAK.dirGlobe>0.01){
-    const GP=[1.55,-0.50,0.30], S=0.86;
+  if(KAK.dirGlobe>0.01&&globeOn()){
+    const GP=[GLOBE_X,-0.50,0.30], S=GLOBE_S;
     const base=M4.mul(M4.trs(GP[0],GP[1],GP[2],S),M4.rotX(0.92,1));
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
     kakSph.reset();kakSph.add(GP[0],GP[1],GP[2],0,0,S*0.5,S*0.5,0.26,0.42,0.62);kakSph.upload();
@@ -1141,6 +1215,17 @@ function kakRender(dt){
 /* =====================================================================
    4. 剧本
    ===================================================================== */
+/* 三幕不是装饰标题，而是读者的论证地图：体积先被压到几乎没有，然后换一把
+   量得动它的尺子，最后才是把下界一级级抬到 3。15 章排成一条没有刻度的
+   进度条时，读者既不知道自己在哪一段，也不知道还剩多远。
+   第一幕的边界（8）和「入门段不摆标度图」那条检查用的是同一个数。 */
+const ACTS=[
+  {k:'第一幕',t:'体积可以任意小',start:0,end:8},
+  {k:'第二幕',t:'换一把尺子',start:8,end:11},
+  {k:'第三幕',t:'把下界抬到 3',start:11,end:15}
+];
+function actForStep(i){return ACTS.find(a=>i>=a.start&&i<a.end)||ACTS[ACTS.length-1];}
+
 const SC={
   kakeya:{
     color:'k',
@@ -1156,26 +1241,25 @@ const SC={
             KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.05;
             to(KAK,'ballAlpha',1,1800,2600);}},
       {id:'kakeya1917',t:'挂谷宗一的问题',
-       b:`<p class="lede">1917 年，挂谷宗一把这个问题写了下来。<b>他自己也想不到答案会是什么。</b></p>
-          <p>问题是这样的：</p>
-          <p>一根单位长的针，要转到<b>每一个方向</b>，扫过的区域最小可以是多少？</p>
+       b:`<p class="lede">1917 年，挂谷宗一把这个问题写了下来。两年后的答案，让整个问题换了性质。</p>
+          <p>先别往下读，押一个答案：</p>
           <div class="predict">
             <p class="pq">先押一个答案，再往下读：一根长度为 1 的针要转过每一个方向，它扫过的地方最小可以是多少？</p>
             <button type="button" data-pick data-why="答案是<b>可以任意接近 0</b>。1919 年 Besicovitch 证明了这件事，而且后面几章你会亲手把它做出来。诀窍只有一条：针在转的时候<em>可以同时平移</em>。平移不改变方向，所以一个方向都不会丢，但挪过去之后大量针段可以互相重叠，重叠的部分只算一次面积。">不可能比那个球更小了</button>
             <button type="button" data-pick data-why="答案是<b>可以任意接近 0</b>。1919 年 Besicovitch 证明了这件事，而且后面几章你会亲手把它做出来。诀窍只有一条：针在转的时候<em>可以同时平移</em>。平移不改变方向，所以一个方向都不会丢，但挪过去之后大量针段可以互相重叠，重叠的部分只算一次面积。">能小到那个球的几分之一</button>
             <button type="button" data-pick data-right data-why="答案是<b>可以任意接近 0</b>。1919 年 Besicovitch 证明了这件事，而且后面几章你会亲手把它做出来。诀窍只有一条：针在转的时候<em>可以同时平移</em>。平移不改变方向，所以一个方向都不会丢，但挪过去之后大量针段可以互相重叠，重叠的部分只算一次面积。">可以小到<b>任意接近 0</b></button>
           </div>
-          <p>刚才那个答案——原地打转——扫出一个半径 ½ 的球：</p>
+          <p>最朴素的办法是让针绕着中点原地打转，扫出一个半径 ½ 的球：</p>
           <span class="fml"><span class="k-vol">V</span> = 4π/3 · (1/2)³ ≈ <span class="k-vol">0.524</span></span>
-          <p>针总得转过去，这看起来已经是极限了。</p>
-          <p>接下来发生的事，会让人不太舒服。</p>`,
+          <p>针总得转过去，所以这看起来已经是极限了。</p>
+          <p>接下来会让人不太舒服的地方在于：<b>0.524 不是极限，它连「大致的量级」都不是。</b></p>`,
        en(){camTo(0.95,0.30,2.5,0,0,0);KAK.oneNeedle=1;KAK.ballAlpha=1;KAK.tDepth=0;
             KAK.sweeping=false;KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.09;}},
 
       {id:'translate',t:'针可以边转边挪',
-       b:`<p class="lede">漏洞在这里：针在转的时候<b>可以同时平移</b>，不必绕着固定的中心。</p>
-          <p>这一条看着无关紧要，它是后面一切的入口。</p>
-          <p>于是我们把针拆开来看。画面上的每一根针代表<b>一个方向</b>，颜色就是方向的编号。</p>
+       b:`<p class="lede">上一章那个「极限」里藏着一个没人明说的假设：针绕着一个固定的中心转。</p>
+          <p>把这个假设拿掉——针在转的时候<b>可以同时平移</b>。这一条看着无关紧要，它是后面一切的入口。</p>
+          <p>于是把针一根一根摆出来看。画面上每一根针代表<b>一个方向</b>，颜色就是这个方向的标签。</p>
           <p>先摆一个最朴素的姿势：让所有针都从<b>同一个点</b>出发，像一束光。这个扇束的体积是</p>
           <span class="fml"><span class="k-vol">V</span> = 1/3 ≈ <span class="k-vol">0.333</span></span>
           <p>已经比球小了。而这只是开始。</p>`,
@@ -1188,7 +1272,7 @@ const SC={
           <p>把所有方向<b>从中间劈成两半</b>。</p>
           <p>左半边不动。右半边的针——<em>整整一半的针</em>——一起向左平移，让它们压到左半边身上。</p>
           <p>平移<b>不改变任何一根针的方向</b>。所以一个方向都没丢，但重叠的地方只需要算一次体积。</p>
-          <p>看左边那块发光的板子：那是针束的正投影。<b>越亮 = 叠在一起的针越多</b>，白色轮廓是它原来的大小。</p>
+          <p>看那块标着<b>「正投影」</b>的发光板子：那是针束压平之后的影子。<b>越亮 = 叠在一起的针越多</b>，白色轮廓是它原来的大小。</p>
           <span class="fml">0.333 &nbsp;→&nbsp; 0.134</span>
           <p>一次操作，体积少了六成。</p>`,
        en(){camTo(0.13,0.05,5.45,-0.72,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
@@ -1201,23 +1285,36 @@ const SC={
           <p>对<b>每一半</b>再做同样的事：劈开、平移、重叠。然后对每一小份继续。</p>
           <p>这个递归结构叫 <b>Perron 树</b>。每加深一层，体积就再掉一截：</p>
           <span class="fml">每层：劈开 → 平移 → 重叠</span>
-          <p>盯住左边的投影板：白色轮廓是原始大小，发亮的部分一层层往里缩。<em>亮斑越集中，省下的体积越多。</em></p>
+          <div class="predict">
+            <p class="pq">第一刀省了六成。照这个势头，切满 10 层之后还剩最初的百分之几？</p>
+            <button type="button" data-pick data-why="剩 <b>3.5%</b>。听起来很猛，但仔细看：如果每层都能省六成，10 层之后该剩 0.6<sup>10</sup> ≈ <b>0.6%</b> —— 实际剩的是它的六倍。<em>省下的比例一层比一层小。</em>下一章那条曲线就是这件事：它越走越平，Perron 树的面积大约只按 1/log(三角形数) 减小。极限确实是 0，但慢得离谱。">大约 0.6%（每层都省六成）</button>
+            <button type="button" data-pick data-right data-why="剩 <b>3.5%</b>。听起来很猛，但仔细看：如果每层都能省六成，10 层之后该剩 0.6<sup>10</sup> ≈ <b>0.6%</b> —— 实际剩的是它的六倍。<em>省下的比例一层比一层小。</em>下一章那条曲线就是这件事：它越走越平，Perron 树的面积大约只按 1/log(三角形数) 减小。极限确实是 0，但慢得离谱。">大约 3.5%</button>
+            <button type="button" data-pick data-why="剩 <b>3.5%</b>。听起来很猛，但仔细看：如果每层都能省六成，10 层之后该剩 0.6<sup>10</sup> ≈ <b>0.6%</b> —— 实际剩的是它的六倍。<em>省下的比例一层比一层小。</em>下一章那条曲线就是这件事：它越走越平，Perron 树的面积大约只按 1/log(三角形数) 减小。极限确实是 0，但慢得离谱。">早就到 0 了，10 层足够多</button>
+          </div>
+          <p>盯住那块<b>「正投影」</b>板：白色轮廓是原始大小，发亮的部分一层层往里缩。<em>亮斑越集中，省下的体积越多。</em></p>
           <p>这就是 1919 年 <b>Besicovitch</b> 的答案——层数没有上限，所以</p>
           <span class="fml">体积可以任意接近 0</span>
           <p>不是「比较小」。取极限之后，得到的集合<b>勒贝格测度为零</b>，却仍然含有每个方向的单位线段。</p>
-          <p style="color:#8f9aae;font-size:12.5px">术语上要分两件事：这种<em>测度为零、含有所有方向单位线段</em>的集合叫 <b>Besicovitch 集</b>（本文后面统称挂谷集）；而挂谷原本问的「针能不能<em>连续地转过去</em>」需要的是 <b>挂谷针集</b>。Pál 与 Besicovitch 证明了后者也能做到任意小的测度——但针集本身不能是零测度的，因为连续转动需要一点「走廊」。</p>`,
+          <details class="deep"><summary>「挂谷集」和挂谷原本问的问题差一点点</summary>
+            <p>术语上要分两件事：这种<em>测度为零、含有所有方向单位线段</em>的集合叫 <b>Besicovitch 集</b>（本文后面统称挂谷集）；而挂谷原本问的「针能不能<em>连续地转过去</em>」需要的是 <b>挂谷针集</b>。</p>
+            <p>Pál 与 Besicovitch 证明了后者也能做到任意小的测度——但针集本身<b>不能</b>是零测度的，因为连续转动需要一点「走廊」。</p>
+            <p>本文后面讲的维数结论说的是前者。这不是偷换：三维挂谷猜想问的就是 Besicovitch 集的维数。</p>
+          </details>`,
        en(){camTo(0.13,0.05,5.45,-0.72,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
             KAK.dirGlobe=0;KAK.boxes=0;KAK.shadow=1;KAK.cones=0;CAM.spin=0;
             KAK.tDepth=1;to(KAK,'tDepth',7,5200,400);}},
 
       {id:'pushdown',t:'推到底',
        b:`<p class="lede">把递归层数拉满，看这个构造能压到什么程度。<b>答案是：想多小有多小。</b></p>
-          <p>10 层之后，体积只剩下最初那束光的</p>
+          <p>切到第 10 层，体积只剩下最初那束光的</p>
           <span class="fml">3.5 %</span>
-          <p>曲线还在往下走，但你会注意到它<b>越走越平</b>。这不是我的构造偷懒——Perron 树的面积大约按 <em>1/log(三角形数)</em> 减小，慢得离谱：想再砍掉一半，三角形数量得<b>平方</b>。</p>
-          <p>所以极限确实是 0，而<em>没有任何一张图能画出这一点</em>。这是数学里常见的一种尴尬：结论为真，图像永远追不上。</p>
+          <p>但真正该看的不是这个数，而是<b>每多切一层还能省下多少</b>。压缩动画走完之后，画面中央会换成那条曲线：<em>它越走越平。</em></p>
+          <button type="button" class="open-charts" data-open-charts="depth">📉 把「每层还能省多少」放到画面中央</button>
+          <p>这不是我的构造偷懒——Perron 树的面积大约按 <em>1/log(三角形数)</em> 减小，慢得离谱：想再砍掉一半，三角形数量得<b>平方</b>。</p>
+          <p>所以极限确实是 0，而<em>没有任何一张图能画出这一点</em>。曲线只会贴着底轴越走越平，永远不落到 0。这是数学里常见的一种尴尬：结论为真，图像永远追不上。</p>
           <p>与此同时，针的数量、方向的数量，<b>一根都没有变</b>。</p>
-          <p>到这里，“体积”这把尺子已经量不动它了。那么问题来了：<em>这个集合到底还剩下什么？</em></p>`,
+          <p>到这里，「体积」这把尺子已经量不动它了。那么问题来了：<em>这个集合到底还剩下什么？</em></p>`,
+       st:['3d','depth',4200],
        en(){camTo(0.62,0.24,3.4,0,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
             KAK.dirGlobe=0;KAK.boxes=0;KAK.cones=0;CAM.spin=0.05;
             to(KAK,'shadow',0,500);
@@ -1226,27 +1323,35 @@ const SC={
       {id:'dirskept',t:'方向一个都没丢',
        b:`<p class="lede">体积几乎没有了。<b>会不会是偷偷扔掉了一些方向？</b></p>
           <p>这是唯一值得怀疑的地方，所以直接查。</p>
-          <p>画面里那个球是<em>方向罗盘</em>：每根针都在球面上点亮属于自己的那个方向。</p>
-          <p>回头把层数拉回 0 再拉满——你会看到<b>亮斑纹丝不动</b>。平移不改变方向，所以一个点都不会熄灭。</p>
-          <p>白色那根针正在集合内部逐个扫过所有方向：它确实转遍了每个方向，而它所在的集合体积接近 0。</p>`,
+          <p>画面正中那张圆盘是一份<em>方向清单</em>：每根针在上面点亮属于自己的那个方向。圆心是竖直方向，圆周是水平方向；它是<b>等面积</b>的，所以「填掉多少」就是「覆盖了多少方向」，而且<em>一个方向都藏不住</em>——这是三维那个球做不到的，它总有一半背着你。</p>
+          <p class="watch">在「参数」里把<b>递归层数</b>拉回 0 再拉满，盯住这张图。</p>
+          <button type="button" class="open-controls" data-open-controls>🎚 打开「递归层数」滑块</button>
+          <p>你会看到<b>一个点都不动</b>。体积一路掉到百分之几，方向清单纹丝不动——平移不改变方向，所以一个点都不会熄灭。</p>
+          <p>背景里那根白针，正在集合<em>内部</em>逐个扫过所有方向。它确实转遍了每个方向，而它所在的集合体积接近 0——这两句话同时成立，就是这一整章要给你的那个不适感。</p>
+          <button type="button" class="open-charts" data-open-charts="3d">🔮 把三维切回画面中央，看那根白针</button>`,
+       /* 这一章的主角就是那张方向地图 —— 三维那个球有一半背着观众，
+          「亮斑纹丝不动」这句话在它上面没法验。 */
+       st:'dirs',
        en(){camTo(0.85,0.30,3.6,0,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=true;
             KAK.boxes=0;KAK.shadow=0;KAK.cones=0;CAM.spin=0.035;
             to(KAK,'dirGlobe',1,700);}},
 
       {id:'assemble',t:'拼成真正的挂谷集',
        b:`<p class="lede">前面构造的只是<b>一个方向锥</b>。补完它，就得到一个真正的挂谷集。</p>
-          <p>看罗盘：到目前为止只点亮了一片亮斑。</p>
-          <p>补完它很简单：把同一个构造<b>旋转到 12 个位置</b>。看着其余 11 份依次落位，罗盘一点点被填满。</p>
-          <p>（我用 6 万个随机方向做了检验：<b>覆盖率 100%</b>，一个方向都不漏，12 个变换矩阵严格正交。）</p>
-          <p>12 份的体积加起来是 12 × 一个很小的数，随层数一起趋于 0。注意屏幕上那个读数<b>不是 0</b>，它是这个有限层数下的真实体积——趋于 0 是极限，不是当前画面。</p>
+          <p>看画面正中那张方向地图：到目前为止只点亮了中间一小片。</p>
+          <p>补完它很简单：把同一个构造<b>旋转到 12 个位置</b>。看着其余 11 份依次落位，地图一格格被填满 —— 因为这张图是等面积的，「填满」就真的等于「所有方向都在里面」。</p>
+          <p>（6 万个随机方向的实测：<b>覆盖率 100%</b>，而且<b>每个方向恰好被一个锥覆盖一次</b>——12 个锥是一个不重不漏的划分，12 个变换矩阵严格正交。）</p>
+          <p>12 份的体积加起来是 12 × 一个很小的数，随层数一起趋于 0。注意读数里的<b>集合体积 V 不是 0</b>，它是这个有限层数下的真实体积——趋于 0 是极限，不是当前画面。</p>
           <span class="fml">挂谷集：体积可任意接近 0
 却含有每个方向的单位线段</span>`,
+       /* 「罗盘一点点被填满」要看得见「填满」，那就得看得到整张地图 */
+       st:'dirs',
        en(){camTo(0.7,0.26,4.6,0,0,0);KAK.oneNeedle=0;KAK.ballAlpha=0;KAK.sweeping=false;
             KAK.boxes=0;KAK.shadow=0;CAM.spin=0.05;KAK.dirGlobe=1;KAK.cones=0;
             beat(500,()=>to(KAK,'cones',1,3600));}},
 
       {id:'dimension',t:'换一把尺子：维数',
-       b:`<p class="lede">体积这把尺子已经量不动它了。<b>换一把——维数。</b></p>
+       b:`<p class="lede">第 6 章问「还剩下什么」。答案是：剩下的是<b>占地方的方式</b>。量它的尺子叫维数。</p>
           <p>直觉上「维数」量的不是大小，是<em>占地方的方式</em>。</p>
           <p>办法叫<b>盒计数</b>：拿边长 <span class="k-delta">δ</span> 的小盒子把东西盖住，数用了多少个。然后把 <span class="k-delta">δ</span> 减半，再数一次。</p>
           <ul>
@@ -1281,7 +1386,7 @@ const SC={
 
       {id:'dimtrap',t:'量之前先说清楚：量的到底是什么',
        b:`<p class="lede">如果你现在就去量屏幕上这个东西，会量到 <b>3.00</b>。<em>而这个 3.00 什么也不说明。</em></p>
-          <p>这一章不推公式，只讲一个坑。<b>它是「为什么这个问题难」的全部原因。</b></p>
+          <p>这一章不推公式，只讲一个坑。<b>不跨过它，后面每一句话都会读错。</b></p>
           <p>屏幕上是个<em>有限层数</em>的构造。它的体积是<b>正的</b>——读数栏里的「集合体积 V」就是一个正数。既然体积为正，它本来就是个实心物体，把盒子越缩越小当然会量到满格的 3。</p>
           <p>这和挂谷猜想没有关系。<b>猜想问的是极限</b>：针无限细、方向无限密。</p>
           <p>所以正确的量法是让两件事<em>一起细化</em>：</p>
@@ -1293,7 +1398,7 @@ const SC={
               <b><span class="k-delta">δ</span> 减半的同时，方向也加密一倍</b>
               <i>量的是「装下所有方向至少要占多少地方」</i></div>
           </div>
-          <p class="watch">画面上正在做的就是右边那件事：盒子在缩，递归层数同时在涨。</p>
+          <p class="watch">画面上正在做的就是上表<b>「对的量法」</b>那一栏：盒子在缩，递归层数同时在涨。</p>
           <p>这叫<b>离散化的挂谷问题</b>。换个说法就是：<em>当针细到 <span class="k-delta">δ</span> 时，要装下所有方向，至少得占多少地方？</em></p>
           <p>下一章把这句话写成可以计算的形式。</p>`,
        en(){camTo(0.55,0.34,3.6,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
@@ -1311,6 +1416,7 @@ const SC={
             <p>取一族 <b><span class="k-delta">δ</span>-管道</b> T<sub>1</sub>,…,T<sub>M</sub>：每根长 1、半径 <span class="k-delta">δ</span>，方向两两分离至少 <span class="k-delta">δ</span>。这样的方向最多有 M ≈ <span class="k-delta">δ</span><sup>−2</sup> 个（球面被 <span class="k-delta">δ</span>-帽子分割）。</p>
             <p class="q">问：|T<sub>1</sub> ∪ … ∪ T<sub>M</sub>| 至少能有多大？</p>
           </div>
+          <p class="q">这个 <span class="k-delta">δ</span> 和上一章盒子的边长是<b>同一个 δ</b>——不是我偷懒复用了字母，是这一行的人<em>故意让它们相等</em>：量一个 δ-管道之并，用边长 δ 的盒子正好一格一格数得清。上一章那句「让两件事一起细化」，说的就是这一个 δ 在往下走。</p>
           <p>两个平凡的边界先摆出来：</p>
           <ul>
             <li>每根管体积 ≈ <span class="k-delta">δ</span>²，共 <span class="k-delta">δ</span><sup>−2</sup> 根，<b>完全不重叠</b>的话总体积是 O(1)；</li>
@@ -1362,7 +1468,7 @@ const SC={
           </div>
           <p>重数低了 <b>1/<span class="k-delta">δ</span></b> 倍，等价的体积下界就抬高一档。这就是 2 → 2.5 的来源：</p>
           <span class="fml">D ≥ (n+2)/2 = 2.5　（ℝ³）</span>
-          <p class="q">说明白：屏幕上这个有限构型只是让你看见机制，它本身不构成证明。真正的下界来自这个重数估计在 <span class="k-delta">δ</span> → 0 时的<em>标度</em>，而不是某一组具体管子的读数。</p>
+          <p class="q">把话说明白：屏幕上这个有限构型只是让你看见机制，它本身不构成证明。真正的下界来自这个重数估计在 <span class="k-delta">δ</span> → 0 时的<em>标度</em>，而不是某一组具体管子的读数。</p>
 
           <p class="subh">③ 之后的 30 年</p>
           <div class="ladder">
@@ -1394,7 +1500,7 @@ const SC={
             </div>
             <div class="proof-feedback" aria-live="polite">请选择你认为最早出现裂缝的一步。</div>
           </div>
-          <p>关键不是找到一句“听着不严谨”的话，而是给出一个能穿过裂缝的反例。</p>`,
+          <p>关键不是找到一句「听着不严谨」的话，而是给出一个能穿过裂缝的反例。</p>`,
        en(){camTo(0.62,0.30,3.8,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.025;
             to(KAK,'tDepth',7,900);to(KAK,'boxes',1,500);}},
@@ -1404,10 +1510,18 @@ const SC={
           <p>这一章你来当对手，亲手造一个最难对付的。</p>
           <p>1999 年 Katz、Łaba 与陶哲轩指出，最难对付的是一类<b>跨尺度近似自相似</b>的构型——他们把它命名为<em>黏性</em>（sticky）。它成了此后 26 年绕不过去的坎。</p>
           <p>现在你可以亲手造一个。在<b>「参数」</b>面板里按<b>「自相似（黏性）」</b>：原本每一层用不同的滑动量，现在<b>每层都用同一个</b>——这就是自相似。</p>
-          <p>然后把层数拉满，盯住两个读数：</p>
-          <p>体积会<em>停在某个正数上不动</em>：8 层之后就冻在 0.037 附近，再加层数也不动了。而关掉自相似时，同样的层数它会一路掉到 0.008。</p>
+          <button type="button" class="open-controls" data-open-controls>🎚 打开「自相似（黏性）」开关</button>
+          <div class="predict">
+            <p class="pq">你是想把维数压到 3 以下的那个对手。让每一层都用同一个滑动量（自相似），维数会怎样？</p>
+            <button type="button" data-pick data-why="维数被顶到 <b>3.00</b>，比原来更高 —— 你的努力帮了倒忙。机制在于维数量的是「δ 减半时体积掉多少」：自相似让每层压缩同一个比例，δ-邻域的体积因此<em>停止下降</em>（实测第 8 层之后就冻在 0.037 不动）。体积不掉，维数就只能满格。<b>你越想用自相似省体积，越是把维数钉死。</b>这正是为什么黏性那一族既是最难的情形，又在 2022 年成了王虹与 Zahl 的突破口。">压低一些——自相似更省体积，应该更「瘦」</button>
+            <button type="button" data-pick data-why="维数被顶到 <b>3.00</b>，比原来更高 —— 你的努力帮了倒忙。机制在于维数量的是「δ 减半时体积掉多少」：自相似让每层压缩同一个比例，δ-邻域的体积因此<em>停止下降</em>（实测第 8 层之后就冻在 0.037 不动）。体积不掉，维数就只能满格。<b>你越想用自相似省体积，越是把维数钉死。</b>这正是为什么黏性那一族既是最难的情形，又在 2022 年成了王虹与 Zahl 的突破口。">几乎不变——换个滑动量而已</button>
+            <button type="button" data-pick data-right data-why="维数被顶到 <b>3.00</b>，比原来更高 —— 你的努力帮了倒忙。机制在于维数量的是「δ 减半时体积掉多少」：自相似让每层压缩同一个比例，δ-邻域的体积因此<em>停止下降</em>（实测第 8 层之后就冻在 0.037 不动）。体积不掉，维数就只能满格。<b>你越想用自相似省体积，越是把维数钉死。</b>这正是为什么黏性那一族既是最难的情形，又在 2022 年成了王虹与 Zahl 的突破口。">反而被顶到满格 3.00</button>
+          </div>
+          <p>画面中央那张图上有两条曲线，按下按钮的一瞬间它们就分岔了：</p>
+          <button type="button" class="open-charts" data-open-charts="depth">📉 把两条曲线放到画面中央对比</button>
+          <p>黏性那条（黄色虚线）<em>停在某个正数上不动</em>：第 8 层之后就冻在 0.037 附近，也就是最初那束光的 11%，再多切也不动了。而每层滑动量不同那条（蓝色）到第 10 层已经掉到 0.012（3.5%），并且还在往下走。</p>
           <p>而维数——你想压低的那个——被顶到了 <b>3.00</b>。</p>
-          <p class="q">机制就在这两句话里：维数由"δ 减半时体积掉多少"定义。自相似让每层压缩同一个比例，δ-邻域的体积因此<b>停止下降</b>；体积不掉，维数就只能满格。你越想用自相似省体积，越是把维数钉死。</p>
+          <p class="q">机制就在这两句话里：维数由「δ 减半时体积掉多少」定义。自相似让每层压缩同一个比例，δ-邻域的体积因此<b>停止下降</b>；体积不掉，维数就只能满格。你越想用自相似省体积，越是把维数钉死。</p>
 
           <p>为什么偏偏是这一族难？因为前面那些论证（灌木、毛刷）本质上都靠<em>「细管在粗尺度上散得开」</em>来赚体积。黏性构型恰好把这个赚头堵死：<b>每放大一级，看到的还是同一个样子，没有新的分离可以利用。</b></p>
           <details class="deep"><summary>「黏性」的精确说法</summary>
@@ -1426,22 +1540,24 @@ const SC={
           <span class="fml">跨尺度自相似 ⟹ 刚性 ⟹ 与「含有所有方向」不相容</span>
           <p>这解决了 KLT 隔离出来的那个特殊情形，也为 2025 年的完整证明铺好了路——<em>下一章就是那篇。</em></p>
           <p class="srcnote"><b>想读原文：</b>黏性那篇是 arXiv:2210.09581，完整证明是 arXiv:2502.17655。如果只想看思路，Bourbaki 讨论班有一篇带大量插图的综述 <em>The Kakeya conjecture, after Wang and Zahl</em>（arXiv:2604.03416）。「资料」页给了链接。</p>`,
+       st:['3d','depth',6200],
        en(){camTo(0.85,0.28,4.0,0,0,0);KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
             KAK.shadow=0;KAK.cones=0;CAM.spin=0.03;
             to(KAK,'boxes',0,400);to(KAK,'tDepth',10,2600);}},
 
       {id:'wangzahl',t:'王虹 & Zahl：维数必须是 3',
        b:`<p class="lede">2025 年 2 月，王虹与 Joshua Zahl 用 127 页证明了：<b>ℝ³ 里任何挂谷集，维数必须是 3。</b></p>
-          <p>先看实测数据。把针不断变细（<span class="k-delta">δ</span> 每次减半），看体积怎么变：</p>
-          <button type="button" class="open-charts" data-open-charts>📉 打开 log V–log δ 曲线与逐档维数</button>
-          <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0，测得的<span class="k-dim">维数</span>从 1.90 升到 <b class="k-dim">2.89</b>。它不是单调上升的（中途会回落，因为每一层的滑动量不同），但趋势明确指向 3。</p>
+          <p>先看实测数据。<b>画面中央那条曲线</b>就是它：把针不断变细（<span class="k-delta">δ</span> 每次减半），看它占的地方怎么变。</p>
+          <button type="button" class="open-charts" data-open-charts="vol">📉 把 log V–log δ 曲线放回画面中央</button>
+          <p>如果这东西是二维的，δ 减半、体积也该减半（图中虚线）。可实测曲线<em>越来越平</em>——下降幅度趋于 0。另一张图上那排柱子就是逐档读出的<span class="k-dim">维数</span>：从 1.90 抬到 <b class="k-dim">2.84</b>（中途最高到过 2.89）。它不是单调上升的（会回落，因为每一层的滑动量不同），但趋势明确指向 3。</p>
           <p>而上一章你自己试过：把构造改成自相似，维数直接顶到 <b>3.00</b>。<em>两条路都通向 3</em>。</p>
-          <p><b>挂谷猜想</b>断言：ℝⁿ 中任何挂谷集，不管测度多小，豪斯多夫维数必定是满的 n。n=2 由 Davies 于 1971 年解决；n=3 卡了半个多世纪。</p>
-          <p>2025 年 2 月 24 日，<b>王虹</b>与 <b>Joshua Zahl</b> 用一篇 127 页的论文证明了 n=3 的情形——ℝ³ 中任何挂谷集的<b>闵可夫斯基维数与豪斯多夫维数都等于 3</b>。技术核心是一族关于「δ-管道之并」的体积估计：若一组管道不会大量塞进同一个凸集里，它们的并就必须占据几乎最大的体积。Nets Katz 称之为「百年一遇」。</p>
+          <p><b>挂谷猜想</b>的完整表述是：ℝⁿ 中任何挂谷集，不管测度多小，豪斯多夫维数必定是满的 n。n=2 由 Davies 于 1971 年解决，n=3 卡了半个多世纪——直到 <b>2025 年 2 月 24 日</b>。</p>
+          <p>两人证的是<b>闵可夫斯基维数与豪斯多夫维数都等于 3</b>（第 9 章说过，后者是严格更强的那个）。技术核心是一族关于「δ-管道之并」的体积估计：若一组管道不会大量塞进同一个凸集里，它们的并就必须占据几乎最大的体积。Nets Katz 称之为「百年一遇」。</p>
           <p><b>为什么调和分析的人这么在意。</b>挂谷问题不是孤立的几何趣题，它坐在一条蕴含链的底部：</p>
           <span class="fml">限制性猜想 ⇒ Bochner–Riesz 猜想 ⇒ 局部光滑性 ⇒ 挂谷猜想</span>
           <p>方向越多、管道越难压缩，Fourier 变换在曲面上的限制就越可控。反过来，只要能造出一个低维的挂谷集，上面那一整串猜想就会连锁崩塌。所以在 n=3 上把它钉死，等于替这条链的最底层封了口。</p>
           <p>一年后，王虹成为菲尔兹奖 90 年历史上的<b>第三位女性得主</b>（前两位是 2014 年的 Maryam Mirzakhani 与 2022 年的 Maryna Viazovska）。</p>`,
+       st:'vol',
        en(){camTo(1.05,0.24,4.4,0,0,0);KAK.oneNeedle=0;KAK.sweeping=true;KAK.dirGlobe=1;
             KAK.boxes=0;KAK.shadow=0;CAM.spin=0.05;
             to(KAK,'tDepth',7,1500);to(KAK,'cones',1,2400,600);}}
@@ -1517,22 +1633,37 @@ function setScene(name){
   }else{
     labels([]);
     KAK.alpha=0.42;
+    /* 离开演示就把舞台撤掉。setScene 是整块重写 body.className 的，
+       所以 staged / has-stagepick 这些标记必须在这里显式收拾干净。 */
+    setStage('3d');
+    document.body.classList.remove('has-stagepick');
     if(name==='home'){KAK.oneNeedle=0;KAK.sweeping=false;KAK.dirGlobe=0;
       KAK.boxes=0;KAK.shadow=0;KAK.alpha=0.42;CAM.spin=0.075;camTo(CAM.taz,0.16,3.5,0,0,0);}
   }
 }
 function buildDots(){
-  const n=SC[scene].steps.length;
-  $('#dots').innerHTML=Array.from({length:n},(_,i)=>`<i data-i="${i}"></i>`).join('');
-  $$('#dots i').forEach(e=>e.onclick=()=>gotoStep(+e.dataset.i));
+  const S=SC[scene].steps;
+  $('#dots').innerHTML=ACTS.map(act=>
+    `<span class="dot-act" aria-label="${act.k}：${act.t}">${Array.from({length:act.end-act.start},(_,j)=>{
+      const i=act.start+j;
+      return `<button type="button" data-i="${i}" aria-label="第 ${i+1} 章：${S[i].t}"></button>`;
+    }).join('')}</span>`
+  ).join('');
+  $$('#dots button').forEach(e=>e.onclick=()=>gotoStep(+e.dataset.i));
   markDots();
 }
-function markDots(){$$('#dots i').forEach((e,i)=>e.classList.toggle('on',i===si));}
+function markDots(){$$('#dots button').forEach((e,i)=>{
+  const on=i===si;e.classList.toggle('on',on);
+  if(on)e.setAttribute('aria-current','step');else e.removeAttribute('aria-current');
+});}
 function gotoStep(i){
   const S=SC[scene].steps;si=clamp(i,0,S.length-1);
   const s=S[si];
   clearShow();
-  $('#stepno').textContent=`${String(si+1).padStart(2,'0')} / ${String(S.length).padStart(2,'0')}`;
+  const act=actForStep(si);
+  $('#stepno').innerHTML=`<span class="act">${act.k} · ${act.t}</span>`+
+    `<span class="count">${String(si+1).padStart(2,'0')} / ${String(S.length).padStart(2,'0')}</span>`;
+  $('#stepno').setAttribute('aria-label',`${act.k} ${act.t}，第 ${si+1} 章，共 ${S.length} 章`);
   $('#sttitle').textContent=s.t;
   $('#stbody').innerHTML=s.b;
   $('#stbody').scrollTop=0;
@@ -1543,6 +1674,8 @@ function gotoStep(i){
      盒子尺寸也一并复位：有一章会把它动画着缩下去，留着会污染后面的章节。 */
   KAK.cfg='';KAK.bush=0;KAK.brush=0;cellSize=0.14;
   s.en&&s.en();
+  /* 主角在 en() 之后定：en() 里的 beat() 已经排完了，applyStage 要接在它后面 */
+  applyStage(s);
   syncCtrl();
 }
 $('#prev').onclick=()=>gotoStep(si-1);
@@ -1574,6 +1707,9 @@ function bindCtrl(name){
     if(bs)bs.onclick=()=>{
       STICKY=!STICKY;
       resetScaleCache();kakBuilt=-1;kakBoxBuilt='';
+      /* 按下这个键的那一刻，读者要看的就是两条曲线分不分岔 ——
+         那就把那张图搬到画面正中，不要让他自己去侧栏里找。 */
+      if(stageOpts().includes('depth'))setStage('depth',{pin:true});
       syncCtrl();
     };
     $('#b_sweep').onclick=()=>{KAK.sweeping=!KAK.sweeping;syncCtrl();};
@@ -1619,6 +1755,127 @@ function bushVolumes(){
   };
 }
 
+/* =====================================================================
+   5b. 舞台：这一章的画面主角是谁
+   ===================================================================== */
+/* 多数章节的主角是三维那根针。但有几章的论证本身就是一条曲线 ——
+   「先看实测数据，把针不断变细，看体积怎么变」。那种时候曲线必须走到
+   画面正中并且放大；留在 274px 的侧栏里，等于让读者自己去角落里找证据。
+   所以每章声明一个主角，画面重心跟着叙述走。 */
+const STAGE={key:'3d',sec:null,avail:300,pin:false};
+const CHART_NAME={dirs:'方向地图',depth:'每层省多少',vol:'缩得多快',dim:'维数尺'};
+const chartSection=k=>(k&&k!=='3d')?document.querySelector(`.ckd[data-chart="${k}"]`):null;
+
+/* 舞台至少要有 330px 宽才配叫舞台。视口一窄（iPad 横屏再窄一点就是这样），
+   讲解面板和控制面板之间只剩两百来像素 —— 那时把图搬过去并不比留在侧栏好，
+   而且离撞上面板只差一点。所以窄了就不搬，保持原来的行为。 */
+function stageFits(){
+  const R=freeRect();
+  /* 量不到视口（启动的头一两帧可能是 0）时先别降级，下一帧会自己纠正 */
+  if(!(R.W>0&&R.H>0))return true;
+  return R.W<=900?(R.b-R.t)>=210:(R.r-R.l-24)>=330;
+}
+function layoutStage(force){
+  const st=$('#stage'),pk=$('#stagepick');
+  if(!st)return;
+  const R=freeRect(), wide=R.W>900;
+  const padX=wide?12:6, gapTop=wide?46:40, padB=wide?10:6;
+  const l=R.l+padX, r=R.r-padX;
+  const t=R.t+gapTop, b=R.b-padB;
+  const w=Math.max(240,r-l), h=Math.max(150,b-t);
+  const ww=wide?Math.min(w,1040):w;
+  const x=l+(w-ww)/2;
+  /* 视口被缩窄之后舞台可能已经放不下了 —— 那就当场把主角退回三维，
+     免得它压到面板上。key 已经是 3d 时 setStage 不会再回头调这里，不递归。 */
+  if(STAGE.key!=='3d'&&!stageFits()){setStage('3d');return;}
+  const sig=[x,t,ww,h].map(Math.round).join(',');
+  if(!force&&sig===layoutStage.sig)return;
+  layoutStage.sig=sig;
+  st.style.left=Math.round(x)+'px';st.style.top=Math.round(t)+'px';
+  st.style.width=Math.round(ww)+'px';st.style.height=Math.round(h)+'px';
+  pk.style.left=Math.round(l+w/2)+'px';pk.style.top=Math.round(R.t+(wide?5:1))+'px';
+  /* 卡片里除画布还有标题、读法、读数三行 */
+  STAGE.avail=Math.max(130,h-(wide?134:104));
+}
+function setStage(key,opt){
+  opt=opt||{};
+  key=key||'3d';
+  if(key!=='3d'&&(!chartSection(key)||!stageFits()))key='3d';
+  if(opt.pin)STAGE.pin=true;
+  /* 主角没变也要走一遍收尾：换章时开场主角常常还是三维，早退的话
+     侧栏就留着上一章的图，要等下一帧才被收掉 —— 那一帧读者看得见。 */
+  if(key===STAGE.key){layoutStage(true);syncRail();paintStagePick();return;}
+  STAGE.key=key;
+  /* 上一位主角搬回侧栏。display / order 每帧都会重设，这里只搬节点。 */
+  if(STAGE.sec){$('#charts').appendChild(STAGE.sec);STAGE.sec=null;}
+  const sec=chartSection(key);
+  if(sec){
+    sec.style.display='';sec.style.order='';
+    $('#stagehost').appendChild(sec);STAGE.sec=sec;
+    /* 两个类必须分两次生效，否则浏览器把它们合成一帧，淡入就变成硬切。
+       中间强制一次重排来分隔 —— 不用 rAF，因为标签页在后台时 rAF 不触发，
+       那种情况下舞台会永远停在 opacity:0。 */
+    document.body.classList.add('staged');
+    void $('#stage').offsetWidth;
+    document.body.classList.add('stage-in');
+  }else{
+    document.body.classList.remove('staged','stage-in');
+  }
+  layoutStage(true);
+  syncRail();
+  paintStagePick();
+}
+function stageOpts(){
+  const id=(SC[scene]&&SC[scene].steps[si]||{}).id||'';
+  return (CHARTS[id]||[]).filter(k=>chartSection(k));
+}
+function buildStagePick(){
+  const pk=$('#stagepick'),opts=stageOpts();
+  document.body.classList.toggle('has-stagepick',scene==='kakeya'&&opts.length>0&&stageFits());
+  pk.innerHTML='<b>画面主角</b>'+[['3d','三维'],...opts.map(k=>[k,CHART_NAME[k]||k])]
+    .map(([k,t])=>`<button type="button" data-stage="${k}">${t}</button>`).join('');
+  $$('#stagepick button').forEach(b=>b.onclick=()=>setStage(b.dataset.stage,{pin:true}));
+  paintStagePick();
+}
+function paintStagePick(){
+  $$('#stagepick button').forEach(b=>{
+    const on=b.dataset.stage===STAGE.key;
+    b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));
+  });
+}
+/* 侧栏只留本章的配角：台上那张图是同一个 DOM 节点，不能在两处同时出现。
+   每帧都会调一次，但换章 / 换主角时也要立刻调 —— 否则上一章的图会闪一帧。 */
+function syncRail(){
+  const id=(SC[scene]&&SC[scene].steps[si]||{}).id||'';
+  const rail=(CHARTS[id]||[]).filter(k=>k!==STAGE.key);
+  const on=rail.length>0;
+  $('#charts').classList.toggle('show',on);
+  document.body.classList.toggle('has-charts',on);
+  $$('#charts .ckd').forEach(s=>{
+    const k=rail.indexOf(s.dataset.chart);
+    s.style.display=k<0?'none':'';s.style.order=k;
+  });
+}
+/* 每章的开场主角。写成 ['3d','vol',6200] 就是「先看三维，6.2 秒后曲线接棒」——
+   前半句的画面到那时已经说完了它要说的，叙述正好走到曲线上。 */
+function applyStage(step){
+  STAGE.pin=false;
+  const s=step.st||'3d';
+  if(Array.isArray(s)){
+    setStage(s[0]);
+    beat(s[2],()=>{if(!STAGE.pin)setStage(s[1]);});
+  }else setStage(s);
+  buildStagePick();
+}
+/* 正文里的「把这张图放到画面中央」按钮走这里（见 article-shell.js）。
+   返回 false 表示这个视口放不下舞台，让 shell 回退到原来的「闪一下侧栏 /
+   跳到图表那一档」—— 按钮在任何宽度下都必须有反应。 */
+window.vizStage=k=>{
+  if(!stageFits())return false;
+  setStage(k,{pin:true});
+  return true;
+};
+
 /* HUD */
 let hudSig='';
 function hud(items){
@@ -1632,7 +1889,7 @@ function hud(items){
 }
 
 /* 图表 */
-const c1=$('#ch1'),x1=c1.getContext('2d'),c2=$('#ch2'),x2=c2.getContext('2d');
+const c1=$('#ch1'),c2=$('#ch2'),c3=$('#ch3'),c4=$('#ch4');
 function fitChart(c,w,h){
   const dpr=Math.min(2,devicePixelRatio||1);
   w=Math.round(w);h=Math.round(h);
@@ -1640,19 +1897,24 @@ function fitChart(c,w,h){
   c.style.width=w+'px';c.style.height=h+'px';
   const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);return x;
 }
-/* 图表宽度跟着面板走：手机上「图表」那一档是整屏宽的，写死 248px 会只占半边 */
-function chartW(){
-  const box=$('#charts');
-  const w=box?box.clientWidth-28:248;   // 减掉 #charts 左右各 14px 的 padding
-  return clamp(w,180,560);
+/* 图表的尺寸由它当前待的地方决定：在侧栏里是一张小卡片，上了舞台就铺开。
+   写死宽高的话，「放大到画面中央」就只是把同一张邮票搬了个位置。 */
+function chartBox(cv,ratio,minH,railH){
+  const host=cv.parentElement;                       // .ckd
+  const onStage=!!(STAGE.sec&&STAGE.sec.contains(cv));
+  /* .ckd 只有左内边距（侧栏 11px / 舞台 15px），多减几像素当安全余量 */
+  const w=clamp((host?host.clientWidth:262)-(onStage?19:14),180,onStage?1024:560);
+  return[w,clamp(w*ratio,minH,onStage?STAGE.avail:railH)];
 }
+/* 放大不是把小图拉伸：字号、内边距、线宽都得跟着一起长 */
+const chartScale=W=>clamp(W/300,1,2);
 /* δ→0 的标度数据：与交互参数无关，算一次后给最后两章的图表复用 */
 let scaleData=null,scaleQueued=false;
 function resetScaleCache(){scaleData=null;scaleQueued=false;}
 function queueScaleData(){
   if(scaleData||scaleQueued)return;
   scaleQueued=true;
-  (window.requestIdleCallback||(f=>setTimeout(f,500)))(()=>getScaleData());
+  (window.requestIdleCallback||(f=>setTimeout(f,500)))(()=>{getScaleData();getDepthData();});
 }
 function getScaleData(){
   if(scaleData)return scaleData;
@@ -1675,61 +1937,212 @@ window.vizReadKakeyaEvidence=()=>{
    用户的原话是「图像上面公式有必要吗」——没有。正文里已经讲过，
    堆在这儿只会让下面那两张图更认不出来。换成每张图自己的一行大白话读数。 */
 function drawScale(){
-  const W=chartW(),H=clamp(W*0.54,132,190),x=fitChart(c1,W,H);
+  const [W,H]=chartBox(c1,0.54,132,190),x=fitChart(c1,W,H),S=chartScale(W);
   const pts=getScaleData();
   const lx=pts.map(p=>Math.log2(p[0])),ly=pts.map(p=>Math.log2(p[1]));
   const x0=Math.min(...lx),x1_=Math.max(...lx);
   // 参考线：从 δ 最大的那个点出发，按斜率 1（二维物体）往左延伸
   const yRef0=ly[0]-(lx[0]-x0);
   const y0=Math.min(...ly,yRef0),y1=Math.max(...ly);
-  const X=v=>18+(v-x0)/(x1_-x0)*(W-28), Y=v=>H-20-(v-y0)/(y1-y0+1e-9)*(H-36);
-  x.strokeStyle='rgba(255,255,255,.10)';x.beginPath();
-  x.moveTo(18,H-20);x.lineTo(W-8,H-20);x.moveTo(18,10);x.lineTo(18,H-20);x.stroke();
+  const padL=18*S,padB=20*S,padT=10*S;
+  const X=v=>padL+(v-x0)/(x1_-x0)*(W-padL-10*S), Y=v=>H-padB-(v-y0)/(y1-y0+1e-9)*(H-padB-padT-6*S);
+  x.strokeStyle='rgba(255,255,255,.10)';x.lineWidth=1*S;x.beginPath();
+  x.moveTo(padL,H-padB);x.lineTo(W-8*S,H-padB);x.moveTo(padL,padT);x.lineTo(padL,H-padB);x.stroke();
   // 参考斜率 1 = 二维物体（δ 减半，体积也减半）
-  x.strokeStyle='rgba(152,162,189,.4)';x.setLineDash([3,3]);x.lineWidth=1;x.beginPath();
+  x.strokeStyle='rgba(152,162,189,.4)';x.setLineDash([3*S,3*S]);x.lineWidth=1*S;x.beginPath();
   x.moveTo(X(lx[0]),Y(ly[0]));x.lineTo(X(x0),Y(yRef0));x.stroke();
   x.setLineDash([]);
-  x.strokeStyle='#5ee7ff';x.lineWidth=2;x.beginPath();
+  x.strokeStyle='#5ee7ff';x.lineWidth=2*S;x.beginPath();
   pts.forEach((p,i)=>{const px=X(Math.log2(p[0])),py=Y(Math.log2(p[1]));i?x.lineTo(px,py):x.moveTo(px,py);});
   x.stroke();
   x.fillStyle='#5ee7ff';
-  pts.forEach(p=>{x.beginPath();x.arc(X(Math.log2(p[0])),Y(Math.log2(p[1])),2.6,0,7);x.fill();});
-  x.font='10px ui-monospace,monospace';
+  pts.forEach(p=>{x.beginPath();x.arc(X(Math.log2(p[0])),Y(Math.log2(p[1])),2.6*S,0,7);x.fill();});
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
   x.fillStyle='rgba(152,162,189,.75)';
-  x.fillText('针粗',20,H-6);x.fillText('针细 →',W-52,H-6);
-  x.save();x.translate(11,H/2);x.rotate(-Math.PI/2);x.fillText('占地方 ↑',-24,0);x.restore();
-  x.fillStyle='rgba(152,162,189,.6)';x.fillText('虚线：如果它只是一张纸',36,14);
-  x.fillStyle='rgba(94,231,255,.92)';x.fillText('实测：缩得慢得多',36,26);
+  x.fillText('针粗',padL+2,H-6*S);x.fillText('针细 →',W-52*S,H-6*S);
+  x.save();x.translate(11*S,H/2);x.rotate(-Math.PI/2);x.fillText('占地方 ↑',-24*S,0);x.restore();
+  x.fillStyle='rgba(152,162,189,.6)';x.fillText('虚线：如果它只是一张纸',padL+18*S,padT+4*S);
+  x.fillStyle='rgba(94,231,255,.92)';x.fillText('实测：缩得慢得多',padL+18*S,padT+16*S);
 }
 function drawDimBars(){
-  const W=chartW(),H=clamp(W*0.31,76,120),x=fitChart(c2,W,H);
+  const [W,H]=chartBox(c2,0.31,76,130),x=fitChart(c2,W,H),S=chartScale(W);
   const pts=getScaleData(),rows=[];
   for(let i=1;i<pts.length;i++)rows.push(3-Math.log2(pts[i-1][1]/pts[i][1]));
-  const bw=(W-20)/rows.length;
-  x.font='10px ui-monospace,monospace';
+  const padL=10*S,padB=14*S,gh=H-padB-18*S;
+  const bw=(W-padL*2)/rows.length;
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
   rows.forEach((d,i)=>{
-    const hgt=clamp((d-1)/2.2,0,1)*(H-32);
-    const gx=10+i*bw;
+    const hgt=clamp((d-1)/2.2,0,1)*gh;
     x.fillStyle=`rgba(94,231,255,${0.25+0.6*clamp((d-1.5)/1.5,0,1)})`;
-    x.fillRect(gx,H-14-hgt,bw-3,hgt);
+    x.fillRect(padL+i*bw,H-padB-hgt,bw-3*S,hgt);
   });
-  x.fillStyle='rgba(94,231,255,.95)';x.font='10px ui-monospace,monospace';
-  x.fillText(rows[rows.length-1].toFixed(2),W-32,H-4);
-  x.strokeStyle='rgba(255,255,255,.28)';x.setLineDash([3,3]);
-  const y3=H-14-clamp((3-1)/2.2,0,1)*(H-32);
-  x.beginPath();x.moveTo(10,y3);x.lineTo(W-10,y3);x.stroke();x.setLineDash([]);
-  x.fillStyle='rgba(255,255,255,.5)';x.fillText('3',W-14,y3-2);
+  x.fillStyle='rgba(94,231,255,.95)';
+  x.fillText(rows[rows.length-1].toFixed(2),W-32*S,H-4*S);
+  x.strokeStyle='rgba(255,255,255,.28)';x.setLineDash([3*S,3*S]);x.lineWidth=1*S;
+  const y3=H-padB-clamp((3-1)/2.2,0,1)*gh;
+  x.beginPath();x.moveTo(padL,y3);x.lineTo(W-padL,y3);x.stroke();x.setLineDash([]);
+  x.fillStyle='rgba(255,255,255,.5)';x.fillText('3',W-14*S,y3-2*S);
+}
+/* ── 方向罗盘的平面版 ────────────────────────────────────
+   三维那个球有一半永远背着观众。第 7 章说「亮斑纹丝不动」、第 8 章说「罗盘
+   一点点被填满」—— 而读者只看得到朝自己那一半，另一半是不是也填上了，
+   他没法判断。更糟的是那个球被写死在世界坐标 x=1.55：实测在 1280×720 上落到
+   NDC 0.74（正好在参数面板底下），在 390×780 的手机上落到 2.40 —— 屏幕外。
+   也就是说这两章的主角，一直是看不见或看不全的。
+
+   方向是无向直线，真正的定义域是半球。这里用兰伯特方位等面积投影把半球摊成
+   一个圆盘：一个方向都不藏，而且**等面积** —— 圆盘被填掉多少比例，就是多少
+   比例的方向被覆盖了。这句话在三维球上是说不出口的。 */
+const dirRep=(x,y,z)=>{const s=y<0?-1:1;return[x*s,y*s,z*s];};
+let dirPts=null,dirPtsKey='';
+function getDirPts(nCone){
+  const key=KAK.K+'|'+nCone;
+  if(dirPtsKey===key)return dirPts;
+  dirPtsKey=key;
+  const K=KAK.K, step=Math.max(1,Math.round(K/16));
+  const out=[];
+  for(let k=0;k<nCone;k++){
+    const m=CONES[k];
+    for(let i=0;i<K;i+=step)for(let j=0;j<K;j+=step){
+      const sx=(i+0.5)/K, sy=(j+0.5)/K, L=Math.hypot(sx,1,sy);
+      const v0=sx/L,v1=1/L,v2=sy/L;
+      /* CONES 是列主序 mat4，(行 r, 列 c) = m[c*4+r] */
+      const d=dirRep(m[0]*v0+m[4]*v1+m[8]*v2,
+                     m[1]*v0+m[5]*v1+m[9]*v2,
+                     m[2]*v0+m[6]*v1+m[10]*v2);
+      const kk=Math.sqrt(1/(1+d[1]));                 // 兰伯特等面积：半球 → 单位圆盘
+      const c=ramp((i+0.5)/K), sh=0.72+0.38*((j+0.5)/K);
+      out.push([d[0]*kk, d[2]*kk,
+        `rgba(${Math.round(c[0]*sh*255)},${Math.round(c[1]*sh*255)},${Math.round(c[2]*sh*255)},.88)`]);
+    }
+  }
+  return dirPts=out;
+}
+/* 覆盖率不从画上的点数着，而是拿随机方向做精确的成员测试 ——
+   点只是给人看的，数是量出来的。d 属于第 k 个锥 ⟺ Mᵀd 归一化后
+   落在 {(a,1,b): a,b∈[0,1]} 里（无向，所以 y<0 时先取反）。 */
+let dirCov=-1,dirCovKey='';
+function dirCoverage(nCone){
+  const key=String(nCone);
+  if(dirCovKey===key)return dirCov;
+  dirCovKey=key;
+  const inCone=(m,dx,dy,dz)=>{
+    const wx=m[0]*dx+m[1]*dy+m[2]*dz;
+    const wy=m[4]*dx+m[5]*dy+m[6]*dz;
+    const wz=m[8]*dx+m[9]*dy+m[10]*dz;
+    const s=wy<0?-1:1, y=wy*s;
+    if(y<=1e-12)return false;
+    const a=wx*s/y, b=wz*s/y;
+    return a>=0&&a<=1&&b>=0&&b<=1;
+  };
+  const R=rng(20260805);
+  let hit=0;const N=12000;
+  for(let i=0;i<N;i++){
+    const u=2*R()-1, ph=6.283185307*R(), s=Math.sqrt(Math.max(0,1-u*u));
+    const dx=s*Math.cos(ph),dy=u,dz=s*Math.sin(ph);
+    for(let k=0;k<nCone;k++)if(inCone(CONES[k],dx,dy,dz)){hit++;break;}
+  }
+  return dirCov=hit/N;
+}
+function nConeNow(){return KAK.cones>0.5?Math.round(1+KAK.cones*(CONES.length-1)):1;}
+function drawDirs(){
+  const [W,H]=chartBox(c4,0.74,150,240),x=fitChart(c4,W,H),S=chartScale(W);
+  const pad=13*S, footer=13*S;
+  const R0=Math.max(30,Math.min((W-pad*2)/2,(H-pad*2-footer)/2));
+  const cx=W/2, cy=pad+R0;
+  const nCone=nConeNow();
+  x.fillStyle='rgba(255,255,255,.035)';
+  x.beginPath();x.arc(cx,cy,R0,0,7);x.fill();
+  x.strokeStyle='rgba(255,255,255,.18)';x.lineWidth=1*S;x.stroke();
+  /* 半径 R/√2 的那个圈：等面积投影下，圈内与圈外各占一半方向 */
+  x.strokeStyle='rgba(255,255,255,.10)';x.setLineDash([3*S,3*S]);
+  x.beginPath();x.arc(cx,cy,R0/Math.SQRT2,0,7);x.stroke();x.setLineDash([]);
+  const pts=getDirPts(nCone), r=Math.max(1,R0*0.024);
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    x.fillStyle=p[2];
+    x.fillRect(cx+p[0]*R0-r, cy+p[1]*R0-r, r*2, r*2);
+  }
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
+  x.fillStyle='rgba(152,162,189,.8)';
+  x.textAlign='center';
+  x.fillText('圆心＝竖直方向',cx,cy-R0-3*S);
+  x.fillText('圆周＝水平方向',cx,cy+R0+11*S);
+  x.textAlign='left';
+  x.fillStyle='rgba(92,208,179,.95)';
+  x.fillText(`方向锥 ${nCone} / 12`,pad,H-3*S);
+  x.textAlign='right';
+  x.fillText(`覆盖 ${(dirCoverage(nCone)*100).toFixed(1)}%`,W-pad,H-3*S);
+  x.textAlign='left';
+}
+/* ── 体积 vs 递归层数 ──
+   第 6 章的原话是「曲线还在往下走，但你会注意到它越走越平」。
+   在这张图之前，页面上并没有那条曲线 —— 读者只能选择信我。现在它在这儿，
+   而且顺手把第 14 章要的对照也画上：黏性那条会停住，另一条不会。 */
+let depthData=null;
+function getDepthData(){
+  if(depthData)return depthData;
+  const run=st=>{
+    const keep=STICKY;STICKY=st;
+    const o=[];for(let n=0;n<=MAXD;n++)o.push(volume(buildTris(n),0)/(1/3));
+    STICKY=keep;return o;
+  };
+  return depthData={greedy:run(false),sticky:run(true)};
+}
+function drawDepth(){
+  const [W,H]=chartBox(c3,0.58,140,210),x=fitChart(c3,W,H),S=chartScale(W);
+  const D=getDepthData();
+  const padL=34*S,padR=10*S,padT=13*S,padB=22*S;
+  const gw=W-padL-padR, gh=H-padT-padB;
+  /* 纵轴锚死在 0–100%。自动缩放会把「越走越平」画成「一直在陡降」，
+     那正好是这张图要否掉的印象。 */
+  const X=n=>padL+n/MAXD*gw, Y=p=>padT+gh-clamp(p,0,1)*gh;
+  x.lineWidth=1*S;x.strokeStyle='rgba(255,255,255,.10)';
+  x.beginPath();x.moveTo(padL,padT);x.lineTo(padL,padT+gh);x.lineTo(padL+gw,padT+gh);x.stroke();
+  x.font=`${(10*S).toFixed(1)}px ui-monospace,monospace`;
+  x.setLineDash([2*S,4*S]);
+  for(const p of [0.25,0.5,1]){
+    x.strokeStyle='rgba(255,255,255,.08)';
+    x.beginPath();x.moveTo(padL,Y(p));x.lineTo(padL+gw,Y(p));x.stroke();
+    x.fillStyle='rgba(152,162,189,.6)';
+    x.fillText((p*100).toFixed(0)+'%',3*S,Y(p)+3.5*S);
+  }
+  x.setLineDash([]);
+  const line=(arr,col,dash,wid)=>{
+    x.setLineDash(dash);x.strokeStyle=col;x.lineWidth=wid;
+    x.beginPath();arr.forEach((v,n)=>n?x.lineTo(X(n),Y(v)):x.moveTo(X(n),Y(v)));x.stroke();
+    x.setLineDash([]);
+  };
+  line(D.sticky,STICKY?'#ffd866':'rgba(255,216,102,.30)',[4*S,4*S],(STICKY?2.4:1.4)*S);
+  line(D.greedy,STICKY?'rgba(94,231,255,.30)':'#5ee7ff',[],(STICKY?1.4:2.4)*S);
+  const act=STICKY?D.sticky:D.greedy;
+  x.fillStyle=STICKY?'#ffd866':'#5ee7ff';
+  act.forEach((v,n)=>{x.beginPath();x.arc(X(n),Y(v),2.6*S,0,7);x.fill();});
+  // 你现在拖到的层数
+  const d=clamp(KAK.tDepth,0,MAXD);
+  x.strokeStyle='rgba(255,255,255,.40)';x.lineWidth=1*S;x.setLineDash([3*S,3*S]);
+  x.beginPath();x.moveTo(X(d),padT);x.lineTo(X(d),padT+gh);x.stroke();x.setLineDash([]);
+  x.fillStyle='rgba(152,162,189,.85)';
+  x.fillText('一层没切',padL,H-6*S);x.fillText(MAXD+' 层',padL+gw-26*S,H-6*S);
+  x.fillStyle=STICKY?'rgba(94,231,255,.55)':'rgba(94,231,255,.92)';
+  x.fillText('每层滑动量不同',padL+9*S,padT+11*S);
+  x.fillStyle=STICKY?'rgba(255,216,102,.95)':'rgba(255,216,102,.55)';
+  x.fillText('每层同一个滑动量（黏性）',padL+9*S,padT+24*S);
 }
 
 /* =====================================================================
    6. 主循环
    ===================================================================== */
-/* 每章显示哪几张图。原则和玻尔兹曼篇一致：一章一张主图，最多再配一张。 */
+/* 每章用得上哪几张图。原则和玻尔兹曼篇一致：一章一张主图，最多再配一张。
+   数组的第一项同时也是这一章的候选主角（见各章的 st 字段）。 */
 const CHARTS={
+  pushdown:['depth'],
+  dirskept:['dirs'],
+  assemble:['dirs'],
   dimension:['vol'],
   dimtrap:['vol'],
   tubes:['vol'],
-  sticky:['vol','dim'],
+  sticky:['depth','dim'],
   wangzahl:['vol','dim']
 };
 let last=performance.now(), acc=0;
@@ -1750,7 +2163,7 @@ function frame(now){
   requestAnimationFrame(frame);
   if(document.hidden||scene!=='kakeya'){last=now;return;}
   const dt=Math.min(0.05,(now-last)/1000);last=now;
-  resize();stepAnims();camUpdate(dt);
+  resize();stepAnims();camUpdate(dt);layoutStage();
   gl.viewport(0,0,cv.width,cv.height);
   gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);
   gl.useProgram(P_BG);
@@ -1817,28 +2230,45 @@ function frame(now){
           $('#brushBar').style.width=Math.max(4,bv.brush.maxMult/mx*100).toFixed(0)+'%';
         }
       }
-      /* 先挂上 .show 再画：chartW() 要量面板宽度，隐藏时量到的是 0 */
-      /* 每章显示哪几张图。以前七章都把两张一起摆着，谁也认不出谁是干什么的。 */
+      /* 主角在台上时，侧栏只留配角；台上那张图不再出现在侧栏里（是同一个节点）。
+         先挂上 .show 再画：chartBox() 要量容器宽度，隐藏时量到的是 0。 */
       const want=CHARTS[id]||[];
-      if(want.length){$('#charts').classList.add('show');document.body.classList.add('has-charts');
-        $$('#charts .ckd').forEach(s=>{
-          const k=want.indexOf(s.dataset.chart);
-          s.style.display=k<0?'none':'';s.style.order=k;
-        });
+      syncRail();
+      if(want.length){
+        /* 一张图只有真的看得见才画：舞台上的和侧栏里的都算 */
+        const shown=k=>{const s=chartSection(k);return s&&s.offsetParent!==null;};
         const pts=getScaleData();
-        if(want.includes('vol')){
+        if(want.includes('dirs')&&shown('dirs')){
+          drawDirs();
+          const nC=nConeNow(), cov=(dirCoverage(nC)*100).toFixed(1);
+          $('#now_dirs').textContent=nC>=12
+            ? `12 个方向锥全部落位，覆盖 ${cov}%　·　实测每个方向恰好被一个锥覆盖一次，不重不漏`
+            : nC>1
+            ? `已经落位 ${nC} 个方向锥，覆盖 ${cov}%　·　还差 ${12-nC} 个`
+            : `现在只点亮了 1 个方向锥，覆盖 ${cov}%　·　递归层数 ${KAK.tDepth.toFixed(2)}，把它拖来拖去，这张图一个点都不会动`;
+        }
+        if(want.includes('depth')&&shown('depth')){
+          drawDepth();
+          const D=getDepthData();
+          $('#now_depth').textContent=STICKY
+            ? `黏性：第 8 层之后就停在 ${(D.sticky[8]*100).toFixed(0)}% 不动了 —— 再切也省不下来`
+            : `第 1 层省掉六成，切到第 10 层只剩 ${(D.greedy[10]*100).toFixed(1)}%；每多切一层，省下的越来越少`;
+        }
+        if(want.includes('vol')&&shown('vol')){
           drawScale();
           $('#now_vol').textContent=STICKY
             ? '自相似构型：曲线基本走平了，体积停在正数上不动'
             : '曲线越来越平——比一张纸缩得慢得多，说明它比二维「厚」';
         }
-        if(want.includes('dim')&&pts.length>1){
+        if(want.includes('dim')&&shown('dim')&&pts.length>1){
           drawDimBars();
-          const i=pts.length-1, D=3-Math.log2(pts[i-1][1]/pts[i][1]);
-          $('#now_dim').textContent=`最细一档读出 ${D.toFixed(2)}　·　`+
+          const rows=[];
+          for(let k=1;k<pts.length;k++)rows.push(3-Math.log2(pts[k-1][1]/pts[k][1]));
+          const D=rows[rows.length-1],hi=Math.max(...rows);
+          $('#now_dim').textContent=`最细一档读出 ${D.toFixed(2)}　·　中途最高到过 ${hi.toFixed(2)}　·　`+
             (D>2.95?'已经顶到 3 了':'还在往 3 爬');
-        }}
-      else {$('#charts').classList.remove('show');document.body.classList.remove('has-charts');}
+        }
+      }
       const L=[];
       if(cfg){
         const bv=bushVolumes();
@@ -1854,11 +2284,11 @@ function frame(now){
       }
       if(KAK.oneNeedle>0.5)L.push({p:[0,-0.80,0],
         t:KAK.ballAlpha>0.5?'扫出的球 · V ≈ 0.524':'针正在转过所有方向',c:'#58c4dd',dot:1});
-      if(KAK.dirGlobe>0.5)L.push({p:[1.55,-1.12,0.30],o:KAK.dirGlobe,
+      if(KAK.dirGlobe>0.5&&globeOn())L.push({p:[GLOBE_X,-1.12,0.30],o:KAK.dirGlobe,
         t:KAK.cones>0.55?'方向罗盘 · 已铺满整个球面':'方向罗盘 · 亮点 = 已覆盖的方向',c:'#58c4dd',dot:1});
       if(KAK.shadow>0.4){
-        L.push({p:[-1.55,-0.52,0],o:KAK.shadow,t:'正投影 · 越亮 = 叠在一起的针越多',c:'#5cd0b3',dot:1});
-        L.push({p:[-1.55,0.54,0],o:KAK.shadow*0.85,t:'白框 = 压缩前的大小',c:'#8a94ad'});
+        L.push({p:[SHADOW_X,-0.52,0],o:KAK.shadow,t:'正投影 · 越亮 = 叠在一起的针越多',c:'#5cd0b3',dot:1});
+        L.push({p:[SHADOW_X,0.54,0],o:KAK.shadow*0.85,t:'白框 = 压缩前的大小',c:'#8a94ad'});
         L.push({p:[-(KAK.cx||0),-0.76,0],o:KAK.shadow,t:'三维针束',c:'#ffd866',dot:1});
       }
       if(KAK.boxes>0.4)L.push({p:[0,0.98,0],o:KAK.boxes,t:'用边长 δ 的盒子把它盖住',c:'#58c4dd',dot:1});

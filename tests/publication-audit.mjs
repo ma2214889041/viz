@@ -91,4 +91,97 @@ for (const { slug, method } of works) {
   }
 }
 
+/* ── 共享样式里「手机端覆盖桌面端」的顺序 ──
+   媒体查询不增加选择器权重。所以 @media(max-width:900px) 里的 `#stage{padding:…}`
+   如果写在顶层的 `#stage{padding:…}` 之前，会被后者整条盖掉 —— 手机上舞台照旧
+   用桌面的内边距和字号，而 CSS 看起来完全正确。第一版就是这么错的。
+   这里把顺序钉住：同名选择器的手机端规则必须出现在桌面端定义之后。 */
+{
+  const css = await readFile(new URL("../article.css", import.meta.url), "utf8");
+  /* 每条规则记下它的起始位置和所在的 @media 深度 */
+  const rules = [];
+  let depth = 0, atMedia = [];
+  const lines = css.split("\n");
+  let offset = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^@(media|supports)/.test(trimmed)) atMedia.push(depth);
+    const selector = trimmed.includes("{") ? trimmed.slice(0, trimmed.indexOf("{")).trim() : "";
+    if (selector && !selector.startsWith("@") && !selector.startsWith("/*")) {
+      rules.push({ selector, at: offset, inMedia: atMedia.length > 0 });
+    }
+    for (const ch of line) {
+      if (ch === "{") depth++;
+      else if (ch === "}") { depth--; if (atMedia.length && depth === atMedia[atMedia.length - 1]) atMedia.pop(); }
+    }
+    offset += line.length + 1;
+  }
+  /* 只查舞台这几个选择器：它们是这次新加的，也是踩过坑的那一组 */
+  const watch = ["#stage", "#stage .ckd", "#stage .ckd h4", "#stage .ckd .ckd-how",
+                 "#stage .ckd .ckd-now", "#stagepick", "#stagepick>b", "#stagepick button"];
+  const wrong = [];
+  for (const sel of watch) {
+    const base = rules.filter((r) => r.selector === sel && !r.inMedia);
+    const mob = rules.filter((r) => r.selector === sel && r.inMedia);
+    if (!base.length || !mob.length) continue;
+    const lastBase = Math.max(...base.map((r) => r.at));
+    const firstMob = Math.min(...mob.map((r) => r.at));
+    if (firstMob < lastBase) wrong.push(sel);
+  }
+  if (wrong.length) {
+    console.error(JSON.stringify({ ok: false,
+      why: "article.css 里这些选择器的手机端规则写在了桌面端定义之前，会被整条盖掉：" + wrong.join("、")
+    }, null, 2));
+    process.exit(1);
+  }
+}
+
+/* ── 首页写的时长必须等于文章自己声明的时长 ──
+   两处各写一遍，就一定会漂。实测漂到过：玻尔兹曼自己的首页写「主线约 25 分钟」，
+   站点首页写「约 8 分钟」——差三倍；挂谷篇首页写「11 章」，正文其实有 15 章。
+   这类数字读者一进门就看见，错了直接损伤信任。 */
+{
+  const home = await readFile("index.html", "utf8");
+  const bad = [];
+  for (const { slug } of works) {
+    const meta = JSON.parse(await readFile(`${slug}/work.json`, "utf8"));
+    /* 首页每篇是一个 <a href="slug/"> 卡片，时长写在它的 .post-meta 里 */
+    /* 必须锚在文章卡片上。只按 href 找会先撞上顶部那条「阅读最新文章」，
+       于是读到的是别人的时长 —— 第一版就这么误报过一次。 */
+    const i = home.indexOf(`<a class="post" href="${slug}/"`);
+    if (i < 0) { bad.push(`${slug} 首页没有文章卡片`); continue; }
+    const card = home.slice(i, i + 400);
+    const m = card.match(/约\s*(\d+)\s*分钟/);
+    if (!m) { bad.push(`${slug} 首页卡片没写时长`); continue; }
+    const want = (meta.duration || "").match(/(\d+)/);
+    if (!want) { bad.push(`${slug}/work.json 的 duration 不含数字`); continue; }
+    if (m[1] !== want[1]) bad.push(`${slug}：首页 ${m[1]} 分钟 vs work.json ${want[1]} 分钟`);
+    /* 文章自己的首页如果写了章数，也必须等于 work.json */
+    const article = await readFile(`${slug}/index.html`, "utf8");
+    const ch = article.match(/(\d+)\s*章 ·/) || article.match(/(\d+)\s*章</);
+    if (ch && meta.chapters && +ch[1] !== meta.chapters) {
+      bad.push(`${slug}：文章首页写 ${ch[1]} 章 vs work.json ${meta.chapters} 章`);
+    }
+  }
+
+  /* 「阅读最新文章」必须真的指向最新那一篇。实测它一直指着 optimization（7/30），
+     而最新的是 cosmic-web（8/4）—— 首页最显眼的那个按钮送错了地方。 */
+  {
+    const dated = [];
+    for (const { slug } of works) {
+      const meta = JSON.parse(await readFile(`${slug}/work.json`, "utf8"));
+      dated.push({ slug, date: meta.date });
+    }
+    dated.sort((a, b) => b.date.localeCompare(a.date));
+    const newest = dated[0].slug;
+    const m = home.match(/<a class="nav-pill" href="([^"]+)\/">\s*阅读最新文章/);
+    if (!m) bad.push("首页找不到「阅读最新文章」链接");
+    else if (m[1] !== newest) bad.push(`「阅读最新文章」指向 ${m[1]}，最新的其实是 ${newest}（${dated[0].date}）`);
+  }
+  if (bad.length) {
+    console.error(JSON.stringify({ ok: false, why: "时长/章数对不上：" + bad.join("；") }, null, 2));
+    process.exit(1);
+  }
+}
+
 console.log(JSON.stringify({ ok: true, works: works.length, report }));

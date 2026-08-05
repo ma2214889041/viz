@@ -665,7 +665,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
    每章必须有一句话导语（.lede）。这是这次改版的核心约定：
    读者能只读导语走完全篇，公式推导收在 details 里按需展开。 */
 {
-  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*b:`([\s\S]*?)`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)/g)];
+  const bodies = [...html.matchAll(/\{id:'(\w+)',t:'[^']*',\s*b:`([\s\S]*?)`,\s*(?:(?:\/\*[\s\S]*?\*\/|st:[^\n]*)\s*)*en\(\)/g)];
   check("能解析出全部章节正文", bodies.length === 12, `解析到 ${bodies.length} 章`);
   const noLede = bodies.filter(m => !m[2].includes('class="lede"')).map(m => m[1]);
   check("每章都有一句话导语", noLede.length === 0, `缺导语：${noLede.join(", ")}`);
@@ -682,6 +682,40 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   const deep = bodies.filter(m => m[2].includes('details class="deep"')).length;
   check("重推导确实被收进可展开块", deep >= 6, `只有 ${deep} 章有 details.deep`);
   console.log("分层阅读:", JSON.stringify({ chapters: bodies.length, withDeep: deep }));
+}
+
+/* ── 章节互指：编号必须落在真正那一章上 ──
+   「前面九章搭好了舞台」写在第 11 章上（前面其实有十章）—— 这类差一格的错
+   靠肉眼校不出来，而重排章节时它一定会发生。所以把每一条互指钉成
+   「第 N 章里必须出现某个关键词」，编号一错、关键词就对不上。 */
+{
+  const heads2 = [...html.matchAll(/\{id:'(\w+)',t:'/g)].map((m) => ({ id: m[1], at: m.index }));
+  const bodyOf = (i) => {
+    const slice = html.slice(heads2[i].at, i + 1 < heads2.length ? heads2[i + 1].at : html.length);
+    const b = slice.match(/b:`([\s\S]*?)`,\s*(?:(?:\/\*[\s\S]*?\*\/|st:[^\n]*)\s*)*en\(\)/);
+    return b ? b[1].replace(/<[^>]*>/g, "") : "";
+  };
+  const bodies2 = heads2.map((_, i) => bodyOf(i));
+  const N = bodies2.length;
+  /* 所有「第 N 章」都得存在 */
+  const oob = [];
+  bodies2.forEach((t, i) => {
+    for (const m of t.matchAll(/第\s*(\d+)\s*章/g)) {
+      const n = +m[1];
+      if (n < 1 || n > N) oob.push(`第 ${i + 1} 章指向不存在的第 ${n} 章`);
+    }
+    for (const m of t.matchAll(/前面\s*([一二三四五六七八九十\d]+)\s*章/g)) {
+      const map = { 一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,十一:11,十二:12,十三:13,十四:14,十五:15 };
+      const n = map[m[1]] !== undefined ? map[m[1]] : +m[1];
+      if (n !== i) oob.push(`第 ${i + 1} 章写「前面${m[1]}章」，实际前面有 ${i} 章`);
+    }
+  });
+  check("章节互指的编号都对得上", oob.length === 0, oob.join("；"));
+  /* 逐条核对：引用的那一章里必须真的有那个东西 */
+  const wants = [[1, "可逆"], [3, "速度分布"], [5, "伏笔"], [6, "H 定理"], [7, "洛施密特"], [8, "past hypothesis"], [9, "重碰"], [11, "数不过来"], [12, "累积量展开"]];
+  const wrong = wants.filter(([n, kw]) => !(bodies2[n - 1] || "").includes(kw))
+    .map(([n, kw]) => `第 ${n} 章里找不到「${kw}」`);
+  check("互指指到的内容真的在那一章里", wrong.length === 0, wrong.join("；"));
 }
 
 /* ── 10g. 图表面板的可读性 ──
@@ -703,7 +737,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
     check("有数据的章节都在 CHARTS 里有条目", missing.length === 0, `漏了：${missing.join(", ")}`);
     const fat = Object.entries(map).filter(([, v]) => v.length > 2).map(([k, v]) => `${k}:${v.length}`);
     check("一章最多两张图", fat.length === 0, `过多：${fat.join(", ")}`);
-    const known = new Set(["mb", "wf", "q", "prof", "recol", "h"]);
+    const known = new Set(["mb", "wf", "q", "prof", "recol", "h", "tree", "both"]);
     const unknown = Object.values(map).flat().filter(k => !known.has(k));
     check("引用的图都真实存在", unknown.length === 0, `未知图表：${unknown.join(", ")}`);
     /* 前三章没有可看的数据，不该硬摆一张图上去 */
@@ -713,7 +747,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
 
   /* 每张图必须有大白话标题，而且标题里不能有公式 */
   const cards = [...html.matchAll(/<section class="ckd" data-chart="(\w+)"[^>]*>\s*<h4>([^<]+)<\/h4>\s*<p class="ckd-how">([^<]+)</g)];
-  check("每张图都是一张带标题的卡片", cards.length === 6, `解析到 ${cards.length} 张`);
+  check("每张图都是一张带标题的卡片", cards.length === 8, `解析到 ${cards.length} 张`);
   const noQ = cards.filter(c => !/[？?]/.test(c[2])).map(c => c[1]);
   check("图表标题写成一个问句", noQ.length === 0, `不是问句：${noQ.join(", ")}`);
   const hasFml = cards.filter(c => /f\(|Q\(|∫|<sub>|δ|λ|⟨/.test(c[2])).map(c => c[1]);
@@ -726,6 +760,206 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
     "liveeq / updateLiveMB 仍在");
   check("旧的一行式图注已移除", !html.includes("chartcap"), "chartcap 仍在");
   console.log("图表卡片:", JSON.stringify(cards.map(c => `${c[1]}｜${c[2]}`)));
+}
+
+/* ── 10g2. 第 8 章那个 V 字：往过去推，H 一样往下掉 ──
+   A4 的判词是「它是对某一端提的条件，不是对两端」。这张图声称：拿同一个混沌
+   低熵初态，往未来推和往过去推（速度全部取反再往前跑），H 的落差几乎一样。
+   这是整篇文章的落点，也是最容易被写飘的一句 —— 所以逐个初态核一遍。 */
+{
+  const runBranch = (preset, reverse, steps = 450, dt = 0.01) => {
+    GAS.N = 520; GAS.r = 0.045; GAS.single = false; GAS.mode = "micro";
+    GAS.t = 0; GAS.collisions = 0; GAS.pairLast = new Map();
+    M.gasInit(preset);
+    if (reverse) for (let i = 0; i < GAS.N; i++) { GAS.vx[i] *= -1; GAS.vy[i] *= -1; GAS.vz[i] *= -1; }
+    M.gasStats();
+    const H = [GAS.Hcur];
+    for (let s = 0; s < steps; s++) { M.gasStep(dt); if ((s + 1) % 4 === 0) { M.gasStats(); H.push(GAS.Hcur); } }
+    return H;
+  };
+  const rows = [];
+  for (const preset of ["same", "beam", "hot"]) {
+    const f = runBranch(preset, false), b = runBranch(preset, true);
+    const drop = (a) => a[0] - Math.min(...a);
+    const df = drop(f), db = drop(b);
+    const rel = Math.abs(df - db) / Math.max(1e-9, df);
+    rows.push({ preset, 未来: +df.toFixed(3), 过去: +db.toFixed(3), 差: +(rel * 100).toFixed(2) + "%" });
+    check(`${preset}：往未来 H 明显下落`, df > 1.5, `落差只有 ${df.toFixed(3)}`);
+    check(`${preset}：往过去 H 同样下落`, db > 1.5, `落差只有 ${db.toFixed(3)}`);
+    /* 「几乎一模一样」得给个上限，否则这句话没法被证伪 */
+    check(`${preset}：两支落差之差 < 5%`, rel < 0.05, `实测差 ${(rel * 100).toFixed(2)}%`);
+    /* 尾段抖动不能盖过落差，否则这张图上看到的是噪声不是 V 字 */
+    const tail = f.slice(Math.floor(f.length * 0.7));
+    const wob = Math.max(...tail) - Math.min(...tail);
+    check(`${preset}：尾段抖动远小于落差`, wob < df * 0.1,
+      `抖动 ${wob.toFixed(3)} / 落差 ${df.toFixed(3)}`);
+  }
+  check("正文写明了两边都往下掉", /两边的 H 都往下掉/.test(html), "正文没有写出这个结论");
+  check("正文没有把它说成解释了熵增", /past hypothesis/.test(html),
+    "正文缺少「解释不了为什么过去有低熵态」这层限定");
+  check("双向实验会在换章时放弃", /bothAbort\(\)/.test(html) && /clearShow\(\);\n  bothAbort\(\)/.test(html),
+    "gotoStep 没有放弃在跑的双向实验，主循环会永远不再步进模型");
+  check("算完把模型还原", /gasInit\(saved\.preset\)[\s\S]{0,200}qbReset\(\)/.test(html),
+    "双向实验算完没有还原本章的模型");
+  console.log("双向时间:", JSON.stringify(rows));
+}
+
+/* ── 10h. 舞台：画面主角必须真的存在 ──
+   正文里写「画面正中就是这条曲线」是一句可以被证伪的话。如果这一章声明的主角
+   不在它的 CHARTS 列表里，setStage 会静默退回三维 —— 于是正文指着一个空位说
+   「看这里」。另外，碰撞树以前是塞在正文里的一张 ~300px 小画布，而第 11 章的
+   全部论证就是那张图；它现在必须是一张能上舞台的卡片。 */
+{
+  const cardKeys = new Set([...html.matchAll(/data-chart="(\w+)"/g)].map(m => m[1]));
+  const m = html.match(/const CHARTS=\{([\s\S]*?)\n\};/);
+  const map = {};
+  if (m) for (const line of m[1].split("\n")) {
+    const g = line.match(/(\w+):\[([^\]]*)\]/);
+    if (g) map[g[1]] = g[2] ? g[2].split(",").map(s => s.trim().replace(/'/g, "")) : [];
+  }
+  /* 必须按章切片再找 st: —— 一条跨越整个 steps 数组的正则会把后面某一章的
+     st 记在前面一章头上（挂谷篇的同一条检查就先这么错过一次）。 */
+  const heads = [...html.matchAll(/\{id:'(\w+)',t:'/g)].map(x => ({ id: x[1], at: x.index }));
+  const stages = [];
+  heads.forEach((h, i) => {
+    const slice = html.slice(h.at, i + 1 < heads.length ? heads[i + 1].at : html.length);
+    const g = slice.match(/\n\s+st:(\[[^\]]*\]|'[^']*')/);
+    if (g) stages.push({ id: h.id, raw: g[1] });
+  });
+  check("有章节声明了画面主角", stages.length >= 5, `只有 ${stages.length} 章`);
+  const bad = [], rushed = [];
+  for (const s of stages) {
+    const keys = [...s.raw.matchAll(/'(\w+)'/g)].map(k => k[1]).filter(k => k !== "3d");
+    for (const k of keys) {
+      if (!cardKeys.has(k)) bad.push(`${s.id}→${k}（没有这张图）`);
+      else if (!(map[s.id] || []).includes(k)) bad.push(`${s.id}→${k}（不在本章 CHARTS 里）`);
+    }
+    /* ['3d', key, ms]：延迟太短会在读者还在读第一段时就把画面换掉 */
+    const delay = +(s.raw.match(/,\s*(\d+)\s*\]/) || [, 0])[1];
+    if (s.raw.startsWith("[") && delay < 3000) rushed.push(`${s.id}(${delay}ms)`);
+  }
+  check("声明的主角都真实存在且属于本章", bad.length === 0, bad.join("；"));
+  check("自动换主角不早于 3 秒", rushed.length === 0, `太急：${rushed.join(", ")}`);
+  check("舞台会在换章时重新指派", /applyStage\(s\)/.test(html), "gotoStep 没有调用 applyStage");
+  check("离开演示会撤掉舞台", /setStage\('3d'\)[\s\S]{0,220}has-stagepick/.test(html),
+    "setScene 的非演示分支没有收拾 staged / has-stagepick");
+  check("图表尺寸问的是当前容器而不是写死的侧栏",
+    !/function chartW\(\)/.test(html) && /function chartBox\(/.test(html),
+    "chartW() 还在 —— 图上了舞台也不会变大");
+  check("碰撞树不再是正文里的一张小画布",
+    !html.includes("treeCv") && !html.includes("treewrap") && cardKeys.has("tree"),
+    "drawTree 还画在 .treewrap 里");
+  /* 正文里的「把这张图放到画面中央」必须写明目标，否则 article-shell.js
+     会退回「在角落里闪一下」的老行为 —— 那正是这次要改掉的东西 */
+  const blanks = [...html.matchAll(/data-open-charts(?=[\s>])/g)].length;
+  check("正文的看图按钮都写明了目标图", blanks === 0, `还有 ${blanks} 个没写目标`);
+  /* 正文里的看图按钮也必须指向本章真的有的图。指错了 setStage 会静默退回三维，
+     于是「把这条曲线放到画面中央」按下去什么也不发生 —— 而按钮看起来完全正常。
+     '3d' 是允许的目标（把主角切回三维场景）。 */
+  {
+    const bad = [];
+    heads.forEach((h, i) => {
+      const slice = html.slice(h.at, i + 1 < heads.length ? heads[i + 1].at : html.length);
+      for (const m of slice.matchAll(/data-open-charts="(\w+)"/g)) {
+        const k = m[1];
+        if (k === "3d") continue;
+        if (!cardKeys.has(k)) bad.push(`${h.id}→${k}（没有这张图）`);
+        else if (!(map[h.id] || []).includes(k)) bad.push(`${h.id}→${k}（不在本章 CHARTS 里）`);
+      }
+    });
+    check("正文的看图按钮都指向本章真的有的图", bad.length === 0, bad.join("；"));
+  }
+  /* 切换器上的名字：漏一个就会把 data-chart 的原始键（比如 "dirs"）直接印在
+     按钮上给读者看。第一版就漏了一个。 */
+  {
+    const named = new Set([...(html.match(/const CHART_NAME=\{([^}]*)\}/) || [, ""])[1]
+      .matchAll(/(\w+):/g)].map((m) => m[1]));
+    const miss = [...cardKeys].filter((k) => !named.has(k));
+    check("每张图在主角切换器上都有中文名", miss.length === 0, `缺名字：${miss.join(", ")}`);
+  }
+  console.log("画面主角:", JSON.stringify(stages.map(s => `${s.id}｜${s.raw}`)));
+}
+
+/* ── 10i. 舞台和镜头的落点：都必须躲开面板 ──
+   freeRect 里那句可见性判断原本写的是 `el.offsetParent!==null`。三块面板全是
+   position:fixed，而 offsetParent 对 fixed 元素一律返回 null —— 判断恒为 false，
+   函数一直在走「什么都没挡住」的兜底分支。也就是说镜头从来都对着整个视口的
+   中心，有一部分内容一直压在讲解面板底下，而注释写的是「从根本上杜绝遮挡」。
+   截图查不出来（这个环境里画布永远是黑的），所以直接把函数抽出来打桩验算。 */
+{
+  const stub = (rects, W, H) => {
+    const mkEl = (id) => rects[id] ? {
+      getBoundingClientRect: () => rects[id],
+      style: {},
+      offsetParent: null,          // 真实页面里这几块都是 fixed，这一位恒为 null
+      offsetWidth: rects[id].width
+    } : null;
+    const nodes = { "#story": mkEl("story"), "#right": mkEl("right"), "#hud": mkEl("hud"),
+                    "#stage": mkEl("stage"), "#stagepick": mkEl("stagepick") };
+    const make = new Function("$", "innerWidth", "innerHeight", "getComputedStyle", "STAGE", `
+      ${grab("freeRect")}
+      ${grab("safeCenter")}
+      ${grab("stageFits")}
+      ${grab("layoutStage")}
+      return { freeRect, safeCenter, stageFits, layoutStage, STAGE };
+    `);
+    const STAGE = { key: "3d", sec: null, avail: 0 };
+    const api = make((s) => nodes[s], W, H,
+      () => ({ display: "flex", visibility: "visible" }), STAGE);
+    api.nodes = nodes;
+    return api;
+  };
+  const box = (l, t, w, h) => ({ left: l, top: t, right: l + w, bottom: t + h, width: w, height: h });
+
+  /* 电脑：讲解在左、控制在右、读数在左下 */
+  {
+    const rects = { story: box(22, 74, 352, 534), right: box(928, 74, 330, 626),
+                    hud: box(22, 668, 38, 30), stage: box(0, 0, 10, 10), stagepick: box(0, 0, 10, 10) };
+    const a = stub(rects, 1280, 720);
+    const R = a.freeRect();
+    check("电脑：空地从讲解面板右缘算起", R.l >= rects.story.right, `l=${R.l}，讲解右缘 ${rects.story.right}`);
+    check("电脑：空地在控制面板左缘之前结束", R.r <= rects.right.left, `r=${R.r}，控制左缘 ${rects.right.left}`);
+    check("电脑：空地不压到读数", R.b <= rects.hud.top, `b=${R.b}，读数上缘 ${rects.hud.top}`);
+    check("电脑：镜头偏到空地那一侧而不是视口中心", Math.abs(a.safeCenter()[0]) > 1e-3,
+      `ox=${a.safeCenter()[0].toFixed(4)}（为 0 就说明可见性判断又失效了）`);
+    a.layoutStage(true);
+    const s = a.nodes["#stage"].style;
+    const l = parseFloat(s.left), t = parseFloat(s.top), w = parseFloat(s.width), h = parseFloat(s.height);
+    check("电脑：舞台不盖住讲解面板", l >= rects.story.right, `舞台左 ${l}`);
+    check("电脑：舞台不盖住控制面板", l + w <= rects.right.left, `舞台右 ${l + w}`);
+    check("电脑：舞台在顶栏之下、读数之上", t >= 56 && t + h <= rects.hud.top, `${t} → ${t + h}`);
+    check("电脑：舞台比原来的侧栏卡片宽得多", w > rects.right.width * 1.4, `${w}px vs 侧栏 ${rects.right.width}px`);
+    check("电脑：画布高度留够", a.STAGE.avail > 300, `avail=${a.STAGE.avail}`);
+  }
+  /* 视口太窄：空地只剩两百来像素，宁可不上台也不能压到面板上 */
+  {
+    const rects = { story: box(22, 74, 300, 534), right: box(680, 74, 238, 626),
+                    hud: box(22, 668, 38, 30), stage: box(0, 0, 10, 10), stagepick: box(0, 0, 10, 10) };
+    const a = stub(rects, 940, 700);
+    check("窄视口下舞台判定为放不下", a.stageFits() === false,
+      `空地宽 ${a.freeRect().r - a.freeRect().l}px，却仍然判定放得下`);
+  }
+  /* 宽视口：放得下 */
+  {
+    const rects = { story: box(22, 74, 352, 534), right: box(1226, 74, 274, 626),
+                    hud: box(22, 668, 38, 30), stage: box(0, 0, 10, 10), stagepick: box(0, 0, 10, 10) };
+    const a = stub(rects, 1522, 800);
+    check("宽视口下舞台判定为放得下", a.stageFits() === true, "宽屏也判定放不下");
+  }
+  /* 手机：讲解在下、控制整列隐藏、读数在上 */
+  {
+    const rects = { story: box(10, 420, 370, 350), hud: box(10, 104, 250, 84),
+                    stage: box(0, 0, 10, 10), stagepick: box(0, 0, 10, 10) };
+    const a = stub(rects, 390, 780);
+    const R = a.freeRect();
+    check("手机：空地在读数之下", R.t >= rects.hud.bottom, `t=${R.t}，读数下缘 ${rects.hud.bottom}`);
+    check("手机：空地在讲解面板之上", R.b <= rects.story.top, `b=${R.b}，讲解上缘 ${rects.story.top}`);
+    a.layoutStage(true);
+    const s = a.nodes["#stage"].style;
+    const t = parseFloat(s.top), h = parseFloat(s.height), w = parseFloat(s.width);
+    check("手机：舞台夹在读数和讲解之间", t >= rects.hud.bottom && t + h <= rects.story.top, `${t} → ${t + h}`);
+    check("手机：舞台横向铺满", w > 340, `${w}px`);
+  }
 }
 
 /* ── 先猜一下：结构契约 ──
@@ -859,7 +1093,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
      而且要出现在**做出论断的那一章**里——页面别处随便提一句不算数，
      读者看的是结尾那段。 */
   {
-    const m = html.match(/\{id:'deng',t:'[^']*',\s*b:`([\s\S]*?)`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)/);
+    const m = html.match(/\{id:'deng',t:'[^']*',\s*b:`([\s\S]*?)`,\s*(?:(?:\/\*[\s\S]*?\*\/|st:[^\n]*)\s*)*en\(\)/);
     check("能取到结尾那一章", !!m, "找不到 deng 章正文");
     if (m) {
       /* 只看**主线**：details 是折叠的，默认不展开。
@@ -909,7 +1143,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
    「匀速直线、只在碰壁时反射、知道此刻的 (x,v) 就知道所有时刻」。
    画面和文字对不上，读者会（正确地）以为球能凭空变向。 */
 {
-  const m = html.match(/\{id:'one',t:'[^']*',\s*b:`[\s\S]*?`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)\{([\s\S]*?)\}\}/);
+  const m = html.match(/\{id:'one',t:'[^']*',\s*b:`[\s\S]*?`,\s*(?:(?:\/\*[\s\S]*?\*\/|st:[^\n]*)\s*)*en\(\)\{([\s\S]*?)\}\}/);
   check("能取到第 1 章的场景设置", !!m, "找不到 one 章的 en()");
   if (m) {
     check("第 1 章把粒子数真的设成 1", /GAS\.N=1\b/.test(m[1]),
@@ -942,7 +1176,7 @@ for (let i = 0; i < 8000; i++) M.gasStep(0.005);   // 先弛豫到平衡
   GAS.N = 520; GAS.single = false;
 
   /* 第 2 章必须把球数加回来，否则会继承第 1 章的 N=1 */
-  const m2 = html.match(/\{id:'many',t:'[^']*',\s*b:`[\s\S]*?`,\s*(?:\/\*[\s\S]*?\*\/\s*)?en\(\)\{([\s\S]*?)\}\}/);
+  const m2 = html.match(/\{id:'many',t:'[^']*',\s*b:`[\s\S]*?`,\s*(?:(?:\/\*[\s\S]*?\*\/|st:[^\n]*)\s*)*en\(\)\{([\s\S]*?)\}\}/);
   check("第 2 章把粒子数加回来", m2 && /GAS\.N=\d{2,}/.test(m2[1]),
     "第 2 章没设 N，会继承上一章的 1 个球");
 

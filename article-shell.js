@@ -326,7 +326,9 @@
     if (charts && rightColumn) {
       const empty = document.createElement("p");
       empty.className = "charts-empty";
-      empty.textContent = "速率分布、Q(f,f) 与 H 曲线要等分布开始变形才有内容。先往下读一章，再回来看这里。";
+      /* 这段文字是共享 shell 注入的，所以不能提任何一篇特有的图名 ——
+         原来写的是「速率分布、Q(f,f) 与 H 曲线…」，挂谷篇里根本没有这几张图。 */
+      empty.textContent = "这一章没有要看的图，画面本身就是论据。往下读一章再回来看这里。";
       rightColumn.appendChild(empty);
     }
 
@@ -342,6 +344,12 @@
 
     const panelButtons = [...panelSwitch.querySelectorAll("button")];
     const setPanel = (name) => {
+      /* 「图表」这一档会盖满整屏，那时舞台已经被 CSS 藏起来了 —— 如果本章的
+         主角正在台上，它就跟着一起消失，读者在这一档里只会看到「还没有内容」。
+         所以进这一档时先让主角退回侧栏，这一档才真的列出本章全部的图。 */
+      if (name === "charts" && typeof window.vizStage === "function") {
+        window.vizStage("3d");
+      }
       body.classList.toggle("mobile-controls", name === "controls");
       body.classList.toggle("mobile-charts", name === "charts");
       panelButtons.forEach((button) => {
@@ -370,6 +378,16 @@
       const trigger = event.target.closest("[data-open-charts]");
       if (!trigger) return;
       event.preventDefault();
+      /* 有舞台的文章（挂谷 / 玻尔兹曼）把这个按钮接到 window.vizStage 上：
+         正文说「看这条曲线」，那条曲线就走到画面正中并放大，而不是在
+         角落里闪两下。没写目标的按钮保持原来的行为。
+         vizStage 返回 false = 这个视口放不下舞台，那就走下面的老路 ——
+         按钮在任何宽度下都必须有反应。 */
+      const stageTarget = trigger.dataset.openCharts;
+      if (stageTarget && typeof window.vizStage === "function"
+          && window.vizStage(stageTarget) !== false) {
+        return;
+      }
       if (matchMedia("(max-width:900px)").matches) {
         setPanel("charts");
         return;
