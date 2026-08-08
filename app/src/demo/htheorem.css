@@ -1,0 +1,132 @@
+.ht {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2.2rem 1.2rem 4rem;
+}
+
+.ht-head h1 {
+  font-size: clamp(1.5rem, 1.1rem + 1.8vw, 2.4rem);
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.01em;
+}
+.ht-head .sub {
+  margin: 0 0 1.6rem;
+  color: var(--muted);
+}
+
+.ht-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.9rem;
+}
+@media (max-width: 880px) {
+  .ht-grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+  background: #10141c;
+  border: 1px solid #1e2531;
+  border-radius: 12px;
+  padding: 0.85rem 0.9rem 0.7rem;
+  transition:
+    border-color 260ms ease,
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+/* 焦点跟着公式走：亮起来的那块就是刚被指到的那一项 */
+.panel.is-lit {
+  border-color: #46536b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px -14px #000;
+}
+.panel.is-dim { opacity: 0.42; }
+
+.panel h2 {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 0.55rem;
+  /* 绝对不能用 text-transform：数学里 f 和 F、t 和 T 是不同的量。
+     排版效果永远不值得拿符号的正确性去换。 */
+}
+.panel h2 i { font-style: italic; font-weight: 700; }
+
+.panel small {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.cv { width: 100%; display: block; border-radius: 7px; background: #080b11; }
+.cv-gas { aspect-ratio: 1; }
+.cv-f { aspect-ratio: 1; }
+.cv-h { aspect-ratio: 1; }
+
+.ht-formula {
+  margin: 1.6rem 0 0.4rem;
+  padding: 1.2rem 1.3rem 1rem;
+  background: #0d1118;
+  border: 1px solid #1e2531;
+  border-radius: 12px;
+  min-height: 178px;
+}
+.ht-formula .say {
+  margin: 0.4rem 0 0;
+  color: #c3ccdb;
+  line-height: 1.7;
+}
+.ht-formula .tip {
+  margin: 0.8rem 0 0;
+  padding: 0.45rem 0.7rem;
+  border-left: 3px solid;
+  background: #0b0f15;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ht-steps {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 1rem 0 0.9rem;
+  flex-wrap: wrap;
+}
+.ht-steps .spacer { flex: 1; }
+.ht-steps button,
+.ht-ctrl button {
+  background: #161c27;
+  color: #d8e0ec;
+  border: 1px solid #263041;
+  border-radius: 7px;
+  padding: 0.36rem 0.72rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.ht-steps button:hover,
+.ht-ctrl button:hover { background: #1e2634; border-color: #38455c; }
+.ht-steps button.on {
+  background: var(--tm-H);
+  border-color: var(--tm-H);
+  color: #10141c;
+  font-weight: 700;
+}
+
+.ht-ctrl {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 0.9rem;
+  border-top: 1px solid #1a212c;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.ht-ctrl label { display: flex; align-items: center; gap: 0.45rem; }
+.ht-ctrl input[type="range"] { width: 128px; accent-color: var(--tm-f); }
+.ht-ctrl .energy { margin-left: auto; font-family: ui-monospace, monospace; }

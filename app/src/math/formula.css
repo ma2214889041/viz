@@ -1,0 +1,59 @@
+.fml-wrap {
+  position: relative;
+  margin: 1.4rem 0;
+}
+
+.fml .katex {
+  font-size: clamp(1.15rem, 1.05rem + 0.9vw, 1.85rem);
+  color: var(--ink, #e8edf4);
+}
+
+/* 每一项都是可寻址的对象，不是一段死文字 */
+.tm {
+  color: var(--tm-color, inherit);
+  cursor: pointer;
+  border-radius: 0.18em;
+  transition:
+    filter 220ms ease,
+    opacity 220ms ease,
+    background-color 220ms ease;
+  /* KaTeX 的 span 默认 inline，FLIP 需要能变换 */
+  display: inline-block;
+}
+
+/* 颜色即语义：同一符号在全站保持同一色 */
+.tm-H { --tm-color: var(--tm-H); }
+.tm-f { --tm-color: var(--tm-f); }
+.tm-logf { --tm-color: var(--tm-logf); }
+.tm-v { --tm-color: var(--tm-v); }
+.tm-x { --tm-color: var(--tm-x); }
+.tm-t { --tm-color: var(--tm-t); }
+.tm-Q { --tm-color: var(--tm-Q); }
+.tm-dv { --tm-color: var(--tm-dv); }
+.tm-dx { --tm-color: var(--tm-dx); }
+.tm-S { --tm-color: var(--tm-S); }
+.tm-kB { --tm-color: var(--tm-kB); }
+
+.tm:hover {
+  background-color: color-mix(in srgb, var(--tm-color, #fff) 16%, transparent);
+}
+
+.tm.is-active {
+  background-color: color-mix(in srgb, var(--tm-color, #fff) 22%, transparent);
+  filter: brightness(1.25);
+}
+
+/* 高亮一项时，其余项退到背景里 —— 注意力只有一个焦点 */
+.tm.is-dimmed {
+  opacity: 0.32;
+}
+
+.fml-ghost {
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm {
+    transition: none;
+  }
+}
